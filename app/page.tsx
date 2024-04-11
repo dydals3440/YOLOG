@@ -3,7 +3,13 @@ import { PostItem } from '@/components/post-item';
 import { buttonVariants } from '@/components/ui/button';
 import { siteConfig } from '@/config/site';
 import { cn, sortPosts } from '@/lib/utils';
+import { Metadata } from 'next';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'My blog',
+  description: 'This is a description',
+};
 
 export default function Home() {
   const latestPosts = sortPosts(posts).slice(0, 6);
