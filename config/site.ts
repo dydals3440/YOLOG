@@ -1,5 +1,5 @@
 export const siteConfig = {
-  name: 'YOLOG',
+  name: 'MOIM',
   url: 'https://example.com',
   description: 'Nextjs 14 blog using velite, tailwind and shadcn',
   author: 'Yongmin Kim',
