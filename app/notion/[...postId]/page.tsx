@@ -1,3 +1,4 @@
+import { NotionDetailPost } from '@/components/notion-detail-post';
 import { Render } from '@9gustin/react-notion-render';
 import '@9gustin/react-notion-render/dist/index.css';
 
@@ -22,13 +23,13 @@ export default async function PostPage({ params }: { params: IParams }) {
 
   return (
     <article className='container py-6 prose dark:prose-invert max-w-3xl mx-auto'>
-      {/* <NotionDetailPost blocks={post} /> */}
-      <Render
+      <NotionDetailPost blocks={post} />
+      {/* <Render
         blocks={post}
         useStyles
         emptyBlocks
         slugifyFn={(text) => text.replace(/[^a-zA-Z0-9]/g, '_')}
-      />
+      /> */}
     </article>
   );
 }

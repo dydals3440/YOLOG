@@ -1,7 +1,10 @@
 'use client';
 
 import NotionBlocks from 'notion-block-renderer';
-import { monokaiSublime } from 'react-syntax-highlighter/dist/cjs/styles/hljs';
+import {
+  monokaiSublime,
+  atomOneDarkReasonable,
+} from 'react-syntax-highlighter/dist/cjs/styles/hljs';
 
 export function NotionDetailPost({ blocks }: any) {
   return (
@@ -9,7 +12,7 @@ export function NotionDetailPost({ blocks }: any) {
       <NotionBlocks
         blocks={blocks}
         isCodeHighlighter={true}
-        syntaxHighlighterCSS={monokaiSublime}
+        syntaxHighlighterCSS={atomOneDarkReasonable}
       />
     </>
   );

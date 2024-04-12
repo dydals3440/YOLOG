@@ -38,7 +38,7 @@ export function NotionPostItem({
           </dd>
         </dl>
         <Link
-          href={slug}
+          href={`/notion/${id}`}
           className={cn(buttonVariants({ variant: 'link' }), 'py-0')}
         >
           더 보기 →
