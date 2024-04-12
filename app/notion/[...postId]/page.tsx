@@ -1,4 +1,3 @@
-import { NotionDetailPost } from '@/components/notion-detail-post';
 import { Render } from '@9gustin/react-notion-render';
 import '@9gustin/react-notion-render/dist/index.css';
 
@@ -20,6 +19,7 @@ interface IParams {
 export default async function PostPage({ params }: { params: IParams }) {
   const { postId } = params;
   const post = await getPost(postId);
+
   return (
     <article className='container py-6 prose dark:prose-invert max-w-3xl mx-auto'>
       {/* <NotionDetailPost blocks={post} /> */}

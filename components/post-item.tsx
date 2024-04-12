@@ -11,7 +11,6 @@ interface PostItemProps {
 }
 
 export function PostItem({ slug, title, description, date }: PostItemProps) {
-  console.log(slug);
   return (
     <article className='flex flex-col gap-2 border-border border-b py-3'>
       <div>

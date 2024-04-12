@@ -23,6 +23,10 @@ export function SiteFooter() {
             <span className='sr-only'>GitHub</span>
             <Icons.gitHub className='h-6 w-6' />
           </a>
+          <a target='_blank' rel='noreferrer' href={siteConfig.links.linkedin}>
+            <span className='sr-only'>LinkedIn</span>
+            <Icons.linkedIn className='h-6 w-6' />
+          </a>
         </div>
         <div className='mb-2 flex space-x-2 text-sm text-muted-foreground'>
           <a href={siteConfig.links.personalSite} target='_blank'>

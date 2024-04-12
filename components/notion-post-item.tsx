@@ -9,6 +9,7 @@ interface NotionPostItemProps {
   title: string;
   description?: string;
   date: string;
+  category?: string;
 }
 
 export function NotionPostItem({
@@ -17,13 +18,15 @@ export function NotionPostItem({
   title,
   description,
   date,
+  category,
 }: NotionPostItemProps) {
   return (
     <article className='flex flex-col gap-2 border-border border-b py-3'>
-      <div>
+      <div className='flex items-center justify-between'>
         <h2 className='text-2xl font-bold'>
           <Link href={`/notion/${id}`}>{title}</Link>
         </h2>
+        <div className='max-w-none text-muted-foreground'>{category}</div>
       </div>
       <div className='max-w-none text-muted-foreground'>{description}</div>
       <div className='flex justify-between items-center'>

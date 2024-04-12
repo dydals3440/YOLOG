@@ -32,6 +32,9 @@ export function MobileNav() {
           <MobileLink onOpenChange={setOpen} href='/about'>
             About
           </MobileLink>
+          <MobileLink onOpenChange={setOpen} href='/notion'>
+            Notion
+          </MobileLink>
           <Link target='_blank' rel='noreferrer' href={siteConfig.links.github}>
             GitHub
           </Link>

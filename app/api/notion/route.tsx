@@ -86,7 +86,5 @@ export async function GET(req: NextRequest, res: NextResponse) {
     date: row.properties.Date.date.start,
   }));
 
-  console.log(rowsStructured);
-
   return new Response(JSON.stringify(rowsStructured), { status: 200 });
 }

@@ -28,14 +28,11 @@ export default async function AboutPage() {
             {siteConfig.author}
           </h2>
           <p className='text-muted-foreground text-center break-words'>
-            Software Developer
+            {siteConfig.job}
           </p>
         </div>
         <p className='text-muted-foreground text-lg py-4'>
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Ipsam libero
-          impedit ut repudiandae animi, harum delectus quos expedita distinctio
-          reiciendis, nobis facere minima voluptatibus magnam, veniam at beatae
-          debitis dignissimos?
+          {siteConfig.introduce}
         </p>
       </div>
     </div>

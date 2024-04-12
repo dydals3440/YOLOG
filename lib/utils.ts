@@ -6,9 +6,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// bg-blue-500 bg-red-500
-// pt-1 pb-1 py-1로 머지함
-
 export function formatDate(input: string | number): string {
   const date = new Date(input);
   return date.toLocaleDateString('ko-KR', {

@@ -18,18 +18,18 @@ export default function Home() {
       <section className='space-y-6 pb-8 pt-6 md:pb-12 md:mt-10 lg:py-32'>
         <div className='container flex flex-col gap-4 text-center'>
           <h1 className='text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-bold text-balance'>
-            Welcome To MOIM
+            Welcome To {siteConfig.name}
           </h1>
           <p className='max-w-[42rem] mx-auto text-muted-foreground sm:text-xl text-balance'>
-            Welcome to my blog template. Built using tailwind, shadcn, velite
-            and Next.js 14.
+            Welcome to my blog template. Built using tailwind, shadcn, velite,
+            Notion DB and Next.js 14.
           </p>
           <div className='flex flex-col gap-4 justify-center sm:flex-row'>
             <Link
               href='/blog'
               className={cn(buttonVariants({ size: 'lg' }), 'w-full sm:w-fit')}
             >
-              View my blog
+              View my Blog Post
             </Link>
             <Link
               href={siteConfig.links.github}
@@ -40,13 +40,13 @@ export default function Home() {
                 'w-full sm:w-fit'
               )}
             >
-              GitHub
+              My GitHub
             </Link>
           </div>
         </div>
       </section>
-      <section className='container max-w-4xl py-6 lg:py-10 flex flex-col space-y-6 mt-60'>
-        <h2 className='text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-center'>
+      <section className='container max-w-4xl py-6 lg:py-10 flex flex-col space-y-6 mt-30'>
+        <h2 className='text-3xl mb-10 sm:text-5xl md:text-6xl lg:text-7xl font-black text-center'>
           Latest Posts
         </h2>
         <ul className='flex flex-col'>
