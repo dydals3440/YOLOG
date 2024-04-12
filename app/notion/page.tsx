@@ -41,7 +41,7 @@ export default async function NotionPage({ searchParams }: BlogPageProps) {
     POSTS_PER_PAGE * (currentPage - 1),
     POSTS_PER_PAGE * currentPage
   );
-  console.log(data);
+
   return (
     <div className='container max-w-6xl py-6 lg:py-10'>
       <div className='flex flex-col items-start gap-4 md:flex-row md:justify-between md:gap-8'>

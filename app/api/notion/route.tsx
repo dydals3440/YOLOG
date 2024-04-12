@@ -77,13 +77,13 @@ export async function GET(req: NextRequest, res: NextResponse) {
 
   const rowsStructured = rows.map((row) => ({
     id: row.id,
-    title: row.properties.title.title[0].text.content,
-    slug: row.properties.slug.rich_text[0].text.content,
-    category: row.properties.category.select.name,
-    summary: row.properties.summary.rich_text[0].text.content,
-    author: row.properties.author.people[0].id,
-    updatedAt: row.properties.updatedAt.last_edited_time,
-    date: row.properties.Date.date.start,
+    title: row.properties?.title?.title[0]?.text?.content,
+    slug: row.properties?.slug?.rich_text[0]?.text?.content,
+    category: row.properties?.category?.select?.name,
+    summary: row.properties?.summary?.rich_text[0]?.text?.content,
+    author: row.properties?.author?.people[0]?.id,
+    updatedAt: row.properties?.updatedAt?.last_edited_time,
+    date: row.properties?.Date?.date?.start,
   }));
 
   return new Response(JSON.stringify(rowsStructured), { status: 200 });
