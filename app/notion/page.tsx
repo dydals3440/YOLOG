@@ -44,7 +44,6 @@ export default async function NotionPage({ searchParams }: BlogPageProps) {
         <ul className='flex flex-col'>
           {displayPosts.map((post: any) => {
             const { id, slug, date, title, summary, category } = post;
-
             return (
               <li key={id}>
                 <NotionPostItem

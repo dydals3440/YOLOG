@@ -10,7 +10,7 @@ export const siteConfig = {
     twitter: 'https://twitter.com/yong_min__Kim',
     github: 'https://github.com/dydals3440',
     personalSite: 'https://github.com/dydals3440',
-    linkedin: 'www.linkedin.com/in/dydals3440',
+    linkedin: 'https://www.linkedin.com/in/dydals3440',
   },
 };
 

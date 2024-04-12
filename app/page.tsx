@@ -7,8 +7,8 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'My blog',
-  description: 'This is a description',
+  title: 'YOLOG',
+  description: 'My Blog Description Posting My Studying',
 };
 
 export default function Home() {
