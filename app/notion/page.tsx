@@ -39,16 +39,16 @@ export default async function NotionPage({ searchParams }: BlogPageProps) {
   const data = await fetchFromNotion();
   const currentPage = Number(searchParams?.page) || 1;
 
-  const displayPosts = data.slice(
+  const categories = [...new Set(data.map((post) => post.category))];
+
+  const categoryPost = searchParams.category
+    ? data.filter((post) => searchParams.category === post.category)
+    : data;
+
+  const displayPosts = categoryPost.slice(
     POSTS_PER_PAGE * (currentPage - 1),
     POSTS_PER_PAGE * currentPage
   );
-
-  const categories = [...new Set(displayPosts.map((post) => post.category))];
-
-  const categoryPost = searchParams.category
-    ? displayPosts.filter((post) => searchParams.category === post.category)
-    : data;
 
   const totalPages = Math.ceil(categoryPost.length / POSTS_PER_PAGE);
 
@@ -66,9 +66,9 @@ export default async function NotionPage({ searchParams }: BlogPageProps) {
       </div>
       <Categories categories={categories} />
       <hr className='mt-8' />
-      {categoryPost?.length > 0 ? (
+      {displayPosts?.length > 0 ? (
         <ul className='flex flex-col'>
-          {categoryPost.map((post: any) => {
+          {displayPosts.map((post: any) => {
             const { id, slug, date, title, summary, category } = post;
             return (
               <li key={id}>

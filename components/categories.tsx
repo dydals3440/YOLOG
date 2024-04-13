@@ -14,7 +14,9 @@ export function Categories({ categories }: CategoriesProps) {
   const params = new URLSearchParams(searchParams);
 
   const createPageURL = (category: string) => {
-    params.set('category', category);
+    if (category) {
+      params.set('category', category);
+    }
     return `${pathname}?${params.toString()}`;
   };
 
@@ -32,7 +34,7 @@ export function Categories({ categories }: CategoriesProps) {
       {categories.map((category: string) => (
         <li key={category}>
           <Button
-            onClick={() => router.push(createPageURL(category))}
+            onClick={() => router.push(`/notion?category=${category}`)}
             variant='outline'
             type='button'
           >
