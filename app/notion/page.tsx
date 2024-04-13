@@ -1,3 +1,4 @@
+import { Categories } from '@/components/categories';
 import { NotionPostItem } from '@/components/notion-post-item';
 import { QueryPagination } from '@/components/query-pagination';
 
@@ -30,17 +31,26 @@ const POSTS_PER_PAGE = 5;
 interface BlogPageProps {
   searchParams: {
     page?: string;
+    category?: string;
   };
 }
 
 export default async function NotionPage({ searchParams }: BlogPageProps) {
   const data = await fetchFromNotion();
   const currentPage = Number(searchParams?.page) || 1;
-  const totalPages = Math.ceil(data.length / POSTS_PER_PAGE);
+
   const displayPosts = data.slice(
     POSTS_PER_PAGE * (currentPage - 1),
     POSTS_PER_PAGE * currentPage
   );
+
+  const categories = [...new Set(displayPosts.map((post) => post.category))];
+
+  const categoryPost = searchParams.category
+    ? displayPosts.filter((post) => searchParams.category === post.category)
+    : data;
+
+  const totalPages = Math.ceil(categoryPost.length / POSTS_PER_PAGE);
 
   return (
     <div className='container max-w-6xl py-6 lg:py-10'>
@@ -54,10 +64,11 @@ export default async function NotionPage({ searchParams }: BlogPageProps) {
           </p>
         </div>
       </div>
+      <Categories categories={categories} />
       <hr className='mt-8' />
-      {displayPosts?.length > 0 ? (
+      {categoryPost?.length > 0 ? (
         <ul className='flex flex-col'>
-          {displayPosts.map((post: any) => {
+          {categoryPost.map((post: any) => {
             const { id, slug, date, title, summary, category } = post;
             return (
               <li key={id}>
