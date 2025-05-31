@@ -22,7 +22,7 @@ import { transformerFragment } from './plugins/transformer-fragment';
 import { customCallout } from './src/lib/directives';
 
 export default defineConfig({
-  site: 'https://yolog.co.kr',
+  site: 'https://www.yolog.co.kr',
   integrations: [
     mdx({
       syntaxHighlight: 'shiki',

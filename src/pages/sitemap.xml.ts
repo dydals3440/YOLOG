@@ -1,7 +1,7 @@
 import { getPostInfoList } from '@/lib/mdx';
 
 export async function GET() {
-  const siteUrl = import.meta.env.SITE || 'https://yolog.co.kr';
+  const siteUrl = import.meta.env.SITE || 'https://www.yolog.co.kr';
   const posts = await getPostInfoList();
 
   const renderUrl = (slug: string) => `<url><loc>${siteUrl}${slug}</loc></url>`;
