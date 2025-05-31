@@ -34,7 +34,7 @@ export const GiscusComment = (props: React.HTMLAttributes<HTMLElement>) => {
       'data-repo-id': 'R_kgDOLsWIKw',
       'data-category': 'Comments',
       'data-category-id': 'DIC_kwDONgmID84Clq9d',
-      'data-mapping': 'title',
+      'data-mapping': 'pathname',
       'data-strict': '1',
       'data-reactions-enabled': '1',
       'data-emit-metadata': '0',
