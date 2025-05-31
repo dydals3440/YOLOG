@@ -1,0 +1,30 @@
+---
+import { type CollectionEntry } from 'astro:content'
+
+import PostLayout from '@/layouts/PostLayout.astro'
+import { getPostCollection, isBlogPost, resolveSlug } from '@/lib/mdx'
+
+interface Props {
+  post: CollectionEntry<'post'>
+}
+
+export const getStaticPaths = async () => {
+  const posts = await getPostCollection()
+  return posts.map((post: CollectionEntry<'post'>, _, list) => {
+    const postList = list.filter(item => isBlogPost(item))
+    const postIndex = postList.findIndex((item) => item.id === post.id)
+    const slug = resolveSlug(post.slug)
+    
+    return {
+      params: { slug },
+      props: {
+        post,
+        prevPost: postList[postIndex + 1],
+        nextPost: postList[postIndex - 1],
+      },
+    }
+  })
+}
+---
+
+<PostLayout {...Astro.props} />

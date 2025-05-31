@@ -1,0 +1,46 @@
+---
+import type { CollectionEntry } from 'astro:content'
+import { BLOG_CATEGORIES, type BlogCategory } from '@/consts'
+
+interface Props {
+  post: CollectionEntry<'post'>
+}
+
+const { post } = Astro.props
+const { title, description, date, category } = post.data
+const slug = post.slug.replace('blog/', '')
+
+
+---
+
+<article class="group hover:scale-105 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-200 rounded-2xl p-4">
+  <a href={`/post/${slug}`} class="block">
+    <div class="mb-4">
+      <span class="text-sm text-gray-500 dark:text-gray-400">
+        {BLOG_CATEGORIES[category as BlogCategory]}
+      </span>
+    </div>
+    <h2 class="mb-2 text-xl font-medium text-gray-900 group-hover:text-primary dark:text-white dark:group-hover:text-primary-400">
+      {title}
+    </h2>
+    {description && (
+      <p class="mb-4 text-base text-gray-600 dark:text-gray-300">
+        {description}
+      </p>
+    )}
+    <time datetime={date.toISOString()} class="text-sm text-gray-500 dark:text-gray-400">
+      {new Date(date).toLocaleDateString('ko-KR', { 
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })}
+    </time>
+  </a>
+</article>
+
+<style>
+  .group:hover .decoration-2 {
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+</style> 

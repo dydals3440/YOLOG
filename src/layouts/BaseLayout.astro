@@ -1,0 +1,37 @@
+---
+import '@/styles/animation.css'
+
+import MetaHead from '@/layouts/partials/MetaHead.astro'
+import Footer from '@/layouts/partials/Footer.astro'
+import Header from '@/layouts/partials/Header.astro'
+import Monitoring from '@/components/scripts/Monitoring.astro'
+import ThemeHead from '@/components/scripts/ThemeHead.astro'
+import { Toaster } from '@/components/ui/toaster'
+
+import type { SEOModel } from '@/types'
+
+interface Props {
+  seo?: SEOModel
+  class?: string
+}
+
+const { seo, class: className } = Astro.props
+---
+
+<html lang="ko">
+  <head>
+    <MetaHead {...seo} />
+    <ThemeHead />
+    <Monitoring />
+  </head>
+  <body>
+    <Header />
+    <main class={className}>
+      <div class="container">
+        <slot />
+      </div>
+    </main>
+    <Footer />
+    <Toaster client:load />
+  </body>
+</html>

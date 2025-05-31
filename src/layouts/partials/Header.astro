@@ -1,0 +1,60 @@
+---
+import NavLink from '@/components/common/NavLink.astro'
+import ThemeToggle from '@/components/ui/theme-toggle'
+---
+
+<div class="blur-layer" aria-hidden="true"></div>
+<header class="fixed left-0 right-0 top-0 z-10 transition-all duration-200" data-header>
+  <div class="container mx-auto flex max-w-content items-center justify-between pt-4 md:pt-0">
+    <nav>
+      <ul class="flex items-center gap-6 py-4">
+        <li>
+          <NavLink href="/" class="text-lg font-bold">yolog</NavLink>
+        </li>
+        <li>
+          <NavLink href="/blogs">블로그</NavLink>
+        </li>
+      </ul>
+    </nav>
+    <div>
+      <ThemeToggle client:load />
+    </div>
+  </div>
+</header>
+
+<style>
+  .blur-layer {
+    @apply pointer-events-none fixed inset-0 z-10 h-[var(--header-height)] bg-background/80 backdrop-blur-[--blur-size];
+    --blur-size: 12px;
+    --header-height: 4rem;
+  }
+
+  [data-header] {
+    height: var(--header-height);
+  }
+
+  :global(.scrolled-down) [data-header] {
+    transform: translateY(calc(var(--header-height) * -1));
+  }
+
+  :global(.scrolled-up) [data-header] {
+    transform: translateY(0);
+  }
+</style>
+
+<script>
+  let lastScrollY = window.scrollY
+  const header = document.documentElement
+
+  window.addEventListener('scroll', () => {
+    if (lastScrollY < window.scrollY) {
+      header.classList.add('scrolled-down')
+      header.classList.remove('scrolled-up')
+    } else {
+      header.classList.add('scrolled-up')
+      header.classList.remove('scrolled-down')
+    }
+
+    lastScrollY = window.scrollY
+  })
+</script> 

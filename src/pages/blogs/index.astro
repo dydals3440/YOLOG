@@ -1,0 +1,47 @@
+---
+import { getCollection } from 'astro:content'
+
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import { BLOG_CATEGORIES, type BlogCategory } from '@/consts'
+import CategoryList from '@/components/blogs/CategoryList.astro'
+import BlogCard from '@/components/blogs/BlogCard.astro'
+
+const posts = await getCollection('post')
+const categories = Object.entries(BLOG_CATEGORIES).map(([key, value]) => ({
+  id: key as BlogCategory,
+  label: value,
+  count: key === 'ALL' ? posts.length : posts.filter(post => post.data.category === key).length
+}))
+---
+
+<BaseLayout>
+  <div class="container mx-auto max-w-6xl px-4 py-12">
+    <h1 class="text-center text-4xl font-bold mb-4">All</h1>
+    <p class="text-center text-gray-600 dark:text-gray-400 mb-12">{posts.length} posts</p>
+    
+    <div class="mb-12">
+      <CategoryList categories={categories} currentPath={Astro.url.pathname} />
+    </div>
+
+    {posts.length > 0 ? (
+      <div class="grid gap-8">
+        {posts.map(post => <BlogCard post={post} />)}
+      </div>
+    ) : (
+      <div class="text-center py-12">
+        <p class="text-lg text-gray-600 dark:text-gray-400 mb-2">
+          해당하는 게시글이 없습니다.
+        </p>
+        <p class="text-base text-gray-500 dark:text-gray-500">
+          잠시 기다려주시면 좋은 글로 찾아뵙겠습니다.
+        </p>
+      </div>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+  .group:hover .group-hover\:scale-100 {
+    transform: scale(1);
+  }
+</style> 

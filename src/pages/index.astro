@@ -1,49 +1,29 @@
 ---
-import BaseHead from '../components/BaseHead.astro';
-import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
-import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
+import Yong from '@/components/Yong.astro'
+import BaseLayout from '@/layouts/BaseLayout.astro'
 ---
 
-<!doctype html>
-<html lang="en">
-	<head>
-		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
-	</head>
-	<body>
-		<Header />
-		<main>
-			<h1>🧑‍🚀 Hello, Astronaut!</h1>
-			<p>
-				Welcome to the official <a href="https://astro.build/">Astro</a> blog starter template. This
-				template serves as a lightweight, minimally-styled starting point for anyone looking to build
-				a personal website, blog, or portfolio with Astro.
-			</p>
-			<p>
-				This template comes with a few integrations already configured in your
-				<code>astro.config.mjs</code> file. You can customize your setup with
-				<a href="https://astro.build/integrations">Astro Integrations</a> to add tools like Tailwind,
-				React, or Vue to your project.
-			</p>
-			<p>Here are a few ideas on how to get started with the template:</p>
-			<ul>
-				<li>Edit this page in <code>src/pages/index.astro</code></li>
-				<li>Edit the site header items in <code>src/components/Header.astro</code></li>
-				<li>Add your name to the footer in <code>src/components/Footer.astro</code></li>
-				<li>Check out the included blog posts in <code>src/content/blog/</code></li>
-				<li>Customize the blog post page layout in <code>src/layouts/BlogPost.astro</code></li>
-			</ul>
-			<p>
-				Have fun! If you get stuck, remember to
-				<a href="https://docs.astro.build/">read the docs</a>
-				or <a href="https://astro.build/chat">join us on Discord</a> to ask questions.
-			</p>
-			<p>
-				Looking for a blog template with a bit more personality? Check out
-				<a href="https://github.com/Charca/astro-blog-template">astro-blog-template</a>
-				by <a href="https://twitter.com/Charca">Maxi Ferreira</a>.
-			</p>
-		</main>
-		<Footer />
-	</body>
-</html>
+<BaseLayout>
+  <div data-animate data-animate-speed="slow">
+    <section class="my-10 space-y-5 text-[16px] leading-relaxed sm:text-[15px]">
+      <p>
+        소프트웨어 개발자 <strong>매튜</strong>입니다. 좋은 사람들과 함께 문제를 해결하고, 함께 성장하는 과정을 좋아합니다.
+        단순한 코드 너머, 비즈니스와 사용자 가치까지 함께 고민하는 개발자가 되고자 합니다.
+      </p>
+      <p>
+        지식 공유와 교육에도 관심이 많아, 함께 배우고 나누는 시간을 소중히 생각합니다.
+        이 공간에서는 개발과 서비스, 그리고 개발 이외의 개인적인 생각들을 담아가려 합니다.
+      </p>
+      <p>
+          <a href="https://www.youtube.com/@yongcoding" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline" target="_blank" rel="noopener noreferrer">
+          유튜브 채널
+        </a>
+        에서도 다양한 개발 관련 콘텐츠를 공유하고 있습니다.
+      </p>
+    </section>
+
+    <div class="flex justify-center mt-12">
+      <Yong />
+    </div>
+  </div>
+</BaseLayout>

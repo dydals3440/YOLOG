@@ -1,0 +1,13 @@
+---
+import { cn } from '@/lib/utils'
+---
+
+<aside
+  class={cn(
+    'fixed top-page flex max-w-[200px] translate-x-[-210px] translate-y-[60px] flex-col px-2',
+    'lg:relative lg:top-[-24px] lg:-ml-2 lg:mb-7 lg:translate-x-0 lg:flex-row lg:justify-between lg:w-full lg:items-center lg:max-w-none lg:px-0 lg:pl-2'
+  )}
+  data-animate
+>
+  <slot />
+</aside> 

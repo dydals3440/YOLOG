@@ -1,0 +1,29 @@
+---
+import { isProduction } from '@/lib/utils'
+---
+
+{/* google analytics */}
+{
+  isProduction && (
+    <script
+      async
+      src={`https://www.googletagmanager.com/gtag/js?id=${import.meta.env.PUBLIC_GA_ID}`}
+    />
+  )
+}
+<script>
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-nocheck
+  import { isProduction } from '@/lib/utils'
+
+  if (isProduction) {
+    const gaId = import.meta.env.PUBLIC_GA_ID
+
+    window.dataLayer = window.dataLayer || []
+    function gtag() {
+      dataLayer.push(arguments)
+    }
+    gtag('js', new Date())
+    gtag('config', gaId)
+  }
+</script>

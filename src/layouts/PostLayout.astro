@@ -1,0 +1,80 @@
+---
+import '@shikijs/twoslash/style-rich.css'
+import '@/styles/mdx.css'
+
+import type { CollectionEntry } from 'astro:content'
+import dayjs from 'dayjs'
+
+import CopyCodeScript from '@/components/post/CopyCodeScript.astro'
+import { GiscusComment } from '@/components/post/GiscusComment'
+import MediumZoomScript from '@/components/post/MediumZoomScript.astro'
+import { PageActions } from '@/components/post/PageActions'
+import PostImage from '@/components/post/PostImage.astro'
+import TableOfContent from '@/components/post/TableOfContent'
+import { UndoIcon } from '@/components/ui/icons'
+import { generateDescription, parseToc } from '@/lib/mdx'
+import LeftSidebar from '@/layouts/partials/LeftSidebar.astro'
+import Pagination from '@/components/common/Pagination.astro'
+
+import BaseLayout from './BaseLayout.astro'
+
+type Props = {
+  post: CollectionEntry<'post'>
+  prevPost?: CollectionEntry<'post'>
+  nextPost?: CollectionEntry<'post'>
+}
+
+const { post, prevPost, nextPost } = Astro.props
+
+const { title, date, image } = post.data
+const description = post.data.description || generateDescription(post.body)
+const formattedDate = dayjs(new Date(date)).format('YYYY/MM/DD')
+const toc = parseToc(post.body)
+
+const { Content } = await post.render()
+---
+
+<BaseLayout seo={{ title, description, image }}>
+  <LeftSidebar>
+    <a
+      class="group flex w-fit items-center gap-2 rounded-lg px-3 py-2 transition-all hover:bg-gray-100"
+      href="#"
+      onclick="history.back(); return false;"
+      data-animate
+    >
+      <UndoIcon 
+        strokeWidth={1.5} 
+        className="h-4 w-4 text-gray-600 transition-transform group-hover:-translate-x-0.5" 
+      />
+      <span class="font-serif text-sm font-medium text-gray-700 group-hover:text-gray-900">이전 페이지</span>
+    </a>
+    <div class="mt-8 border-l-2 border-gray-100 pl-4 lg:hidden">
+      <h3 class="mb-3 font-serif text-sm font-semibold text-gray-900">목차</h3>
+      <TableOfContent 
+        className="text-sm" 
+        data-animate 
+        toc={toc} 
+        client:load 
+      />
+    </div>
+    <div class="mt-6">
+      <PageActions client:load />
+    </div>
+  </LeftSidebar>
+  <section>
+    <h1 class="mt-14">{title}</h1>
+    <time datetime={formattedDate} class="text-sm">{formattedDate}</time>
+  </section>
+  <section>
+    <article data-animate data-animate-speed="fast" class="mdx mt-14">
+      <Content components={{ img: PostImage }} />
+    </article>
+    <footer class="px-0">
+      <hr class="mb-7 mt-4" />
+      <Pagination {prevPost} {nextPost} />
+      <GiscusComment className="mx-auto my-half-page" client:load />
+    </footer>
+  </section>
+  <MediumZoomScript />
+  <CopyCodeScript />
+</BaseLayout>

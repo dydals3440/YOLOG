@@ -1,0 +1,28 @@
+---
+import IconLink from '@/components/ui/icon-link'
+import { EmailIcon, GithubIcon, LinkedinIcon, YoutubeIcon } from '@/components/ui/icons'
+---
+
+<footer class="container mt-auto py-8 text-center text-sm text-second">
+  <p>© {new Date().getFullYear()} yolog. Powered by Matthew.</p>
+
+   <div class="mb-16 mt-7 flex items-center justify-center">
+      <div data-animate class="flex items-center justify-center gap-0.5">
+        <IconLink href="mailto:dydals3440@gmail.com" aria-label="이메일" target="_self">
+          <EmailIcon width="1.2rem" height="1.2rem" />
+        </IconLink>
+        <IconLink href="https://github.com/dydals3440" aria-label="깃허브">
+          <GithubIcon width="1.2rem" height="1.2rem" />
+        </IconLink>
+        <IconLink
+          href="https://www.linkedin.com/in/dydals3440/"
+          aria-label="링크드인"
+        >
+          <LinkedinIcon width="1.2rem" height="1.2rem" />
+        </IconLink>
+        <IconLink href="https://www.instagram.com/dydals3440/" aria-label="인스타그램">
+        <YoutubeIcon/>
+      </IconLink>
+      </div>
+    </div>
+</footer> 

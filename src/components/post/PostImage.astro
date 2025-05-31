@@ -1,0 +1,75 @@
+---
+import fs from 'node:fs/promises'
+
+import { getPlaiceholder } from 'plaiceholder'
+
+type Props = {
+  src: string
+  alt: string
+}
+
+const { src, alt } = Astro.props
+
+const isValidCaption = alt && Number.isInteger(+alt[0]) === false
+
+const getImageBuffer = async (src: string) => {
+  const isExternalImage = src.startsWith('https')
+
+  if (isExternalImage) {
+    const res = await fetch(src)
+    return Buffer.from(await res.arrayBuffer())
+  }
+
+  if (src.startsWith('/')) {
+    src = src.slice(1)
+  }
+
+  const localSrc = `public/${src}`
+  const file = await fs.readFile(localSrc)
+  return Buffer.from(file)
+}
+
+const imageBuffer = await getImageBuffer(src)
+const {
+  metadata: { width, height },
+  css,
+} = await getPlaiceholder(imageBuffer)
+---
+
+<figure>
+  <div class="relative block overflow-hidden">
+    <div style={css} class="absolute inset-0 -z-10 blur-2xl filter"></div>
+    <img {src} {alt} {width} {height} />
+  </div>
+  {isValidCaption && <figcaption class="w-full text-center">{alt}</figcaption>}
+</figure>
+
+<style>
+  figure {
+    animation: fadeIn 0.2s ease-out;
+  }
+  img.loaded {
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const imgList = document.querySelectorAll('.mdx figure img')
+
+    imgList.forEach((img) => {
+      img.addEventListener('load', () => {
+        img.classList.add('loaded')
+      })
+    })
+  })
+</script>
