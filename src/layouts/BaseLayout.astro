@@ -8,6 +8,8 @@ import Monitoring from '@/components/scripts/Monitoring.astro'
 import ThemeHead from '@/components/scripts/ThemeHead.astro'
 import { Toaster } from '@/components/ui/toaster'
 import Analytics from '@vercel/analytics/astro'
+import SpeedInsights from "@vercel/speed-insights/astro"
+
 
 import type { SEOModel } from '@/types'
 
@@ -28,6 +30,7 @@ const { seo, class: className } = Astro.props
   <body>
     <Header />
     <Analytics />
+    <SpeedInsights />
     <main class={className}>
       <div class="container">
         <slot />

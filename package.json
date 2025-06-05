@@ -22,6 +22,7 @@
     "@radix-ui/react-slot": "1.2.3",
     "@radix-ui/react-toast": "1.2.14",
     "@vercel/analytics": "^1.5.0",
+    "@vercel/speed-insights": "^1.2.0",
     "astro": "5.8.0",
     "dayjs": "1.11.13",
     "es-toolkit": "1.38.0",
