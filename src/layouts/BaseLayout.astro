@@ -7,6 +7,7 @@ import Header from '@/layouts/partials/Header.astro'
 import Monitoring from '@/components/scripts/Monitoring.astro'
 import ThemeHead from '@/components/scripts/ThemeHead.astro'
 import { Toaster } from '@/components/ui/toaster'
+import Analytics from '@vercel/analytics/astro'
 
 import type { SEOModel } from '@/types'
 
@@ -26,6 +27,7 @@ const { seo, class: className } = Astro.props
   </head>
   <body>
     <Header />
+    <Analytics />
     <main class={className}>
       <div class="container">
         <slot />
