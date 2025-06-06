@@ -29,7 +29,7 @@ const { post, prevPost, nextPost } = Astro.props
 
 const { title, date, image } = post.data
 const description = post.data.description || generateDescription(post.body)
-const formattedDate = dayjs(new Date(date)).format('YYYY/MM/DD')
+const formattedDate = dayjs(new Date(date)).format('YYYY년 MM월 DD일')
 const toc = parseToc(post.body)
 
 const { Content } = await post.render()
