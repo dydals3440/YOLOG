@@ -9,31 +9,29 @@ image: '/images/rbac-abac/thumbnail.png'
 
 ![ABAC은 또 뭐야..?](/images/rbac-abac/thumbnail.png)
 
-# 토나오는 권한들
+# 과거에 내가 작성한 코드가 주는 고통
 
-우리 회사에서 만들고 있는 서비스는 다양한 권한이 복잡하게 얽혀 있는 서비스다.
+우리 팀이 만드는 서비스는 처음엔 **역할 기반 권한 관리(RBAC)** 만으로도 충분했습니다.  
+그런데 서비스가 성장하면서 다양한 예외 케이스가 쏟아지고, 역할만으로는 설명이 안 되는 권한이 점점 많아졌죠.
 
-사실 처음에는 **RBAC(Role-Based Access Control)** 이라는 용어만 알고 있었는데, 서비스가 점점 커지면서 **ABAC(Attribute-Based Access Control)** 이라는 개념이 있다는 걸 알게 됐다.
-
-이번 포스팅에서는 **RBAC과 ABAC의 간단한 차이**를 정리하고, 우리 서비스 코드에서 **ABAC** 권한 관리를 어떻게 처리했는지 기존의 문제점을 개선한 내용에 대해 공유해보려고 한다.
+그때 발견한 것이 바로 **속성 기반 권한 관리(ABAC)** 였습니다.  
+이 글에서는 RBAC과 ABAC의 차이를 정리하고,  
+우리 서비스에서 **ABAC으로 리팩토링한 과정**과 **권한 관리의 시행착오**를 공유해보려 합니다.
 
 ---
 
-## 📖 RBAC과 ABAC, 뭐가 다를까?
+## 📖 RBAC vs ABAC — 핵심만 짚고 가기
 
-정말 간단하게만 정리해보자.
+|      | **RBAC**                  | **ABAC**                                                    |
+| ---- | ------------------------- | ----------------------------------------------------------- |
+| 정의 | Role-Based Access Control | Attribute-Based Access Control                              |
+| 기준 | 사람의 **역할(Role)**     | 사람과 리소스의 **속성(Attribute)**                         |
+| 예시 | `ADMIN이면 글 삭제 가능`  | `PRINCIPAL이고, 학원에 canDeleteChallenge=true면 삭제 가능` |
 
-- **RBAC (Role-Based Access Control)**
-  → **"이 사람의 역할이 무엇인지"** 에 따라 권한을 부여하는 방식
-  ex: `이 사람이 ADMIN이면 글 삭제 가능`
+**👉 핵심:**
 
-<br />
-
-- **ABAC (Attribute-Based Access Control)**
-  → **"이 사람과 이 리소스가 어떤 속성을 갖고 있는지"** 에 따라 권한을 부여하는 방식
-  ex: `이 사람이 PRINCIPAL이고, 해당 학원의 canDeleteChallenge 속성이 true면 글 삭제 가능`
-
-초기엔 **RBAC**이 심플하고 좋지만, 서비스가 커질수록 **"역할만으로 설명이 안 되는 경우"** 가 점점 늘어난다. 결국 **ABAC** 형태로 확장할 수밖에 없다.
+- **RBAC**: 심플해서 좋지만, 서비스가 커지면 한계가 옴.
+- **ABAC**: 조건과 속성을 함께 고려해 더 유연한 권한 부여 가능.
 
 ---
 
@@ -75,7 +73,7 @@ export default function ChallengeDetail({ challenge }) {
 }
 ```
 
-이정도는 뭐 쉽게 👍
+> 음.. 뭐 이 정도야 쉽지.
 
 ---
 
@@ -123,9 +121,7 @@ export default function ChallengeDetail({ challenge }) {
 }
 ```
 
-뭐 이정도는..
-
-매우 쉽다!
+> 오… 뭔가 더 복잡해질 것 같은데..
 
 ---
 
@@ -170,7 +166,7 @@ export default function ChallengeDetail({ challenge }) {
 }
 ```
 
-> 점점 조건이 많아지네요… 🤯
+> 오… 점점 꼬인다?
 
 ---
 
@@ -222,9 +218,11 @@ export default function ChallengeDetail({ challenge }) {
 }
 ```
 
+> 이제부터 조건이 꽤 복잡해지고 유지보수가 무섭기 시작함…
+
 ---
 
-## 🚨 음.. 리팩토링이 필요하다.
+## 🚀 결국 대대적인 리팩토링 시작
 
 최근 우리 서비스의 **v2 버전 출시 준비**를 하면서 자연스럽게 권한 체계를 다시 설계하게 됐습니다.
 
@@ -254,7 +252,7 @@ v1에서는 `PRINCIPAL`이면 무조건 삭제 가능, `STUDENT`는 무조건 �
 
 ---
 
-## 📌 새롭게 설계한 권한 시스템 구조
+## ⚡️ 새 권한 시스템 구조
 
 ### 🍠 권한 개념 정리
 
@@ -269,7 +267,7 @@ v1에서는 `PRINCIPAL`이면 무조건 삭제 가능, `STUDENT`는 무조건 �
 
 ## 📌 전체 코드 구성 설명
 
-### 1️⃣ 역할/리소스/액션 타입 선언
+### 🗂️ 역할, 리소스, 액션 정의
 
 ```tsx
 export type AppRole = 'ADMIN' | 'USER';
@@ -288,7 +286,7 @@ export type Challenge = {
 
 ---
 
-### 2️⃣ 사용자 구조 정의
+### 🧑 사용자 구조 정의
 
 ```tsx
 export type User = {
@@ -310,7 +308,7 @@ export type User = {
 
 ---
 
-### 3️⃣ 권한 테이블 선언 (앱 전역/학원)
+### 🏷️ 권한 정책 테이블
 
 **앱 전역 권한**
 
@@ -368,7 +366,7 @@ export const ACADEMY_ROLES: AcademyRolesWithPermissions = {
 
 ---
 
-### 4️⃣ hasPermission 유틸 함수
+### ✅ hasPermission 유틸 함수
 
 모든 권한 확인은 이 함수로 통일합니다.
 
@@ -531,12 +529,17 @@ describe('✅ ABAC - 앱 전역 역할 & 학원 역할에 대한 테스트', () 
 
 ## 📌 마무리
 
-처음엔 그냥 **RBAC이면 충분하겠지** 싶었는데, 결국 서비스가 커지면서 **RBAC**을 효율적으로 처리하는 방법을 유튜브나, Medium 글을 찾아보며 **ABAC** 개념에 대해서 알게 되었고, 훨씬 권한 관리를 효율적으로 처리할 수 있는 패턴을 배우게 되었다.
+**RBAC**만으로는 복잡한 권한 케이스를 감당하기 쉽지 않았습니다.
+**ABAC**으로 설계를 바꾸니 복잡한 예외 케이스도 기존 방식에 비해 깔끔히 처리되고,
+권한 로직이 흩어지지 코드의 가독성 및 유지보수성이 크게 좋아졌습니다.
 
-혹시 나처럼 서비스 만들다 **권한 때문에 골치 아픈 사람**이라면 위의 패턴을 한번 활용해보면 좋겠다! 정말 효율적으로 코드를 쉽게 작성할 수 있게 된다! ✨
+권한 때문에 골머리를 앓고 있다면,
+**ABAC**을 한 번 고려해보세요. 진짜 삶의 질이 달라집니다.
 
-사실, 조직 구조가 복잡해지고 역할의 수가 기하급수적으로 증가하는 현상을 당근 테크에서 올린 게시글에서는 `Role Explosion` 이라고 표현하고 있다.
+추가로 **Role Explosion** 문제와 **ReBAC(Relation-Based Access Control)** 이야기가 궁금하다면, 아래 당근테크 글을 강력 추천합니다.
 
-그래서 이를 해결하기 위해 **구글의 Zanzibar**에서 활용하는 **ReBAC(Relation-Based Access Control)** 이라는 개념을 소개하고 있으니, 관심있으신 분들은 한번 참고해보면 좋을 것 같다.
+[구글의 Zanzibar 권한 관리 방식, 당근 테크 글 링크](https://medium.com/daangn/%EA%B5%AC%EA%B8%80%EC%B2%98%EB%9F%BC-%EB%B3%B5%EC%9E%A1%ED%95%9C-%EA%B6%8C%ED%95%9C-%EC%89%BD%EA%B2%8C-%EA%B4%80%EB%A6%AC%ED%95%98%EA%B8%B0-feat-graphql-9ce80d34d39b/)
 
-[당근 테크 글 링크](https://medium.com/daangn/%EA%B5%AC%EA%B8%80%EC%B2%98%EB%9F%BC-%EB%B3%B5%EC%9E%A1%ED%95%9C-%EA%B6%8C%ED%95%9C-%EC%89%BD%EA%B2%8C-%EA%B4%80%EB%A6%AC%ED%95%98%EA%B8%B0-feat-graphql-9ce80d34d39b/)
+---
+
+🙌 도움이 됐다면 댓글이나 좋아요 부탁드립니다!
