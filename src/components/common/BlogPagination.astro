@@ -1,0 +1,97 @@
+---
+interface Props {
+  currentPage: number
+  totalPages: number
+  baseUrl: string
+  hasPrevious: boolean
+  hasNext: boolean
+  previousPage: number | null
+  nextPage: number | null
+}
+
+const { 
+  currentPage, 
+  totalPages, 
+  baseUrl, 
+  hasPrevious, 
+  hasNext, 
+  previousPage, 
+  nextPage 
+} = Astro.props
+
+// 페이지 번호 생성 (현재 페이지 주변 5개 정도)
+const generatePageNumbers = () => {
+  const pages = []
+  const maxVisiblePages = 5
+  
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2))
+  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1)
+  
+  // 끝 페이지가 조정되면 시작 페이지도 조정
+  if (endPage - startPage + 1 < maxVisiblePages) {
+    startPage = Math.max(1, endPage - maxVisiblePages + 1)
+  }
+  
+  for (let i = startPage; i <= endPage; i++) {
+    pages.push(i)
+  }
+  
+  return pages
+}
+
+const pageNumbers = generatePageNumbers()
+---
+
+{totalPages > 1 && (
+  <nav class="flex justify-center items-center gap-2 mt-8" aria-label="페이지네이션">
+    {/* 이전 페이지 */}
+    {hasPrevious ? (
+      <a 
+        href={previousPage === 1 ? baseUrl : `${baseUrl}/${previousPage}`}
+        class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+        aria-label="이전 페이지"
+      >
+        이전
+      </a>
+    ) : (
+      <span class="px-3 py-2 text-sm font-medium text-gray-300 bg-white border border-gray-300 rounded-md cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-600">
+        이전
+      </span>
+    )}
+
+    {/* 페이지 번호들 */}
+    {pageNumbers.map((page) => (
+      page === currentPage ? (
+        <span 
+          class="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-md cursor-default"
+          aria-current="page"
+        >
+          {page}
+        </span>
+      ) : (
+        <a 
+          href={page === 1 ? baseUrl : `${baseUrl}/${page}`}
+          class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+          aria-label={`${page}페이지로 이동`}
+        >
+          {page}
+        </a>
+      )
+    ))}
+
+    {/* 다음 페이지 */}
+    {hasNext ? (
+      <a 
+        href={`${baseUrl}/${nextPage}`}
+        class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+        aria-label="다음 페이지"
+      >
+        다음
+      </a>
+    ) : (
+      <span class="px-3 py-2 text-sm font-medium text-gray-300 bg-white border border-gray-300 rounded-md cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-600">
+        다음
+      </span>
+    )}
+  </nav>
+)} 

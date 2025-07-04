@@ -2,30 +2,49 @@
 import { getCollection } from 'astro:content'
 
 import BaseLayout from '@/layouts/BaseLayout.astro'
-import { BLOG_CATEGORIES, type BlogCategory } from '@/consts'
 import CategoryList from '@/components/blogs/CategoryList.astro'
 import BlogCard from '@/components/blogs/BlogCard.astro'
+import BlogPagination from '@/components/common/BlogPagination.astro'
+import { sortPostsByDate, createCategoryList, paginateArray } from '@/lib/blog-utils'
 
-const posts = await getCollection('post')
-const categories = Object.entries(BLOG_CATEGORIES).map(([key, value]) => ({
-  id: key as BlogCategory,
-  label: value,
-  count: key === 'ALL' ? posts.length : posts.filter(post => post.data.category === key).length
-}))
+// 모든 게시글을 가져와서 최신순으로 정렬
+const allPosts = await getCollection('post')
+const sortedPosts = sortPostsByDate(allPosts)
+
+// 첫 번째 페이지 (5개)만 표시
+const POSTS_PER_PAGE = 5
+const { items: paginatedPosts, pagination } = paginateArray(sortedPosts, 1, POSTS_PER_PAGE)
+
+// 카테고리 목록 생성
+const categories = createCategoryList(allPosts)
 ---
 
 <BaseLayout>
   <div class="container mx-auto max-w-6xl px-4 py-12">
     <h1 class="text-center text-4xl font-bold mb-4">All</h1>
-    <p class="text-center text-gray-600 dark:text-gray-400 mb-12">{posts.length} posts</p>
+    <p class="text-center text-gray-600 dark:text-gray-400 mb-12">
+      {sortedPosts.length} posts
+    </p>
     
     <div class="mb-12">
       <CategoryList categories={categories} currentPath={Astro.url.pathname} />
     </div>
 
-    {posts.length > 0 ? (
-      <div class="grid gap-8">
-        {posts.map(post => <BlogCard post={post} />)}
+    {paginatedPosts.length > 0 ? (
+      <div>
+        <div class="grid gap-8 mb-12">
+          {paginatedPosts.map(post => <BlogCard post={post} />)}
+        </div>
+        
+        <BlogPagination 
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          baseUrl="/blogs"
+          hasPrevious={pagination.hasPrevious}
+          hasNext={pagination.hasNext}
+          previousPage={pagination.previousPage}
+          nextPage={pagination.nextPage}
+        />
       </div>
     ) : (
       <div class="text-center py-12">

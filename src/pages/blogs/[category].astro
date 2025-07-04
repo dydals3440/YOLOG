@@ -5,36 +5,44 @@ import BaseLayout from '@/layouts/BaseLayout.astro'
 import { BLOG_CATEGORIES, type BlogCategory } from '@/consts'
 import CategoryList from '@/components/blogs/CategoryList.astro'
 import BlogCard from '@/components/blogs/BlogCard.astro'
+import BlogPagination from '@/components/common/BlogPagination.astro'
 import YongGlass from '@/components/YongGlass.astro'
+import { sortPostsByDate, createCategoryList, filterPostsByCategory, paginateArray } from '@/lib/blog-utils'
 
 export async function getStaticPaths() {
-  const posts = await getCollection('post')
+  const allPosts = await getCollection('post')
   const categories = Object.keys(BLOG_CATEGORIES)
     .filter(category => category !== 'ALL')
     .map(category => category.toLowerCase())
 
-  return categories.map(category => ({
-    params: { category },
-    props: {
-      posts: posts.filter(post => 
-        post.data.category?.toLowerCase() === category
-      ),
-      category,
-      allPosts: posts
+  return categories.map(category => {
+    const categoryKey = category.toUpperCase() as BlogCategory
+    const filteredPosts = filterPostsByCategory(allPosts, categoryKey)
+    const sortedPosts = sortPostsByDate(filteredPosts)
+
+    // 첫 번째 페이지만 표시 (5개)
+    const POSTS_PER_PAGE = 3
+    const { items: paginatedPosts, pagination } = paginateArray(sortedPosts, 1, POSTS_PER_PAGE)
+
+    return {
+      params: { category },
+      props: {
+        posts: paginatedPosts,
+        pagination,
+        allPosts,
+        category,
+        totalPostsInCategory: sortedPosts.length
+      }
     }
-  }))
+  })
 }
 
-const { posts, allPosts, category } = Astro.props
+const { posts, pagination, allPosts, category, totalPostsInCategory } = Astro.props
 
-const categories = Object.entries(BLOG_CATEGORIES).map(([key, value]) => ({
-  id: key as BlogCategory,
-  label: value,
-  count: key === 'ALL' 
-    ? allPosts.length 
-    : allPosts.filter(post => post.data.category === key).length
-}))
+// 카테고리 목록 생성
+const categories = createCategoryList(allPosts)
 
+// 현재 카테고리 라벨 찾기
 const currentCategory = Object.entries(BLOG_CATEGORIES)
   .find(([key]) => key.toLowerCase() === category)?.[1] || category
 ---
@@ -42,15 +50,27 @@ const currentCategory = Object.entries(BLOG_CATEGORIES)
 <BaseLayout>
   <div class="container mx-auto max-w-6xl px-4 py-12">
     <h1 class="text-center text-4xl font-bold mb-4">{currentCategory}</h1>
-    <p class="text-center text-gray-600 dark:text-gray-400 mb-12">{posts.length} posts</p>
+    <p class="text-center text-gray-600 dark:text-gray-400 mb-12">{totalPostsInCategory} posts</p>
     
     <div class="mb-12">
       <CategoryList categories={categories} currentPath={Astro.url.pathname} />
     </div>
 
     {posts.length > 0 ? (
-      <div class="grid gap-8">
-        {posts.map(post => <BlogCard post={post} />)}
+      <div>
+        <div class="grid gap-8 mb-12">
+          {posts.map(post => <BlogCard post={post} />)}
+        </div>
+        
+        <BlogPagination 
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          baseUrl={`/blogs/${category}`}
+          hasPrevious={pagination.hasPrevious}
+          hasNext={pagination.hasNext}
+          previousPage={pagination.previousPage}
+          nextPage={pagination.nextPage}
+        />
       </div>
     ) : (
       <div class="mx-auto flex max-w-md flex-col items-center justify-center space-y-6 py-16 text-center">
