@@ -1,0 +1,233 @@
+---
+interface Props {
+  adClient?: string;
+  adSlot?: string;
+  style?: string;
+  format?: 'auto' | 'rectangle' | 'horizontal' | 'vertical';
+  fullWidthResponsive?: boolean;
+  className?: string;
+  size?: 'small' | 'medium' | 'large';
+}
+
+const {
+  adClient = 'ca-pub-3296643559689345',
+  adSlot = '7152656113',
+  style,
+  format = 'auto',
+  fullWidthResponsive = true,
+  className = '',
+  size = 'medium'
+} = Astro.props;
+
+// 크기별 스타일 설정
+const sizeStyles = {
+  small: 'display:block;width:100%;min-height:50px;max-height:90px;',
+  medium: 'display:block;width:100%;min-height:90px;max-height:250px;',
+  large: 'display:block;width:100%;min-height:250px;max-height:400px;'
+};
+
+const finalStyle = style || sizeStyles[size];
+const isDev = import.meta.env.DEV;
+---
+
+<!-- AdSense 광고 영역 -->
+<div class={`adsense-container ${className}`}>
+  <!-- 개발 환경에서만 디버그 정보 표시 -->
+  {isDev && (
+    <details class="adsense-debug mb-4">
+      <summary class="cursor-pointer text-sm text-gray-600 hover:text-gray-800 transition-colors">
+        🔍 AdSense 디버그 정보 (클릭하여 열기)
+      </summary>
+      <div class="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-xs text-gray-700 dark:text-gray-300 space-y-2">
+        <div><strong>환경:</strong> 개발 모드 (localhost)</div>
+        <div><strong>광고 상태:</strong> ❌ localhost에서는 AdSense 광고가 표시되지 않습니다</div>
+        <div><strong>Client ID:</strong> {adClient}</div>
+        <div><strong>Slot ID:</strong> {adSlot}</div>
+        <div><strong>크기:</strong> {size} ({finalStyle})</div>
+        <div class="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600">
+          <div><strong>AdSense가 안 나오는 이유:</strong></div>
+          <ul class="list-disc list-inside ml-2 mt-1 space-y-1">
+            <li><strong>개발 환경:</strong> localhost에서는 절대 광고 표시 안됨</li>
+            <li><strong>사이트 승인:</strong> AdSense 계정에서 사이트 승인 필요</li>
+            <li><strong>트래픽:</strong> 일일 방문자 100명 이상 권장</li>
+            <li><strong>광고 차단기:</strong> 브라우저 확장 프로그램이 차단</li>
+            <li><strong>HTTPS:</strong> 보안 연결 필수</li>
+            <li><strong>콘텐츠:</strong> AdSense 정책 준수 필요</li>
+          </ul>
+        </div>
+        <div class="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600">
+          <div><strong>확인 방법:</strong></div>
+          <ul class="list-disc list-inside ml-2 mt-1 space-y-1">
+            <li>실제 도메인(yolog.co.kr)에서 테스트</li>
+            <li>AdSense 계정에서 승인 상태 확인</li>
+            <li>ads.txt 파일 확인 (/public/ads.txt)</li>
+            <li>브라우저 콘솔에서 오류 메시지 확인</li>
+          </ul>
+        </div>
+      </div>
+    </details>
+  )}
+
+  <ins
+    class="adsbygoogle"
+    style={finalStyle}
+    data-ad-client={adClient}
+    data-ad-slot={adSlot}
+    data-ad-format={format}
+    data-full-width-responsive={fullWidthResponsive ? 'true' : 'false'}
+  ></ins>
+</div>
+
+<!-- AdSense 스크립트 -->
+<script is:inline define:vars={{ adClient, isDev }}>
+  // AdSense 스크립트가 이미 로드되었는지 확인
+  if (!window.adsbygoogle) {
+    window.adsbygoogle = window.adsbygoogle || [];
+    
+    // 스크립트 태그가 이미 있는지 확인
+    const existingScript = document.querySelector(`script[src*="${adClient}"]`);
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.async = true;
+      script.crossOrigin = 'anonymous';
+      script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adClient}`;
+      
+      script.onload = () => {
+        if (isDev) {
+          console.log('✅ AdSense 스크립트 로드 완료');
+        }
+      };
+      
+      script.onerror = () => {
+        if (isDev) {
+          console.error('❌ AdSense 스크립트 로드 실패');
+        }
+      };
+      
+      document.head.appendChild(script);
+    }
+  }
+  
+  // 광고 푸시
+  try {
+    (window.adsbygoogle = window.adsbygoogle || []).push({});
+    if (isDev) {
+      console.log('📢 AdSense 광고 푸시 완료');
+    }
+  } catch (e) {
+    if (isDev) {
+      console.error('❌ AdSense 푸시 실패:', e);
+    }
+  }
+  
+  // 개발 환경에서 광고 로딩 상태 체크
+  if (isDev && typeof window !== 'undefined') {
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const ads = document.querySelectorAll('.adsbygoogle');
+        ads.forEach((ad, index) => {
+          if (ad.innerHTML.trim() === '' || ad.getAttribute('data-adsbygoogle-status') !== 'done') {
+            console.warn(`⚠️ AdSense 광고 #${index + 1}이 로드되지 않았습니다.`);
+            
+            // localhost에서는 플레이스홀더 표시
+            if (window.location.hostname === 'localhost') {
+              ad.innerHTML = `
+                <div style="
+                  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); 
+                  border: 2px dashed #cbd5e1; 
+                  padding: 20px; 
+                  text-align: center; 
+                  color: #64748b;
+                  border-radius: 12px;
+                  font-family: system-ui, -apple-system, sans-serif;
+                  position: relative;
+                  overflow: hidden;
+                ">
+                  <div style="font-size: 24px; margin-bottom: 8px;">📺</div>
+                  <div style="font-weight: 600; margin-bottom: 4px;">AdSense 광고 영역</div>
+                  <div style="font-size: 12px; opacity: 0.7;">
+                    실제 사이트에서는 여기에 광고가 표시됩니다
+                  </div>
+                  <div style="
+                    position: absolute; 
+                    top: 0; 
+                    left: -100%; 
+                    width: 100%; 
+                    height: 100%; 
+                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+                    animation: shimmer 2s infinite;
+                  "></div>
+                </div>
+                <style>
+                  @keyframes shimmer {
+                    0% { left: -100%; }
+                    100% { left: 100%; }
+                  }
+                </style>
+              `;
+            }
+          } else {
+            console.log(`✅ AdSense 광고 #${index + 1} 로드 완료`);
+          }
+        });
+      }, 3000); // 3초 후 체크
+    });
+  }
+</script>
+
+<style>
+  .adsense-container {
+    margin: 1.5rem 0;
+    text-align: center;
+  }
+  
+  .adsbygoogle {
+    display: block;
+    margin: 0 auto;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  /* 광고 로딩 중 스켈레톤 (높이 부담 없게) */
+  .adsbygoogle:empty {
+    background: linear-gradient(90deg, #f8fafc 25%, #e2e8f0 50%, #f8fafc 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    min-height: 50px; /* 최소 높이만 설정 */
+    border: 1px solid #e2e8f0;
+  }
+  
+  @keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  
+  /* 다크모드 지원 */
+  :global(.dark) .adsbygoogle:empty {
+    background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+    background-size: 200% 100%;
+    border-color: #334155;
+  }
+  
+  /* 디버그 정보 스타일 */
+  .adsense-debug summary {
+    padding: 8px 12px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+  
+  :global(.dark) .adsense-debug summary {
+    background: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+  }
+  
+  /* 반응형 광고 크기 조정 */
+  @media (max-width: 768px) {
+    .adsbygoogle {
+      max-height: 200px; /* 모바일에서는 더 작게 */
+    }
+  }
+</style> 

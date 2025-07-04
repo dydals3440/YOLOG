@@ -5,7 +5,6 @@ import BaseLayout from '@/layouts/BaseLayout.astro'
 import { BLOG_CATEGORIES, type BlogCategory } from '@/consts'
 import CategoryList from '@/components/blogs/CategoryList.astro'
 import BlogCard from '@/components/blogs/BlogCard.astro'
-import BlogPagination from '@/components/common/BlogPagination.astro'
 import YongGlass from '@/components/YongGlass.astro'
 import { sortPostsByDate, createCategoryList, filterPostsByCategory, paginateArray } from '@/lib/blog-utils'
 
@@ -61,16 +60,6 @@ const currentCategory = Object.entries(BLOG_CATEGORIES)
         <div class="grid gap-8 mb-12">
           {posts.map(post => <BlogCard post={post} />)}
         </div>
-        
-        <BlogPagination 
-          currentPage={pagination.currentPage}
-          totalPages={pagination.totalPages}
-          baseUrl={`/blogs/${category}`}
-          hasPrevious={pagination.hasPrevious}
-          hasNext={pagination.hasNext}
-          previousPage={pagination.previousPage}
-          nextPage={pagination.nextPage}
-        />
       </div>
     ) : (
       <div class="mx-auto flex max-w-md flex-col items-center justify-center space-y-6 py-16 text-center">

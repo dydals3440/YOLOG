@@ -4,7 +4,6 @@ import { getCollection } from 'astro:content'
 import BaseLayout from '@/layouts/BaseLayout.astro'
 import CategoryList from '@/components/blogs/CategoryList.astro'
 import BlogCard from '@/components/blogs/BlogCard.astro'
-import BlogPagination from '@/components/common/BlogPagination.astro'
 import { sortPostsByDate, createCategoryList, paginateArray } from '@/lib/blog-utils'
 
 // 모든 게시글을 가져와서 최신순으로 정렬
@@ -35,16 +34,6 @@ const categories = createCategoryList(allPosts)
         <div class="grid gap-8 mb-12">
           {paginatedPosts.map(post => <BlogCard post={post} />)}
         </div>
-        
-        <BlogPagination 
-          currentPage={pagination.currentPage}
-          totalPages={pagination.totalPages}
-          baseUrl="/blogs"
-          hasPrevious={pagination.hasPrevious}
-          hasNext={pagination.hasNext}
-          previousPage={pagination.previousPage}
-          nextPage={pagination.nextPage}
-        />
       </div>
     ) : (
       <div class="text-center py-12">
