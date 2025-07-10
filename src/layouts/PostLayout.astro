@@ -15,7 +15,6 @@ import { UndoIcon } from '@/components/ui/icons'
 import { generateDescription, parseToc } from '@/lib/mdx'
 import LeftSidebar from '@/layouts/partials/LeftSidebar.astro'
 import Pagination from '@/components/common/Pagination.astro'
-import AdSenseAd from '@/components/common/AdSenseAd.astro'
 
 import BaseLayout from './BaseLayout.astro'
 
@@ -73,12 +72,6 @@ const { Content } = await post.render()
     <footer class="px-0">
       <hr class="mb-7 mt-4" />
       <Pagination {prevPost} {nextPost} />
-      <AdSenseAd
-        adClient="ca-pub-3296643559689345"
-        adSlot="7152656113"
-        size="small"
-        format="auto"
-      />
       <GiscusComment className="mx-auto my-half-page" client:load />
     </footer>
   </section>
