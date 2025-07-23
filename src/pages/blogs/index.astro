@@ -4,47 +4,57 @@ import { getCollection } from 'astro:content'
 import BaseLayout from '@/layouts/BaseLayout.astro'
 import CategoryList from '@/components/blogs/CategoryList.astro'
 import BlogCard from '@/components/blogs/BlogCard.astro'
+import Pagination from '@/components/blogs/Pagination.astro'
 import { sortPostsByDate, createCategoryList, paginateArray } from '@/lib/blog-utils'
 
-// 모든 게시글을 가져와서 최신순으로 정렬
 const allPosts = await getCollection('post')
 const sortedPosts = sortPostsByDate(allPosts)
-
-// 첫 번째 페이지 (5개)만 표시
-const POSTS_PER_PAGE = 5
-const { items: paginatedPosts, pagination } = paginateArray(sortedPosts, 1, POSTS_PER_PAGE)
-
-// 카테고리 목록 생성
 const categories = createCategoryList(allPosts)
+
+const POSTS_PER_PAGE = 5
+const { items: posts, pagination } = paginateArray(sortedPosts, 1, POSTS_PER_PAGE)
 ---
 
 <BaseLayout>
-  <div class="container mx-auto max-w-6xl px-4 py-12">
-    <h1 class="text-center text-4xl font-bold mb-4">All</h1>
-    <p class="text-center text-gray-600 dark:text-gray-400 mb-12">
-      {sortedPosts.length} posts
-    </p>
-    
-    <div class="mb-12">
-      <CategoryList categories={categories} currentPath={Astro.url.pathname} />
-    </div>
+  <div class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto max-w-5xl px-4 py-12">
+      <div class="text-center mb-16">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">All Posts</h1>
+        <p class="text-gray-600 text-lg">
+          전체 {sortedPosts.length}개의 글
+        </p>
+      </div>
+      
+      <div class="mb-12">
+        <CategoryList categories={categories} currentPath={Astro.url.pathname} />
+      </div>
 
-    {paginatedPosts.length > 0 ? (
-      <div>
-        <div class="grid gap-8 mb-12">
-          {paginatedPosts.map(post => <BlogCard post={post} />)}
+      {posts.length > 0 ? (
+        <div>
+          <div class="grid gap-6 mb-16">
+            {posts.map(post => <BlogCard post={post} />)}
+          </div>
+          
+          <div class="flex justify-center">
+            <Pagination pagination={pagination} basePath="/blogs" />
+          </div>
         </div>
-      </div>
-    ) : (
-      <div class="text-center py-12">
-        <p class="text-lg text-gray-600 dark:text-gray-400 mb-2">
-          해당하는 게시글이 없습니다.
-        </p>
-        <p class="text-base text-gray-500 dark:text-gray-500">
-          잠시 기다려주시면 좋은 글로 찾아뵙겠습니다.
-        </p>
-      </div>
-    )}
+      ) : (
+        <div class="bg-white rounded-xl p-12 text-center shadow-sm border border-gray-200">
+          <div class="text-gray-400 mb-4">
+            <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+          </div>
+          <p class="text-xl text-gray-800 font-medium mb-2">
+            해당하는 게시글이 없습니다.
+          </p>
+          <p class="text-gray-600">
+            잠시 기다려주시면 좋은 글로 찾아뵙겠습니다.
+          </p>
+        </div>
+      )}
+    </div>
   </div>
 </BaseLayout>
 

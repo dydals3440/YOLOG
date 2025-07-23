@@ -67,6 +67,8 @@ export function calculatePagination(
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const remainingItems = totalItems - endIndex;
+  const hasNextPage = remainingItems > 0;
 
   return {
     totalPages,
@@ -74,9 +76,9 @@ export function calculatePagination(
     startIndex,
     endIndex,
     hasPrevious: currentPage > 1,
-    hasNext: currentPage < totalPages,
+    hasNext: hasNextPage,
     previousPage: currentPage > 1 ? currentPage - 1 : null,
-    nextPage: currentPage < totalPages ? currentPage + 1 : null,
+    nextPage: hasNextPage ? currentPage + 1 : null,
   };
 }
 

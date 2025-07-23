@@ -11,7 +11,7 @@ export const BLOG_CATEGORIES = {
   DEVELOPMENT: '개발',
   REVIEW: '회고',
   CAREER: '커리어',
-  LIFE: '라이프',
+  STORY: '이야기',
 } as const;
 
 export type BlogCategory = keyof typeof BLOG_CATEGORIES;

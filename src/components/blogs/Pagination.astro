@@ -1,0 +1,103 @@
+---
+interface Props {
+  pagination: {
+    currentPage: number
+    totalPages: number
+    hasPrevious: boolean
+    hasNext: boolean
+    previousPage: number | null
+    nextPage: number | null
+  }
+  basePath: string
+}
+
+const { pagination, basePath } = Astro.props
+
+const getPageUrl = (page: number) => page === 1 ? basePath : `${basePath}/page/${page}`
+
+const generatePageNumbers = () => {
+  const { currentPage, totalPages } = pagination
+  const delta = 2
+  const range = []
+  const rangeWithDots = []
+
+  for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+    range.push(i)
+  }
+
+  if (currentPage - delta > 2) {
+    rangeWithDots.push(1, '...')
+  } else {
+    rangeWithDots.push(1)
+  }
+
+  rangeWithDots.push(...range)
+
+  if (currentPage + delta < totalPages - 1) {
+    rangeWithDots.push('...', totalPages)
+  } else {
+    rangeWithDots.push(totalPages)
+  }
+
+  return totalPages === 1 ? [1] : rangeWithDots
+}
+
+const pageNumbers = generatePageNumbers()
+---
+
+<nav class="flex justify-center items-center gap-2" aria-label="페이지네이션">
+  {pagination.hasPrevious ? (
+    <a
+      href={getPageUrl(pagination.previousPage!)}
+      class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-800 hover:border-gray-400 transition-all duration-200"
+      aria-label="이전 페이지"
+    >
+      ← 이전
+    </a>
+  ) : (
+    <span class="flex items-center px-4 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
+      ← 이전
+    </span>
+  )}
+
+  <div class="flex gap-1">
+    {pageNumbers.map((pageNum, index) => (
+      pageNum === '...' ? (
+        <span
+          key={`ellipsis-${index}`}
+          class="flex items-center px-2 py-2 text-sm text-gray-500"
+        >
+          …
+        </span>
+      ) : (
+        <a
+          key={pageNum}
+          href={getPageUrl(pageNum as number)}
+          class={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+            pageNum === pagination.currentPage
+              ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
+              : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+          }`}
+          aria-label={`${pageNum}페이지로 이동`}
+          aria-current={pageNum === pagination.currentPage ? 'page' : undefined}
+        >
+          {pageNum}
+        </a>
+      )
+    ))}
+  </div>
+
+  {pagination.hasNext ? (
+    <a
+      href={getPageUrl(pagination.nextPage!)}
+      class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-800 hover:border-gray-400 transition-all duration-200"
+      aria-label="다음 페이지"
+    >
+      다음 →
+    </a>
+  ) : (
+    <span class="flex items-center px-4 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
+      다음 →
+    </span>
+  )}
+</nav>

@@ -13,22 +13,22 @@ const slug = post.slug.replace('blog/', '')
 
 ---
 
-<article class="group hover:scale-105 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-200 rounded-2xl p-4">
+<article class="group bg-white rounded-xl border border-gray-200 p-6 transition-all duration-300 hover:shadow-lg hover:border-gray-300 hover:-translate-y-1">
   <a href={`/post/${slug}`} class="block">
-    <div class="mb-4">
-      <span class="text-sm text-gray-500 dark:text-gray-400">
+    <div class="mb-3">
+      <span class="inline-block px-3 py-1 text-xs font-medium text-blue-700 bg-blue-50 rounded-full border border-blue-200">
         {BLOG_CATEGORIES[category as BlogCategory]}
       </span>
     </div>
-    <h2 class="mb-2 text-xl font-medium text-gray-900 group-hover:text-primary dark:text-white dark:group-hover:text-primary-400">
+    <h2 class="mb-3 text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
       {title}
     </h2>
     {description && (
-      <p class="mb-4 text-base text-gray-600 dark:text-gray-300">
+      <p class="mb-4 text-sm text-gray-600 line-clamp-3 leading-relaxed">
         {description}
       </p>
     )}
-    <time datetime={date.toISOString()} class="text-sm text-gray-500 dark:text-gray-400">
+    <time datetime={date.toISOString()} class="text-xs text-gray-500 font-medium">
       {new Date(date).toLocaleDateString('ko-KR', { 
         year: 'numeric',
         month: 'long',

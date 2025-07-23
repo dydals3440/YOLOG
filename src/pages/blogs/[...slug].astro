@@ -1,0 +1,157 @@
+---
+import { getCollection } from 'astro:content'
+
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import { BLOG_CATEGORIES, type BlogCategory } from '@/consts'
+import CategoryList from '@/components/blogs/CategoryList.astro'
+import BlogCard from '@/components/blogs/BlogCard.astro'
+import Pagination from '@/components/blogs/Pagination.astro'
+import YongGlass from '@/components/YongGlass.astro'
+import { sortPostsByDate, createCategoryList, filterPostsByCategory, paginateArray } from '@/lib/blog-utils'
+
+export async function getStaticPaths() {
+  const allPosts = await getCollection('post')
+  const categories = Object.keys(BLOG_CATEGORIES)
+    .filter(category => category !== 'ALL')
+    .map(category => category.toLowerCase())
+
+  const paths = []
+  const POSTS_PER_PAGE = 5
+
+  // 전체 블로그 페이지네이션 (2페이지부터)
+  const totalAllPages = Math.ceil(sortPostsByDate(allPosts).length / POSTS_PER_PAGE)
+  for (let page = 2; page <= totalAllPages; page++) {
+    const { items: posts, pagination } = paginateArray(sortPostsByDate(allPosts), page, POSTS_PER_PAGE)
+    
+    paths.push({
+      params: { slug: `page/${page}` },
+      props: {
+        posts,
+        pagination: {
+          ...pagination,
+          totalPosts: allPosts.length
+        },
+        categories: createCategoryList(allPosts),
+        category: null,
+        categoryLabel: 'All'
+      }
+    })
+  }
+
+  // 각 카테고리별 페이지네이션
+  for (const category of categories) {
+    const categoryKey = category.toUpperCase() as BlogCategory
+    const filteredPosts = filterPostsByCategory(allPosts, categoryKey)
+    const sortedPosts = sortPostsByDate(filteredPosts)
+    
+    const categoryPostsPerPage = 3
+    const totalCategoryPages = Math.ceil(sortedPosts.length / categoryPostsPerPage)
+    
+    // 카테고리 1페이지
+    const { items: firstPagePosts, pagination: firstPagination } = paginateArray(sortedPosts, 1, categoryPostsPerPage)
+    paths.push({
+      params: { slug: category },
+      props: {
+        posts: firstPagePosts,
+        pagination: {
+          ...firstPagination,
+          totalPosts: sortedPosts.length
+        },
+        categories: createCategoryList(allPosts),
+        category,
+        categoryLabel: BLOG_CATEGORIES[categoryKey],
+        totalPostsInCategory: sortedPosts.length
+      }
+    })
+    
+    // 카테고리 2페이지부터
+    for (let page = 2; page <= totalCategoryPages; page++) {
+      const { items: posts, pagination } = paginateArray(sortedPosts, page, categoryPostsPerPage)
+      
+      paths.push({
+        params: { slug: `${category}/page/${page}` },
+        props: {
+          posts,
+          pagination: {
+            ...pagination,
+            totalPosts: sortedPosts.length
+          },
+          categories: createCategoryList(allPosts),
+          category,
+          categoryLabel: BLOG_CATEGORIES[categoryKey],
+          totalPostsInCategory: sortedPosts.length
+        }
+      })
+    }
+  }
+
+  return paths
+}
+
+const { posts, pagination, categories, category, categoryLabel, totalPostsInCategory } = Astro.props
+
+// URL 기반 경로 설정
+const basePath = category ? `/blogs/${category}` : '/blogs'
+const totalPosts = totalPostsInCategory || pagination.totalPosts
+---
+
+<BaseLayout>
+  <div class="container mx-auto max-w-6xl px-4 py-12">
+    <h1 class="text-center text-4xl font-bold mb-4">{categoryLabel}</h1>
+    <p class="text-center text-gray-600 dark:text-gray-400 mb-12">{totalPosts} posts</p>
+    
+    <div class="mb-12">
+      <CategoryList categories={categories} currentPath={Astro.url.pathname} />
+    </div>
+
+    {posts.length > 0 ? (
+      <div>
+        <div class="grid gap-8 mb-12">
+          {posts.map(post => <BlogCard post={post} />)}
+        </div>
+        
+        {pagination.totalPages > 1 && (
+          <Pagination pagination={pagination} basePath={basePath} />
+        )}
+      </div>
+    ) : (
+      <div class="mx-auto flex max-w-md flex-col items-center justify-center space-y-6 py-16 text-center">
+        <div class="relative">
+          <div class="absolute -inset-1 animate-pulse rounded-full bg-gradient-to-r from-purple-100 to-pink-100 opacity-75 blur-xl"></div>
+          <YongGlass className="relative h-24 w-24 text-gray-900/80" />
+        </div>
+
+        <div class="space-y-2">
+          <p class="text-xl font-bold">
+            {category ? '카테고리에 해당하는 게시글이 없습니다' : '게시글이 없습니다'}
+          </p>
+          <p class="text-base text-gray-600">
+            잠시 기다려주시면 좋은 글로 찾아뵙겠습니다
+          </p>
+        </div>
+
+        <a 
+          href="/" 
+          class="group mt-2 inline-flex items-center gap-2 rounded-full bg-gray-50 px-4 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-100"
+        >
+          <span>메인으로 돌아가기</span>
+          <svg 
+            class="h-4 w-4 transition-transform group-hover:translate-x-0.5" 
+            xmlns="http://www.w3.org/2000/svg" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+      </div>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+  .group:hover .group-hover\:scale-100 {
+    transform: scale(1);
+  }
+</style>
