@@ -1,0 +1,26 @@
+---
+import { isProduction } from '@/lib/utils'
+
+interface Props {
+  slot: string
+  format?: 'auto' | 'fluid' | 'rectangle' | 'vertical' | 'horizontal'
+  responsive?: boolean
+  className?: string
+}
+
+const { slot, format = 'auto', responsive = true, className = '' } = Astro.props
+---
+
+{isProduction && (
+  <div class={`google-adsense-container ${className}`}>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3296643559689345"
+         data-ad-slot={slot}
+         data-ad-format={format}
+         data-full-width-responsive={responsive}></ins>
+    <script>
+       (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+)}
