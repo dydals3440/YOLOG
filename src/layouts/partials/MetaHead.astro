@@ -10,7 +10,7 @@ interface Props extends SEOModel {}
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site)
 
-const { title = WEBSITE_CONFIG.TITLE, description = WEBSITE_CONFIG.DESCRIPTION, image = WEBSITE_CONFIG.OG_IMAGE } = Astro.props
+const { title = WEBSITE_CONFIG.TITLE, description = WEBSITE_CONFIG.DESCRIPTION, image = WEBSITE_CONFIG.OG_IMAGE, keywords } = Astro.props
 const formattedTitle = title === WEBSITE_CONFIG.TITLE ? title : WEBSITE_CONFIG.TITLE_TEMPLATE.replace('%s', title)
 
 ---
@@ -34,6 +34,7 @@ const formattedTitle = title === WEBSITE_CONFIG.TITLE ? title : WEBSITE_CONFIG.T
 <title>{formattedTitle}</title>
 <meta name="title" content={formattedTitle} />
 <meta name="description" content={description} />
+{keywords && keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
 
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content="website" />
@@ -52,3 +53,15 @@ const formattedTitle = title === WEBSITE_CONFIG.TITLE ? title : WEBSITE_CONFIG.T
 
 <!-- Fonts -->
 <FontLoader />
+
+<!-- Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": {JSON.stringify(formattedTitle)},
+  "description": {JSON.stringify(description)},
+  "url": {JSON.stringify(canonicalURL.toString())},
+  ...(keywords && keywords.length > 0 ? { "keywords": keywords.join(', ') } : {})
+}
+</script>
