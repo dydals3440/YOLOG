@@ -1,6 +1,7 @@
 ---
 import Yong from '@/components/Yong.astro'
 import BaseLayout from '@/layouts/BaseLayout.astro'
+import GoogleAdsense from '@/components/GoogleAdsense.astro'
 ---
 
 <BaseLayout>
@@ -25,5 +26,10 @@ import BaseLayout from '@/layouts/BaseLayout.astro'
     <div class="flex justify-center mt-12">
       <Yong />
     </div>
+    
+    <GoogleAdsense 
+      slot="9876543210" 
+      className="my-12" 
+    />
   </div>
 </BaseLayout>
