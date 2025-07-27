@@ -10,7 +10,7 @@ export const BLOG_CATEGORIES = {
   ALL: '전체',
   DEVELOPMENT: '개발',
   REVIEW: '회고',
-  CAREER: '커리어',
+  HTTP: 'HTTP',
   STORY: '이야기',
 } as const;
 
