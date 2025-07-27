@@ -11,6 +11,7 @@ import MediumZoomScript from '@/components/post/MediumZoomScript.astro'
 import { PageActions } from '@/components/post/PageActions'
 import PostImage from '@/components/post/PostImage.astro'
 import TableOfContent from '@/components/post/TableOfContent'
+import { SocialShare } from '@/components/post/SocialShare'
 import { UndoIcon } from '@/components/ui/icons'
 import { generateDescription, parseToc } from '@/lib/mdx'
 import LeftSidebar from '@/layouts/partials/LeftSidebar.astro'
@@ -65,6 +66,13 @@ const { Content } = await post.render()
   <section>
     <h1 class="mt-14">{title}</h1>
     <time datetime={formattedDate} class="text-sm">{formattedDate}</time>
+    <div class="mt-6">
+      <SocialShare 
+        title={title} 
+        url={Astro.url.href} 
+        client:load 
+      />
+    </div>
   </section>
   <section>
     <article data-animate data-animate-speed="fast" class="mdx mt-14">
