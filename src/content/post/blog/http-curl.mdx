@@ -22,11 +22,12 @@ image: '/images/http-curl/thumbnail.png'
 맥북 같은 경우는 감사하게도 자체적으로 curl이 내장 기능으로 탑재되어 있다.
 
 ```bash
-// mac
+# mac
 which curl
 
 curl https://dummyjson.com/comments/1
-// {"id":1,"body":"This is some awesome thinking!","postId":242,"likes":3,"user":{"id":105,"username":"emmac","fullName":"Emma Wilson"}}%
+
+# {"id":1,"body":"This is some awesome thinking!","postId":242,"likes":3,"user":{"id":105,"username":"emmac","fullName":"Emma Wilson"}}%
 ```
 
 실제로, 이런식으로 **CURL**을 활용해서 서버에 요청을 보내서 응답을 출력할 수 있다.
@@ -35,7 +36,7 @@ curl https://dummyjson.com/comments/1
 조금 더 요청에 대한 자세한 정보를 보고싶으면 아래와 같이 하면된다.
 
 ```bash
-// mac
+# mac
 which curl
 
 curl https://dummyjson.com/comments/1 --verbose
@@ -49,11 +50,11 @@ curl https://dummyjson.com/comments/1 --verbose
 
 ## **> : 클라이언트 → 서버로 보내는 요청 헤더**
 
-```markdown
+```bash
 > GET /comments/1 HTTP/2
 > Host: dummyjson.com
 > User-Agent: curl/8.7.1
-> Accept: _/_
+> Accept: */*
 ```
 
 | 항목                     | 설명                                                                                                                                                    |
@@ -65,11 +66,11 @@ curl https://dummyjson.com/comments/1 --verbose
 
 ---
 
-## **> :** 서버 → 클라이언트로 보낸 응답 헤더
+## **< : 서버 → 클라이언트로 보낸 응답 헤더**
 
-```markdown
+```bash
 < HTTP/2 200
-< access-control-allow-origin: \*
+< access-control-allow-origin: *
 < content-type: application/json; charset=utf-8
 < date: Tue, 29 Jul 2025 10:25:21 GMT
 < etag: W/"85-FEb3h4CPX0SmhhGt/sXFy+BW+u4"
