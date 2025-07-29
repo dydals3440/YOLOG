@@ -24,24 +24,24 @@ interface ShareOption {
 const SHARE_OPTIONS: ShareOption[] = [
   {
     platform: 'twitter',
-    icon: <TwitterXIcon className='w-5 h-5' />,
+    icon: <TwitterXIcon className='w-4 h-4 sm:w-5 sm:h-5' />,
     label: 'Twitter에 공유',
   },
   {
     platform: 'facebook',
-    icon: <FacebookIcon className='w-5 h-5' />,
+    icon: <FacebookIcon className='w-4 h-4 sm:w-5 sm:h-5' />,
     label: 'Facebook에 공유',
   },
   {
     platform: 'linkedin',
-    icon: <LinkedinIcon className='w-5 h-5' />,
+    icon: <LinkedinIcon className='w-4 h-4 sm:w-5 sm:h-5' />,
     label: 'LinkedIn에 공유',
   },
 ];
 
 const ShareIcon = () => (
   <svg
-    className='w-5 h-5'
+    className='w-4 h-4 sm:w-5 sm:h-5'
     fill='none'
     stroke='currentColor'
     viewBox='0 0 24 24'
@@ -112,15 +112,11 @@ export const SocialShare = ({ title, url }: SocialShareProps) => {
   };
 
   const shareButtonClass =
-    'w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors p-0';
+    'w-8 h-8 sm:w-10 sm:h-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors p-0';
 
   return (
-    <div className='flex items-center gap-4 p-4 border rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'>
-      <h3 className='text-sm font-bold text-gray-700 dark:text-white'>
-        공유하기
-      </h3>
-
-      <div className='flex items-center gap-1.5'>
+    <div className='flex items-center gap-2 sm:gap-4 p-2 sm:p-4 border rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'>
+      <div className='flex items-center gap-1 sm:gap-1.5'>
         {typeof navigator !== 'undefined' && 'share' in navigator && (
           <>
             <Button
@@ -133,7 +129,7 @@ export const SocialShare = ({ title, url }: SocialShareProps) => {
             >
               <ShareIcon />
             </Button>
-            <div className='h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1' />
+            <div className='h-5 sm:h-6 w-px bg-gray-300 dark:bg-gray-600 mx-0.5 sm:mx-1' />
           </>
         )}
 
@@ -151,7 +147,7 @@ export const SocialShare = ({ title, url }: SocialShareProps) => {
           </Button>
         ))}
 
-        <div className='h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1' />
+        <div className='h-5 sm:h-6 w-px bg-gray-300 dark:bg-gray-600 mx-0.5 sm:mx-1' />
 
         <Button
           variant='ghost'
@@ -162,7 +158,7 @@ export const SocialShare = ({ title, url }: SocialShareProps) => {
           title='링크 복사'
           aria-label='링크 복사'
         >
-          <LinkIcon className='w-5 h-5' />
+          <LinkIcon className='w-4 h-4 sm:w-5 sm:h-5' />
         </Button>
       </div>
     </div>

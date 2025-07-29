@@ -1,0 +1,345 @@
+---
+title: HTTP 통신의 핵심 개념-TCP 3-Way Handshake부터 응답까지
+date: 2025-07-30
+updatedDate: 2025-07-30
+tags: [TCP, HTTP, HTTP 통신, HTTP 요청, HTTP 응답, HTTP 헤더]
+category: HTTP
+image: '/images/http-tcp/thumbnail.png'
+---
+
+# HTTP 통신의 핵심 개념: TCP 3-Way Handshake부터 응답까지
+
+웹 개발자라면 매일 HTTP 통신을 다루지만, 정작 그 내부 동작 원리를 정확히 이해하고 있는 경우는 많지 않습니다.
+
+저 또한, HTTP 통신의 핵심 개념을 정확히 이해하고 있지 않아 이번 포스트를 작성하게 되었습니다.
+
+이번 포스트에서는 HTTP 통신의 전체 과정을 TCP 연결 수립부터 요청과 응답까지 학습한 내용을 바탕으로 정리해 보겠습니다.
+
+![HTTP 통신의 핵심 개념: TCP 3-Way Handshake부터 응답까지](/images/http-tcp/thumbnail.png)
+
+## 1. TCP 3-Way Handshake: HTTP 통신의 시작점
+
+HTTP는 애플리케이션 계층 프로토콜로, 전송 계층의 TCP 위에서 동작합니다. 따라서 HTTP 통신을 시작하기 전에 반드시 TCP 연결이 먼저 수립되어야 합니다.
+
+### 3-Way Handshake 과정
+
+```
+Client                    Server
+  |                         |
+  |-------SYN-------->      |  (1) 연결 요청
+  |                         |
+  |<-----SYN+ACK-----       |  (2) 연결 수락 + 확인
+  |                         |
+  |-------ACK-------->      |  (3) 확인 응답
+  |                         |
+  [TCP Connection Established]
+
+```
+
+실제 `curl` 명령어로 확인해보면 다음과 같은 과정을 거칩니다:
+
+`--verbose`를 통해서 더 자세한 정보를 받을 수 있다.
+
+```bash
+curl https://dummyjson.com/comments/1 --verbose // -v 단축 가능
+```
+
+**1단계: DNS 조회**
+
+```
+* Host dummyjson.com:443 was resolved.
+* IPv4: 66.33.22.3, 66.33.22.2, 66.33.22.4, 66.33.22.1
+```
+
+- 도메인 이름을 IP 주소로 변환
+- 여러 IP가 반환되는 것은 로드 밸런싱을 위한 구성
+
+**2단계: TCP 연결 시도**
+
+```
+* Trying 66.33.22.3:443...
+```
+
+- 443 포트는 HTTPS의 기본 포트
+- SYN 패킷 전송
+
+**3단계: 연결 완료**
+
+```
+* Connected to dummyjson.com (66.33.22.3) port 443
+```
+
+- 3-Way Handshake 완료
+- 이제 TLS 핸드셰이크와 HTTP 통신 가능
+
+### TCP 연결의 특징
+
+- **신뢰성**: 패킷 손실 시 재전송
+- **순서 보장**: 패킷이 순서대로 도착
+- **양방향 통신**: 클라이언트와 서버 모두 데이터 전송 가능
+
+---
+
+## 2. URL: 웹 리소스의 주소 체계
+
+URL(Uniform Resource Locator)은 인터넷상의 자원을 식별하는 표준화된 주소 체계입니다.
+
+### URL의 구조
+
+```
+[프로토콜]://[도메인]:[포트]/[경로]?[쿼리]#[프래그먼트]
+
+예시: https://localhost:3000/matthew.pdf?query=name#title
+```
+
+| 구성 요소      | 예시           | 설명               | 특징                                     |
+| -------------- | -------------- | ------------------ | ---------------------------------------- |
+| **프로토콜**   | `https`        | 통신 방식 정의     | http, https, ftp, mailto 등              |
+| **도메인**     | `localhost`    | 서버 식별자        | DNS를 통해 IP로 변환                     |
+| **포트**       | `3000`         | 서버 프로세스 식별 | 생략 시 기본값 사용 (http:80, https:443) |
+| **경로**       | `/matthew.pdf` | 리소스 위치        | 서버 내 자원의 논리적 위치               |
+| **쿼리**       | `?query=name`  | 추가 파라미터      | key=value 형태, &로 구분                 |
+| **프래그먼트** | `#title`       | 문서 내 위치       | 클라이언트에서만 처리                    |
+
+### URL 설계 모범 사례
+
+```ts
+// RESTful API 설계
+GET    /api/users          // 사용자 목록 조회
+GET    /api/users/123      // 특정 사용자 조회
+POST   /api/users          // 사용자 생성
+PUT    /api/users/123      // 사용자 전체 정보 수정
+PATCH  /api/users/123      // 사용자 일부 정보 수정
+DELETE /api/users/123      // 사용자 삭제
+
+// 버전 관리
+/api/v1/users
+/api/v2/users
+
+// 필터링과 페이징
+/api/users?status=active&page=2&limit=20
+```
+
+### 프래그먼트의 동작 원리
+
+프래그먼트는 클라이언트 측에서만 처리되는 특별한 URL 구성요소입니다:
+
+```html
+<!-- HTML -->
+<h2 id="http-methods">HTTP 메서드 개요</h2>
+
+<!-- URL -->
+https://blog.example.com/http-guide#http-methods
+```
+
+- 서버는 프래그먼트를 받지 못함
+- 브라우저가 해당 id를 가진 요소로 스크롤
+- SPA(Single Page Application)에서 라우팅에 활용
+
+---
+
+## 3. HTTP 요청(Request): 클라이언트의 요구사항 전달
+
+HTTP 요청은 클라이언트가 서버에게 원하는 작업을 전달하는 메시지입니다.
+
+### 요청의 구성 요소
+
+```bash
+> GET /comments/1 HTTP/1.1              ← 요청 라인
+> Host: dummyjson.com                   ← 요청 헤더 시작
+> User-Agent: curl/8.7.1
+> Accept: */*
+>                                     ← 빈 줄 (헤더 종료)
+                                      ← 요청 본문 (GET은 보통 비어있음)
+```
+
+### HTTP 메서드별 특징
+
+| 메서드     | 용도      | 본문 | 멱등성 | 안전성 | 캐시 가능 |
+| ---------- | --------- | ---- | ------ | ------ | --------- |
+| **GET**    | 조회      | ❌   | ✅     | ✅     | ✅        |
+| **POST**   | 생성      | ✅   | ❌     | ❌     | 조건부    |
+| **PUT**    | 전체 수정 | ✅   | ✅     | ❌     | ❌        |
+| **PATCH**  | 부분 수정 | ✅   | ❌     | ❌     | ❌        |
+| **DELETE** | 삭제      | ❌   | ✅     | ❌     | ❌        |
+
+### 주요 요청 헤더
+
+**일반 헤더**
+
+```bash
+> Host: api.example.com
+> User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)
+> Accept: application/json
+> Accept-Language: ko-KR,ko;q=0.9,en;q=0.8
+> Accept-Encoding: gzip, deflate, br
+```
+
+**인증 헤더**
+
+```bash
+> Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+> Cookie: session_id=abc123; user_pref=dark_mode
+```
+
+**CORS 헤더**
+
+```bash
+> Origin: https://frontend.example.com
+> Access-Control-Request-Method: POST
+> Access-Control-Request-Headers: Content-Type
+```
+
+**캐싱 헤더**
+
+```
+> If-Modified-Since: Wed, 21 Oct 2023 07:28:00 GMT
+> If-None-Match: "33a64df551425fcc55e4d42a148795d9f25f89d4"
+```
+
+### 요청 본문 예시
+
+**JSON 형식**
+
+```bash
+> POST /api/users HTTP/1.1
+> Host: api.example.com
+> Content-Type: application/json
+> Content-Length: 89
+>
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "role": "developer"
+}
+```
+
+**Form 데이터**
+
+```bash
+> POST /api/upload HTTP/1.1
+> Host: api.example.com
+> Content-Type: application/x-www-form-urlencoded
+> Content-Length: 27
+
+> name=John+Doe&age=30&city=Seoul
+```
+
+---
+
+## 4. HTTP 응답(Response): 서버의 처리 결과
+
+HTTP 응답은 서버가 클라이언트의 요청을 처리한 결과를 전달하는 메시지입니다.
+
+### 응답의 구성 요소
+
+```
+< HTTP/2 200 OK                        ← 상태 라인
+< Date: Tue, 29 Jul 2025 10:25:21 GMT  ← 응답 헤더 시작
+< Content-Type: application/json
+< Content-Length: 133
+< Access-Control-Allow-Origin: *
+<                                      ← 빈 줄 (헤더 종료)
+< {"id":1,"body":"This is..."}         ← 응답 본문
+```
+
+### HTTP 상태 코드 체계
+
+**1xx: 정보성 응답**
+
+- `100 Continue`: 요청 계속 진행
+- `101 Switching Protocols`: 프로토콜 전환 승인
+
+**2xx: 성공**
+
+- `200 OK`: 요청 성공
+- `201 Created`: 리소스 생성 완료
+- `204 No Content`: 성공했으나 응답 본문 없음
+
+**3xx: 리다이렉션**
+
+- `301 Moved Permanently`: 영구 이동
+- `302 Found`: 임시 이동
+- `304 Not Modified`: 캐시된 버전 사용 가능
+
+**4xx: 클라이언트 오류**
+
+- `400 Bad Request`: 잘못된 요청
+- `401 Unauthorized`: 인증 필요
+- `403 Forbidden`: 권한 없음
+- `404 Not Found`: 리소스 없음
+
+**5xx: 서버 오류**
+
+- `500 Internal Server Error`: 서버 내부 오류
+- `502 Bad Gateway`: 게이트웨이 오류
+- `503 Service Unavailable`: 서비스 이용 불가
+- `504 Gateway Timeout`: 게이트웨이 시간 초과
+
+### 주요 응답 헤더
+
+**콘텐츠 관련**
+
+```bash
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 1234
+< Content-Encoding: gzip
+```
+
+**캐싱 관련**
+
+```bash
+< Cache-Control: max-age=3600, public
+< ETag: "33a64df551425fcc55e4d42a148795d9f25f89d4"
+< Last-Modified: Wed, 21 Oct 2023 07:28:00 GMT
+< Expires: Thu, 22 Oct 2023 07:28:00 GMT
+```
+
+**보안 관련**
+
+```bash
+< Content-Security-Policy: default-src 'self'
+< X-Content-Type-Options: nosniff
+< X-Frame-Options: DENY
+< Strict-Transport-Security: max-age=31536000
+```
+
+**CORS 관련**
+
+```bash
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Methods: GET, POST, PUT, DELETE
+< Access-Control-Allow-Headers: Content-Type, Authorization
+< Access-Control-Max-Age: 86400
+```
+
+### Keep-Alive: 연결 재사용
+
+```bash
+< Connection: keep-alive
+< Keep-Alive: timeout=5, max=1000
+```
+
+- TCP 연결을 재사용하여 성능 향상
+- 매 요청마다 3-Way Handshake 불필요
+- HTTP/2에서는 다중화(Multiplexing)로 더욱 개선
+
+---
+
+## 마무리: HTTP 통신의 전체 흐름
+
+1. **URL 파싱**: 클라이언트가 요청할 리소스의 주소 해석
+2. **DNS 조회**: 도메인을 IP 주소로 변환
+3. **TCP 연결**: 3-Way Handshake로 안정적인 연결 수립
+4. **HTTP 요청**: 메서드, 헤더, 본문으로 구성된 요청 전송
+5. **서버 처리**: 요청 해석 및 비즈니스 로직 수행
+6. **HTTP 응답**: 상태 코드, 헤더, 본문으로 결과 반환
+7. **연결 종료**: Keep-Alive가 없다면 TCP 연결 종료
+
+이번에 여러 강의와 블로그 자료를 찾아보며 HTTP 통신에 대해 깊이 있게 학습해보니, 단순히 `요청 → 응답`이라는 수준을 넘어 헤더 하나하나가 실제 서비스의 성능과 보안, 사용자 경험에 얼마나 큰 영향을 미치는지 체감할 수 있었습니다.
+
+특히 `Cache-Control`, `ETag`, `Authorization`, `Content-Type`, `CORS` 관련 헤더 등은 단순한 기술적 스펙이 아니라, 실제 문제를 해결하고 시스템을 안정화하는 열쇠라는 점에서 매우 인상 깊었습니다.
+
+앞으로 API를 설계하거나 디버깅을 할 때, 단순히 결과만 보지 않고 패킷 흐름과 헤더의 의미까지 고려할 수 있는 개발자가 되도록 노력하려 합니다.
+
+이 글이 저처럼 `HTTP 통신의 내부 구조`를 더 깊이 이해하고 싶은 분들께 작은 도움이 되었기를 바랍니다. 🙌
