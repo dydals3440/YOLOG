@@ -1,0 +1,239 @@
+---
+title: HTTP 쿠키 이해하기
+date: 2025-08-14
+updatedDate: 2025-08-14
+tags: [HTTP, HTTP 쿠키, HTTP 헤더, HTTP 요청, HTTP 응답, HTTP 통신]
+category: HTTP
+image: '/images/http-cookie/thumbnail.png'
+---
+
+# 쿠키(Cookie) 완전 정복: 개발자가 알아야 할 모든 것
+
+**쿠키**는 웹 개발에서 클라이언트를 식별하고 상태를 유지하는 핵심 기술입니다.  
+이번 글에서는 쿠키의 기초부터 실무에서 자주 쓰이는 옵션, 보안 설정, 그리고 서버·브라우저 라이브러리 활용법까지 차근차근 살펴보겠습니다.
+
+---
+
+## 1. 쿠키의 시작: 매직 쿠키와 무상태 HTTP
+
+### 매직 쿠키란?
+
+유닉스 환경에서 받은 쿠키를 그대로 돌려보내는 것을 `매직 쿠키(Magic Cookie)`라고 부릅니다.  
+30년 전 쇼핑카트 구현 아이디어로 사용되었고, 오늘날의 웹 쿠키의 시초가 되었습니다.
+
+첫 사용 사례는 **사이트 재방문 확인**이었습니다.  
+방문자의 브라우저에 값을 저장해 두었다가, 다음 접속 시 서버가 이를 보고 “아, 이 사람은 전에 왔던 사람!” 하고 알아보는 방식입니다.
+
+---
+
+## 2. HTTP는 왜 ‘무상태’인가?
+
+HTTP는 **Stateless Protocol**입니다.  
+즉, 각 요청과 응답은 서로 독립적으로 처리되며, 서버는 **이전 요청의 정보**를 기억하지 않습니다.
+
+이 특성 덕분에 확장성은 뛰어납니다.  
+예를 들어, 서버를 여러 대로 확장해도 어느 서버든 모든 요청을 처리할 수 있습니다.  
+서버가 클라이언트를 ‘기억’하지 않아도 되기 때문입니다.
+
+하지만 웹 애플리케이션 개발자 입장에서는 곤란한 경우가 많습니다.  
+로그인 상태 유지, 장바구니 저장, 방문자 맞춤 페이지 등은 **사용자의 상태**를 추적해야 하기 때문입니다.
+
+---
+
+## 쿠키로 상태를 부여하기
+
+이 문제를 해결하기 위해 서버는 응답 헤더에 `Set-Cookie`를 내려보냅니다.  
+브라우저는 이 값을 저장한 뒤, 같은 도메인에 다시 요청할 때 `Cookie` 헤더에 실어 보냅니다.
+
+```http
+< Set-Cookie: sid=1   # 서버 → 브라우저: 세션 식별자 전달
+> Cookie: sid=1       # 브라우저 → 서버: 저장된 쿠키 반환
+```
+
+서버는 `sid` 값을 보고 “이 사용자는 이전에 왔던 사람”이라고 판단할 수 있게 됩니다.
+
+---
+
+## 쿠키를 심어보는 실습!
+
+아래 Node.js 예제는 첫 방문 시와 재방문 시의 응답을 다르게 처리합니다.
+
+```js
+const http = require('http');
+
+const handler = (req, res) => {
+  const cookie = req.headers['cookie'];
+
+  if (cookie && cookie.includes('sid')) {
+    res.write('Hello Again.\n');
+    res.end();
+    return;
+  }
+
+  res.setHeader('Set-Cookie', 'sid=1');
+  res.write('Hello.\n');
+  res.end();
+};
+
+http.createServer(handler).listen(3000, () => {
+  console.log('server is running');
+});
+```
+
+- 첫 방문 → `Hello.`
+- 두 번째 방문 → `Hello Again.`
+
+이렇게 `Set-Cookie`와 `Cookie` 헤더를 주고받으면, **원래 무상태인 HTTP에 상태를 부여**할 수 있습니다.
+
+---
+
+## 3. 쿠키의 유효 범위: Domain & Path
+
+쿠키는 도메인과 경로를 기준으로 전송 범위가 결정됩니다.
+쉽게 말해, 브라우저가 한 번 받은 쿠키를 모든 HTTP 요청에 무작정 담아 보내는 건 아닙니다.
+기본적으로 같은 도메인으로 요청할 때만 해당 쿠키를 전송합니다.
+
+이 말은 곧, 브라우저가 쿠키와 함께 쿠키가 속한 도메인 정보까지 기억한다는 뜻입니다.
+
+---
+
+### 로컬 환경에서 도메인 테스트하기
+
+로컬 개발 환경이라고 해서 항상 `localhost`만 사용할 필요는 없습니다.
+테스트를 위해 다른 도메인을 직접 매핑해볼 수도 있습니다.
+
+예를 들어, macOS에서는 /etc/hosts 파일을 수정해 로컬 주소에 원하는 도메인을 매핑할 수 있습니다.
+
+```bash
+sudo vi /private/etc/hosts
+```
+
+i를 눌러 편집 모드로 들어간 뒤, 아래와 같이 추가합니다.
+
+```bash
+127.0.0.1 yolog.co.kr
+127.0.0.1 login.yolog.co.kr
+```
+
+![호스트를 바꾸는 방법](/images/http-cookie/host-change.png)
+
+이제 `yolog.co.kr`과 `login.yolog.co.kr` 모두 로컬 서버(`127.0.0.1`)로 접근할 수 있습니다.
+
+---
+
+### 서로 다른 서브도메인에서의 쿠키 전송
+
+예를 들어, `yolog.co.kr`에서 발급받은 쿠키는 `login.yolog.co.kr`로 요청을 보낼 때 자동으로 전송되지 않습니다.
+브라우저는 쿠키의 Domain 속성을 엄격하게 따르며, 지정된 도메인 외부로는 쿠키를 보내지 않기 때문입니다.
+
+이 덕분에 민감한 식별 정보가 불필요하게 다른 도메인으로 전송되는 일을 방지할 수 있습니다.
+하지만 경우에 따라서는 다른 서브도메인에서도 동일한 쿠키를 공유해야 할 때가 있습니다.
+
+---
+
+### Domain 디렉티브
+
+대표적인 사례는 로그인 인증입니다.
+예를 들어, 사용자가 `login.yolog.co.kr`에서 로그인하면, 메인 도메인 `yolog.co.kr`에서도 인증 상태를 유지하고 싶을 수 있습니다.
+
+이럴 때는 서버에서 쿠키를 발급할 때 `Domain` 속성을 메인 도메인으로 지정하면 됩니다.
+
+```js
+res.setHeader('Set-Cookie', 'sid=1; Domain=yolog.co.kr');
+```
+
+이렇게 하면 `yolog.co.kr`뿐 아니라 `login.yolog.co.kr`에서도 같은 쿠키를 전송할 수 있게 됩니다.
+
+### Path 디렉티브
+
+경로 단위로 쿠키 전송 범위를 제한합니다.
+
+```js
+res.setHeader('Set-Cookie', 'sid=1; Path=/private');
+```
+
+- `/private` 요청 시 → 쿠키 전송
+- `/public` 요청 시 → 쿠키 없음
+
+---
+
+## 4. 쿠키의 생명주기: 세션 쿠키 vs 영속 쿠키
+
+기본적으로 브라우저는 종료 시 세션 쿠키를 삭제합니다.
+하지만 로그인 유지 같은 경우에는 `영속 쿠키(Permanent Cookie)`가 필요합니다.
+
+- **Max-Age**: 쿠키 수명을 초 단위로 설정
+- **Expires**: 특정 만료일 설정
+
+```js
+res.setHeader('Set-Cookie', 'sid=1; Max-Age=10'); // 10초 후 만료
+```
+
+실제로 이렇게 쿠키를 변경하고, 10초 후에 다시 요청을 보내면
+쿠키가 삭제되는 것을 확인할 수 있습니다.
+
+- **Hello -> Hello** (10초 후 요청시)
+- **Hello -> Hello Again.** (10초 이내 요청시)
+
+---
+
+## 5. 보안 속성: Secure & HttpOnly
+
+### Secure
+
+HTTPS 요청에서만 쿠키 전송
+
+```js
+res.setHeader('Set-Cookie', 'sid=1; Secure');
+```
+
+### HttpOnly
+
+JavaScript에서 `document.cookie` 접근 차단  
+XSS 공격 방어에 필수
+
+```js
+res.setHeader('Set-Cookie', 'sid=1; HttpOnly');
+```
+
+---
+
+## 6. 서버에서 쿠키 다루기
+
+Express는 `res.cookie(name, value, options)`로 쿠키를 쉽게 설정할 수 있습니다.  
+문자열 직렬화는 `cookie` 라이브러리, 파싱은 `cookie-parser` 미들웨어가 담당합니다.
+
+```js
+res.cookie('sid', '1', { httpOnly: true });
+console.log(req.cookies.sid); // "1"
+```
+
+---
+
+## 7. 브라우저에서 쿠키 다루기
+
+HttpOnly가 없는 쿠키는 JS로도 제어할 수 있습니다.  
+팝업 “오늘 하루 보지 않기” 기능처럼 **클라이언트 상태 저장**에 유용합니다.
+
+### js-cookie 라이브러리 예시
+
+```js
+// 설정 (1일 보관)
+Cookies.set('checked', 'true', { expires: 1 });
+
+// 조회
+Cookies.get('checked'); // "true"
+
+// 삭제
+Cookies.remove('checked');
+```
+
+---
+
+## 8. 마무리
+
+쿠키는 단순히 “브라우저 저장소”가 아니라 **HTTP와 밀접한 상태 관리 기술**입니다.  
+도메인·경로·생명주기·보안 옵션을 이해하면, 로그인, 세션 관리, 사용자 경험 개선까지 모두 손에 넣을 수 있습니다.
+
+> **팁**: 실무에서는 쿠키를 세션 저장소와 연계하거나, JWT 등과 조합해 사용하는 경우가 많습니다.  
+> 특히 보안 속성(Secure, HttpOnly)은 반드시 사용하는 것을 추천합니다.
