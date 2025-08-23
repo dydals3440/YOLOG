@@ -1,0 +1,257 @@
+---
+title: HTML 렌더링과 리소스 요청 과정
+date: 2025-08-23
+updatedDate: 2025-08-23
+tags: [CURL, HTTP, HTTP 요청, HTTP 응답, HTTP 헤더]
+category: HTTP
+image: '/images/http-network-request/thumbnail.png'
+---
+
+이번 포스트에서는 사용자가 URL을 입력한 순간부터 HTML 문서가 렌더링되는 과정, 그리고 HTML 안에서 발생하는 다양한 리소스 요청과 Form 요청까지를 예시와 함께 살펴보겠습니다.
+
+![HTML 렌더링과 리소스 요청 과정](/images/http-network-request/thumbnail.png)
+
+---
+
+## 1. HTML 문서 요청과 렌더링 과정
+
+1. 사용자가 브라우저 주소창에 `https://example.com`을 입력합니다.
+2. 브라우저는 해당 서버로 HTTP 요청을 보냅니다.
+3. 서버는 요청을 처리하고 HTML 문서를 응답합니다.
+4. 브라우저는 받은 HTML을 파싱하고 렌더링합니다.
+
+이때 **브라우저는 HTML 문서만 처리하는 것이 아니라**, 문서 안에 포함된 다양한 리소스(CSS, JS, 이미지, 글꼴 등)를 해석하면서 추가 HTTP 요청을 발생시킵니다.
+
+---
+
+## **2. HTML 외 요청들**
+
+**2-1. 스타일시트 요청**
+
+```html
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+```
+
+브라우저는 **`style.css`**를 가져오기 위해 **`Accept: text/css`** 헤더를 포함한 새로운 HTTP 요청을 보냅니다.
+
+**2-2. 글꼴 요청**
+
+```html
+<head>
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css?family=Roboto"
+  />
+</head>
+```
+
+구글 폰트 CSS 파일을 불러오기 위해 또 다른 HTTP 요청이 만들어집니다. 이 CSS 안에는 실제 폰트 파일 요청도 추가로 포함될 수 있습니다.
+
+**2-3. 자바스크립트 요청**
+
+```html
+<head>
+  <script src="script.js" />
+</head>
+```
+
+브라우저는 `script.js`를 다운로드하고 실행합니다.
+
+---
+
+## **3. 이미지 요청과 광고 픽셀**
+
+```html
+<body>
+  <img src="/sweet-potato.webp" alt="고구마" />
+</body>
+```
+
+이미지 태그를 만나면 브라우저는 `Accept: image/*` 헤더를 포함한 요청을 보냅니다.
+
+흥미로운 점은 이 이미지 요청이 **`광고 추적 픽셀(Tracking Pixel)`**에도 활용된다는 것입니다. 마케팅 업체들은 사용자 정보를 수집하기 위해 1px짜리(매우 작은) 투명 이미지를 `<img>` 태그로 삽입합니다.
+
+사용자는 이를 눈치채지 못하지만, 서버는 해당 요청을 통해 **IP, User-Agent, Referer** 등의 정보를 얻을 수 있습니다.
+
+**추적 픽셀 예제 (클라이언트)**
+
+```javascript
+const insertTrackingPixel = () => {
+  const img = document.createElement('img');
+  img.src = '/tracking-pixel.gif';
+  img.alt = 'Tracking Pixel';
+  img.style.width = '1px';
+  img.style.height = '1px';
+  img.style.display = 'none';
+  document.body.appendChild(img);
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  insertTrackingPixel();
+});
+```
+
+**서버에서의 로깅**
+
+```javascript
+const http = require('http');
+const path = require('path');
+const static = require('../shared/serve-static');
+
+const logRequest = (req) => {
+  const log = [
+    `${new Date().toISOString()}`,
+    `IP: ${req.socket.remoteAddress}`,
+    `User-Agent: ${req.headers['user-agent']}`,
+    `Referer: ${req.headers['referer']}`,
+  ].join(', ');
+  console.log(log);
+};
+
+const handler = (req, res) => {
+  const { pathname } = new URL(req.url, `http://${req.headers.host}`);
+  if (pathname === '/tracking-pixel.gif') {
+    logRequest(req);
+  }
+  static(path.join(__dirname, 'public'))(req, res);
+};
+
+http.createServer(handler).listen(8080, () => {
+  console.log('Server is running on port 8080');
+});
+```
+
+출력 예시
+
+```
+2025-08-23T11:43:33.067Z, IP: ::1, User-Agent: Mozilla/5.0 (...), Referer: http://localhost:8080/
+```
+
+---
+
+## **4. Form 요청**
+
+HTML Form은 사용자가 특정 시점에 데이터를 서버로 전송할 때 사용합니다. 로그인 화면이 대표적인 예입니다.
+
+**GET 방식**
+
+```html
+<form method="GET" action="/login">
+  <input name="email" placeholder="Email" />
+  <input name="password" placeholder="Password" />
+  <button type="submit">Login</button>
+</form>
+```
+
+요청 예시:
+
+```http
+GET /login?email=matthew&password=secret
+```
+
+GET 방식은 데이터가 URL의 쿼리 문자열에 노출되므로 **민감한 정보에는 적합하지 않습니다**.
+
+**POST 방식**
+
+```html
+<form method="POST" action="/login">
+  <input name="email" placeholder="Email" />
+  <input name="password" placeholder="Password" />
+  <button type="submit">Login</button>
+</form>
+```
+
+데이터가 요청 본문(Body)에 담기므로 보안과 데이터 크기 면에서 유리합니다.
+
+---
+
+**서버 처리 예시**
+
+```javascript
+const postLogin = (req, res) => {
+  let body = '';
+  req.on('data', (chunk) => {
+    body += chunk.toString();
+  });
+  req.on('end', () => {
+    const { email, password } = queryString.parse(body);
+    const authenticated = email === 'matthew' && password === 'secret';
+    res.statusCode = authenticated ? 200 : 401;
+    res.end(authenticated ? 'Success\n' : 'Unauthorized\n');
+  });
+};
+```
+
+---
+
+## 5. Form 전송 방식
+
+HTML Form 데이터를 전송하는 방식은 크게 두 가지입니다.
+
+### 1) application/x-www-form-urlencoded
+
+- Form의 **기본값**
+- `key=value&key2=value2` 형태
+- 텍스트나 간단한 데이터 전송에 적합
+- 하지만 인코딩으로 인해 데이터가 길어질 수 있고, 파일 업로드는 불가능
+
+### 2) multipart/form-data
+
+- **파일 업로드 가능**
+- 요청 본문을 `boundary`라는 문자열로 구분된 여러 파트로 나눔
+- 각 파트는 **헤더(메타데이터)**와 **본문(실제 값)**으로 구성됨
+- 서버에서는 이 복잡한 구조를 해석해야 하므로, Express에서는 **Multer** 같은 라이브러리를 사용
+
+즉,
+
+- `application/x-www-form-urlencoded` → 단순 텍스트/데이터 전송에 적합
+- `multipart/form-data` → 파일이나 다양한 데이터를 함께 전송할 때 사용
+
+---
+
+### 예시: multipart/form-data 전송
+
+```html
+<form method="POST" action="/login" enctype="multipart/form-data">
+  <input name="email" placeholder="Email" />
+  <input name="password" placeholder="Password" />
+  <input type="file" name="profile-image" accept="image/png,image/jpeg" />
+  <button type="submit">Login</button>
+</form>
+```
+
+이 폼을 전송하면 실제 요청 본문(raw body)은 다음과 같이 구성됩니다.
+
+```
+------WebKitFormBoundary8kr9mWV4YwnI6YUl
+Content-Disposition: form-data; name="email"
+
+matthew
+------WebKitFormBoundary8kr9mWV4YwnI6YUl
+Content-Disposition: form-data; name="password"
+
+secret
+------WebKitFormBoundary8kr9mWV4YwnI6YUl
+Content-Disposition: form-data; name="profile-image"; filename="스크린샷.png"
+Content-Type: image/png
+
+[바이너리 이미지 데이터]
+------WebKitFormBoundary8kr9mWV4YwnI6YUl--
+```
+
+---
+
+### Boundary(WebKitFormBoundary)란?
+
+- **Boundary**는 요청 본문을 파트별로 구분하기 위한 문자열입니다.
+- 예제의 `-----WebKitFormBoundary8kr9mWV4YwnI6YUl` 부분이 바로 그것으로, **같은 요청 내에서 각 필드(email, password, 파일 등)를 나누는 기준선** 역할을 합니다.
+- `WebKitFormBoundary`는 WebKit 기반 브라우저(크롬, 사파리 등)가 자동으로 붙이는 접두어이며, 뒤의 랜덤 문자열은 요청마다 달라집니다.
+- 서버는 요청 헤더의 `Content-Type`을 참고해 이 Boundary 값을 얻고, 이를 기준으로 본문을 파싱합니다.
+
+각 파트는 다시 이렇게 구성됩니다:
+
+1. **헤더** (예: `Content-Disposition`, `Content-Type`) → 데이터의 메타정보
+2. **본문** (예: `matthew`, `secret`, 실제 이미지 바이트 데이터) → 실제 값
