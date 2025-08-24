@@ -13,6 +13,16 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
 const { title = WEBSITE_CONFIG.TITLE, description = WEBSITE_CONFIG.DESCRIPTION, image = WEBSITE_CONFIG.OG_IMAGE, keywords } = Astro.props
 const formattedTitle = title === WEBSITE_CONFIG.TITLE ? title : WEBSITE_CONFIG.TITLE_TEMPLATE.replace('%s', title)
 
+// Structured Data for JSON-LD
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": formattedTitle,
+  "description": description,
+  "url": canonicalURL.toString(),
+  ...(keywords && keywords.length > 0 ? { "keywords": keywords.join(', ') } : {})
+}
+
 ---
 
 <!-- Global Metadata -->
@@ -55,13 +65,4 @@ const formattedTitle = title === WEBSITE_CONFIG.TITLE ? title : WEBSITE_CONFIG.T
 <FontLoader />
 
 <!-- Structured Data -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "WebPage",
-  "name": {JSON.stringify(formattedTitle)},
-  "description": {JSON.stringify(description)},
-  "url": {JSON.stringify(canonicalURL.toString())},
-  ...(keywords && keywords.length > 0 ? { "keywords": keywords.join(', ') } : {})
-}
-</script>
+<script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
