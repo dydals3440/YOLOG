@@ -1,0 +1,533 @@
+---
+title: HTTP 통신 기법 - SSE(Server-Sent Events) 이해와 구현
+date: 2025-08-26
+updatedDate: 2025-08-26
+tags: [HTTP, SSE, Server-Sent Events, 실시간 통신, EventSource]
+category: HTTP
+image: '/images/http-sse/thumbnail.png'
+---
+
+# HTTP 통신 기법: SSE(Server-Sent Events) 이해와 구현
+
+![SSE](/images/http-sse/thumbnail.png)
+
+## SSE(Server-Sent Events)란?
+
+SSE는 HTML5 명세에 정의된 기술로, **서버가 클라이언트로 단방향 실시간 데이터를 전송**하는 프로토콜입니다.
+WebSocket과 달리 여전히 HTTP로 동작하며, 서버에서 클라이언트로만 메시지를 보낼 수 있습니다.
+
+### 핵심 개념
+
+SSE는 서버가 특별한 HTTP 응답 헤더 값을 응답에 싣는 것으로 시작합니다.
+
+```http
+Content-Type: text/event-stream
+```
+
+브라우저는 이 헤더를 보고 "서버가 언제든지 메시지를 보낼 수 있구나"라고 이해합니다.
+
+### 이벤트 스트림 형식
+
+```http
+<
+data: 고구마
+
+data: 고구마 아이스크림
+```
+
+- 각 이벤트는 개행문자로 구분
+- 하나의 이벤트는 빈 줄로 종료
+
+---
+
+## SSE 이벤트 필드
+
+SSE는 다양한 필드를 제공합니다 ([MDN 문서](https://developer.mozilla.org/ko-KR/docs/Web/API/Server-sent_events/Using_server-sent_events)):
+
+### 필드별 설명
+
+| 필드      | 설명                           | 예시                     |
+| --------- | ------------------------------ | ------------------------ |
+| **data**  | 전송할 메시지 데이터           | `data: {"msg": "hello"}` |
+| **id**    | 이벤트 식별자 (재연결 시 사용) | `id: 12345`              |
+| **event** | 이벤트 타입 지정               | `event: userconnect`     |
+| **retry** | 재연결 시도 간격 (밀리초)      | `retry: 10000`           |
+
+```http
+retry: 10000
+id: 1756035473112
+event: message
+data: {"text":"고구마","timestamp":1756035473112}
+```
+
+---
+
+## 비유로 이해하기
+
+> **라디오 방송**을 생각해보세요. 방송국(서버)은 계속 전파를 송출하고, 청취자(클라이언트)는 주파수를 맞춰두면 실시간으로 방송을 들을 수 있습니다.
+> 청취자가 방송국에 요청할 순 없지만, 방송국의 모든 소식을 놓치지 않고 받을 수 있죠.
+
+## SSE의 효율성과 제약사항
+
+### 폴링 대비 장점
+
+- **네트워크 효율**: 서버에 변화가 있을 때만 데이터 전송
+- **서버 자원 절약**: 불필요한 요청/응답 사이클 제거
+- **클라이언트 부담 감소**: 반복 요청 불필요
+
+### 제약사항
+
+- **단방향 통신**: 서버→클라이언트만 가능 (양방향은 WebSocket 필요)
+- **연결 생명주기**: 브라우저 탭 닫으면 연결 종료
+- **유지 비용**: 연결 유지에 따른 리소스 소비는 여전히 존재
+
+실제 구현하면서 한번 알아보겠습니다.
+
+---
+
+## 서버 구현
+
+### 기본 구조
+
+```js
+const http = require('http');
+const path = require('path');
+const static = require('../shared/serve-static');
+const Message = require('../shared/message');
+
+let waitingClients = [];
+let message = null;
+
+// 클라이언트의 SSE 구독 처리
+const subscribe = (req, res) => {
+  // text/event-stream 헤더로 SSE 시작을 알림
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.write('\n'); // 빈 줄로 헤더 종료
+
+  // response 객체를 대기열에 추가 (새 데이터 생길 때까지 유지)
+  waitingClients.push(res);
+
+  // 연결 종료 처리 (브라우저 탭 닫기, 네트워크 끊김 등)
+  // 'close' 이벤트 발생 시 대기열에서 해당 클라이언트 제거
+  // 이렇게 하지 않으면 끊긴 연결에 계속 데이터를 보내려다 에러 발생
+  req.on('close', () => {
+    waitingClients = waitingClients.filter((client) => client !== res);
+  });
+};
+```
+
+이렇게 구현을 해봤고, curl로 한번 요청을 해보겠습니다.
+
+```bash
+curl http://localhost:8080/subscribe -v
+```
+
+```
+* Host localhost:8080 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:8080...
+* Connected to localhost (::1) port 8080
+> GET /subscribe HTTP/1.1
+> Host: localhost:8080
+> User-Agent: curl/8.7.1
+> Accept: */*
+>
+* Request completely sent off
+< HTTP/1.1 200 OK
+< Content-Type: text/event-stream
+< Date: Sun, 24 Aug 2025 11:31:35 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< Transfer-Encoding: chunked
+<
+```
+
+응답으로 200 OK를 받았고, Content-Type은 `text/event-stream`으로 되어있습니다. 서버가 응답 본문을 다 보내지 않아서, 계속 연결을 유지하고 있습니다.
+
+### 메시지 업데이트 및 브로드캐스트
+
+이번에는 새 메시지를 추가할 수 있는 update 함수를 만들어보겠습니다.
+
+```js
+const update = (req, res) => {
+  let body = '';
+
+  req.on('data', (chunk) => {
+    body = body + chunk.toString();
+  });
+
+  req.on('end', () => {
+    const { text } = JSON.parse(body);
+
+    if (!text) {
+      res.statusCode = 400;
+      res.setHeader('Content-Type', 'application/json');
+      res.write(JSON.stringify({ error: 'text 필드를 채워주세요' }));
+      res.end();
+      return;
+    }
+
+    message = new Message(text);
+
+    // 대기 중인 모든 클라이언트에게 이벤트 전송
+    for (const waitingClient of waitingClients) {
+      // 메시지를 SSE 형식(data 필드)으로 전송
+      // 개행문자 2개로 이벤트 하나를 종료
+      waitingClient.write([`data: ${message}\n\n`].join(''));
+    }
+
+    // update 요청한 클라이언트에게는 일반 응답
+    res.write(`${message}`);
+    res.end();
+  });
+};
+
+// 라우팅 핸들러
+const handler = (req, res) => {
+  const { pathname } = new URL(req.url, `http://${req.headers.host}`);
+
+  if (pathname === '/subscribe') return subscribe(req, res);
+  if (pathname === '/update') return update(req, res);
+
+  static(path.join(__dirname, 'public'))(req, res);
+};
+
+const server = http.createServer(handler);
+server.listen(8080, () => console.log('server is running ::8080'));
+```
+
+### 테스트
+
+이렇게 구현을 하고 서버를 재실행하여, 한번 다시 subscribe로 구독을 해보겠습니다.
+
+```bash
+curl http://localhost:8080/subscribe -v
+```
+
+클라이언트는 아까와 동일하게 `text/event-stream`으로 응답을 받습니다:
+
+```
+* Request completely sent off
+< HTTP/1.1 200 OK
+< Content-Type: text/event-stream
+< Date: Sun, 24 Aug 2025 11:36:46 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< Transfer-Encoding: chunked
+<
+```
+
+본문이 올 때까지 기다리고 있습니다.
+
+다른 클라이언트를 하나 더 열어서 update API를 호출해보겠습니다:
+
+```bash
+curl http://localhost:8080/update \
+  -H "Content-Type: application/json" \
+  -d '{"text":"고구마"}' -v
+```
+
+그러면 기다리고 있던 첫번째 클라이언트에 본문이 도착합니다:
+
+```
+data: {"text":"고구마","timestamp":1756035473112}
+```
+
+update API를 호출한 클라이언트도 JSON 응답을 받습니다:
+
+```
+< HTTP/1.1 200 OK
+< Date: Sun, 24 Aug 2025 11:37:53 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< Transfer-Encoding: chunked
+<
+{"text":"고구마","timestamp":1756035473112}
+```
+
+---
+
+## 클라이언트 구현
+
+브라우저는 `EventSource` 클래스를 제공합니다:
+
+```js
+const subscribe = () => {
+  // EventSource로 서버와 연결 (브라우저가 SSE 이벤트 수신 준비)
+  const eventSource = new EventSource('/subscribe');
+
+  // 서버에서 data 필드 전송 시 message 이벤트 발생
+  eventSource.addEventListener('message', (event) => {
+    // JSON 문자열 파싱 후 렌더링
+    render(JSON.parse(event.data));
+  });
+};
+
+const render = (message) => {
+  const messageElement = document.createElement('div');
+  const { text } = message;
+  const timestamp = new Date(message.timestamp).toLocaleTimeString();
+  messageElement.textContent = `${text} (${timestamp})`;
+  document.body.appendChild(messageElement);
+};
+
+const init = () => {
+  subscribe();
+};
+
+// DOM 생성 완료 시 SSE 구독 시작
+document.addEventListener('DOMContentLoaded', init);
+```
+
+![SSE 연결 성공](/images/http-sse/1.png)
+
+![실제로 메시지를 받고도 계속해서 SSE 연결이 유지 됨](/images/http-sse/2.png)
+
+브라우저에서는 서버로부터 새로운 알림이 도착했고, 네트워크 요청도 끊어지지 않고 계속 유지되고 있습니다.
+
+클라이언트에서 한번 더 메시지를 보내보겠습니다:
+
+```bash
+curl http://localhost:8080/update \
+  -H "Content-Type: application/json" \
+  -d '{"text":"고구마 아이스크림"}' -v
+```
+
+응답:
+
+```
+< HTTP/1.1 200 OK
+< Date: Sun, 24 Aug 2025 11:47:01 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< Transfer-Encoding: chunked
+<
+{"text":"고구마 아이스크림","timestamp":1756036021866}
+```
+
+![두번째 메시지도 정상 수신됨을 확인할 수 있음](/images/http-sse/3.png)
+
+폴링이나 롱폴링과 비교했을 때, SSE는 더 간단하게 구현할 수 있습니다. 한번 연결하면 계속 메시지를 받을 수 있죠.
+
+---
+
+## 자동 재연결 기능
+
+### fetch와의 차이점
+
+fetch를 사용할 때는 클라이언트의 요청으로 시작해서, 서버의 응답으로 HTTP 통신이 종료됩니다.
+다시 연결하려면 fetch 함수를 다시 호출하는 코드를 직접 작성해야 합니다.
+
+하지만 **EventSource는 연결이 끊기면 자동으로 재접속을 시도**합니다.
+브라우저가 네트워크 문제로 서버와 연결이 끊기면, 이 객체는 일정 시간 후에 스스로 HTTP 요청을 다시 만듭니다.
+
+### 1. 자동 재연결 동작
+
+서버와 연결된 상태에서 서버를 종료시켜보겠습니다.
+
+![서버 종료 후 자동 재연결 시도](/images/http-sse/4.png)
+
+> 서버를 종료하면 브라우저는 기존 연결이 끊긴 것을 감지하고, 자동으로 새로운 요청을 생성합니다.
+> 서버가 꺼져있으니 실패하지만, 브라우저는 포기하지 않고 계속 재연결을 시도합니다.
+
+![서버 재실행 시 자동으로 연결 복구](/images/http-sse/5.png)
+
+> 서버를 다시 실행하면 대기 중이던 요청이 성공하며 연결이 자동 복구됩니다.
+
+### 2. 재연결 간격 설정
+
+서버에서 `retry` 필드로 재연결 간격을 지정할 수 있습니다:
+
+```js
+for (const waitingClient of waitingClients) {
+  waitingClient.write(
+    [
+      `retry: 10000\n`, // 10초 후 재연결 시도
+      `data: ${message}\n\n`,
+    ].join('')
+  );
+}
+```
+
+이제 서버를 다시 종료하면 기본값보다 늦게(10초 후) 재연결을 시도합니다.
+
+### 3. 누락 메시지 복구 (Last-Event-ID)
+
+연결이 끊긴 동안 놓친 메시지를 받을 수 있는 방법이 있습니다.
+
+#### 서버: 이벤트 ID 전송
+
+```js
+for (const waitingClient of waitingClients) {
+  waitingClient.write(
+    [
+      `retry: 10000\n`,
+      `id: ${message.timestamp}\n`, // 이벤트 식별자
+      `data: ${message}\n\n`,
+    ].join('')
+  );
+}
+```
+
+#### 서버: 재연결 시 Last-Event-ID 처리
+
+```js
+const subscribe = (req, res) => {
+  const lastEventId = req.headers['last-event-id'];
+
+  if (lastEventId) {
+    // 재연결: 놓친 메시지들을 전송
+    console.log('재연결 - 마지막 이벤트 ID:', lastEventId);
+    // 실무에서는 lastEventId 이후의 메시지를 DB에서 조회하여 전송
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.write('\n');
+  waitingClients.push(res);
+};
+```
+
+#### 동작 흐름
+
+1. **첫 연결 시**: 서버 콘솔에 `lastEventId undefined` 출력
+2. **서버 종료 후 재시작**
+3. **브라우저 재연결 시도**:
+
+![Last-Event-ID 헤더 전송](/images/http-sse/6.png)
+
+> 브라우저가 재연결할 때 Request Headers에 `Last-Event-ID: 1756036714406`를 포함시킵니다.
+> 이는 마지막으로 받은 이벤트의 ID로, 서버가 놓친 메시지를 파악하는 기준이 됩니다.
+
+4. **서버 콘솔 출력**:
+
+```bash
+server is running ::8080
+lastEventId 1756036714406  # 클라이언트가 마지막으로 받은 이벤트 ID
+```
+
+서버는 이 ID 이후의 메시지들을 조회하여 클라이언트에게 전송하면 됩니다.
+
+---
+
+## 통신 기법 비교: Polling vs Long Polling vs SSE
+
+| 구분              | Polling                   | Long Polling     | SSE                      |
+| ----------------- | ------------------------- | ---------------- | ------------------------ |
+| **통신 방향**     | 양방향                    | 양방향           | 서버→클라이언트 단방향   |
+| **연결 유지**     | 매번 새 연결              | 응답까지 유지    | 지속적 연결 유지         |
+| **실시간성**      | 주기에 따라 지연          | 즉시 전달        | 즉시 전달                |
+| **네트워크 효율** | 낮음 (불필요한 요청 많음) | 중간             | 높음 (필요시만 전송)     |
+| **서버 부담**     | 낮음                      | 중간 (연결 유지) | 중간 (연결 유지)         |
+| **구현 복잡도**   | 매우 간단                 | 중간             | 간단 (EventSource API)   |
+| **자동 재연결**   | 수동 구현                 | 수동 구현        | 자동 지원                |
+| **브라우저 지원** | 모든 브라우저             | 모든 브라우저    | IE 제외 대부분           |
+| **프로토콜**      | HTTP                      | HTTP             | HTTP (text/event-stream) |
+
+---
+
+## SSE 실무 활용 사례
+
+### 1. 실시간 알림 시스템
+
+```js
+// 서버: 새 알림 발생 시
+eventSource.write(
+  `data: ${JSON.stringify({
+    type: 'notification',
+    title: '새 메시지',
+    body: '김철수님이 메시지를 보냈습니다',
+  })}\n\n`
+);
+```
+
+### 2. 대시보드 실시간 업데이트
+
+- **주식 시세**: 실시간 가격 변동 스트리밍
+- **모니터링**: 서버 메트릭, 에러 로그 실시간 표시
+- **분석 대시보드**: 실시간 방문자 수, 매출 현황
+
+### 3. 라이브 피드
+
+- **소셜 미디어**: Twitter, Facebook의 실시간 타임라인
+- **뉴스 속보**: 실시간 뉴스 업데이트
+- **스포츠 중계**: 실시간 점수 업데이트
+
+### 4. 진행 상태 알림
+
+```js
+// 서버: 파일 업로드 진행률
+for (let progress = 0; progress <= 100; progress += 10) {
+  client.write(
+    `data: ${JSON.stringify({
+      type: 'progress',
+      value: progress,
+    })}\n\n`
+  );
+}
+```
+
+### 5. 협업 도구
+
+- **Google Docs**: 다른 사용자의 커서 위치, 편집 내용
+- **Trello**: 카드 이동, 댓글 알림
+- **Slack**: 타이핑 인디케이터, 온라인 상태
+
+---
+
+## SSE가 적합한 경우 vs 다른 기술 선택
+
+### SSE를 선택해야 할 때
+
+- ✅ **서버→클라이언트 단방향 통신**만 필요
+- ✅ **HTTP 인프라**만 사용 가능한 환경
+- ✅ **자동 재연결**이 중요한 서비스
+- ✅ **텍스트 기반** 데이터 전송
+- ✅ 구현 **단순성**이 중요
+
+### WebSocket을 선택해야 할 때
+
+- ⚡ **양방향 실시간 통신** 필요 (채팅, 게임)
+- ⚡ **바이너리 데이터** 전송
+- ⚡ **초저지연**이 중요한 서비스
+- ⚡ 높은 메시지 **빈도** (초당 수십~수백 개)
+
+### Long Polling을 선택해야 할 때
+
+- 🔄 **레거시 브라우저** 지원 필요 (IE 등)
+- 🔄 **간헐적 업데이트**만 필요
+- 🔄 **프록시/방화벽**이 엄격한 환경
+
+---
+
+## 장단점 정리
+
+### 장점
+
+- ✅ **구현 간단**: EventSource API로 쉽게 구현
+- ✅ **자동 재연결**: 네트워크 문제 자동 복구
+- ✅ **표준 HTTP**: 특별한 프로토콜 불필요
+- ✅ **효율적**: 필요시에만 데이터 전송
+- ✅ **순서 보장**: 이벤트 ID로 순서 관리
+
+### 단점
+
+- ❌ **단방향 통신**: 서버→클라이언트만 가능
+- ❌ **텍스트만 전송**: 바이너리 데이터 불가
+- ❌ **연결 제한**: 브라우저당 6개 연결 제한
+- ❌ **IE 미지원**: Internet Explorer 호환성 없음
+
+---
+
+## 마무리
+
+SSE는 **서버에서 클라이언트로 실시간 데이터를 푸시**하는 가장 간단한 방법입니다.
+
+- Polling의 **네트워크 낭비** 해결
+- Long Polling의 **구현 복잡도** 개선
+- WebSocket보다 **간단한 구현**
+
+특히 **실시간 알림, 대시보드, 라이브 피드** 같은 단방향 스트리밍에 최적화되어 있습니다.
+양방향 통신이 필요 없다면, SSE는 여전히 훌륭한 선택지입니다.
+
+다음 포스트에서는 진정한 양방향 실시간 통신을 가능하게 하는 **WebSocket**을 다루겠습니다.
