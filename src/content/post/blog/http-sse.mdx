@@ -412,7 +412,7 @@ lastEventId 1756036714406  # 클라이언트가 마지막으로 받은 이벤트
 
 ## 통신 기법 비교: Polling vs Long Polling vs SSE
 
-| 구분              | Polling                   | Long Polling     | SSE                      |
+| 구분              | [Polling](https://www.yolog.co.kr/post/http-polling)                   | [Long Polling](https://www.yolog.co.kr/post/http-long-polling)     | SSE                      |
 | ----------------- | ------------------------- | ---------------- | ------------------------ |
 | **통신 방향**     | 양방향                    | 양방향           | 서버→클라이언트 단방향   |
 | **연결 유지**     | 매번 새 연결              | 응답까지 유지    | 지속적 연결 유지         |
@@ -523,8 +523,8 @@ for (let progress = 0; progress <= 100; progress += 10) {
 
 SSE는 **서버에서 클라이언트로 실시간 데이터를 푸시**하는 가장 간단한 방법입니다.
 
-- Polling의 **네트워크 낭비** 해결
-- Long Polling의 **구현 복잡도** 개선
+- [Polling](https://www.yolog.co.kr/post/http-polling)의 **네트워크 낭비** 해결
+- [Long Polling](https://www.yolog.co.kr/post/http-long-polling)의 **구현 복잡도** 개선
 - WebSocket보다 **간단한 구현**
 
 특히 **실시간 알림, 대시보드, 라이브 피드** 같은 단방향 스트리밍에 최적화되어 있습니다.

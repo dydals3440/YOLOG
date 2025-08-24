@@ -292,7 +292,7 @@ curl http://localhost:8080/update \
 
 ## 7. 폴링 vs 롱 폴링 비교
 
-| 구분          | 폴링(Polling)         | 롱 폴링(Long Polling)              |
+| 구분          | [폴링(Polling)](https://www.yolog.co.kr/post/http-polling)         | 롱 폴링(Long Polling)              |
 | ------------- | --------------------- | ---------------------------------- |
 | 요청 방식     | 일정 주기마다 요청    | 요청 후 새 데이터 생길 때까지 대기 |
 | 응답 시점     | 즉시(데이터 없어도)   | 데이터 생길 때 응답                |
@@ -327,5 +327,5 @@ curl http://localhost:8080/update \
 롱 폴링은 폴링의 **실시간성 문제를 해결**했지만, **서버 리소스 부담**이라는 새로운 과제를 안게 되었습니다.
 특히 많은 사용자가 동시에 접속하는 서비스에서는 각 연결이 서버의 메모리와 CPU를 점유하므로, 확장성 측면에서 한계가 명확합니다.
 
-다음 글에서는 롱 폴링의 한계를 극복하는 기술, `SSE(Server-Sent Events)`와 `WebSocket`을 살펴보겠습니다.
+다음 글에서는 롱 폴링의 한계를 극복하는 기술, [`SSE(Server-Sent Events)`](https://www.yolog.co.kr/post/http-sse)와 `WebSocket`을 살펴보겠습니다.
 이들은 더 효율적인 실시간 통신을 가능하게 하는 현대적인 해결책입니다.
