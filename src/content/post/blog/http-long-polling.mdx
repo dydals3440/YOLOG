@@ -1,0 +1,313 @@
+---
+title: HTTP 통신 기법 - 롱 폴링(Long Polling) 이해와 구현
+date: 2025-08-25
+updatedDate: 2025-08-25
+tags: [HTTP, Long Polling, 실시간 통신, 채팅, 네트워크]
+category: HTTP
+image: '/images/http-long-polling/thumbnail.png'
+---
+
+# HTTP 통신 기법: 롱 폴링(Long Polling) 이해와 구현
+
+![Long Polling](/images/http-long-polling/thumbnail.png)
+
+HTTP는 본질적으로 `비연결성(stateless, connectionless)`을 가진 프로토콜입니다.
+즉, 클라이언트가 요청을 보내고 서버가 응답을 반환하면 연결은 곧바로 끊어집니다.
+
+이 특성은 많은 경우 문제가 되지 않지만,
+**실시간성이 필요한 서비스**—예를 들어 **채팅 애플리케이션**—에서는 곤란한 제약이 됩니다.
+
+[이전 포스트](https://www.yolog.co.kr/post/http-polling)에서는 이 한계를 극복하기 위한 단순한 방법인 `폴링(Polling)`을 살펴봤습니다.
+이번에는 그보다 발전된 기법인 **롱 폴링(Long Polling)**을 이해하고 구현해보겠습니다.
+
+---
+
+## 1. 왜 롱 폴링(Long Polling)인가?
+
+폴링은 주기적으로 서버에 요청을 보내 "새 데이터가 있나요?"라고 묻습니다.  
+하지만 서버에 새 데이터가 없을 때도 "없어요"라는 응답이 오기 때문에, **불필요한 네트워크 낭비**가 발생합니다.
+
+이를 개선한 방식이 **롱 폴링(Long Polling)**입니다.
+
+서버가 클라이언트의 요청을 받았을 때, 새로운 데이터가 있을 때까지 응답을 보류하는 방식입니다.
+"아무것도 없다"는 응답조차 네트워크 자원을 소모하니까, 정말 전달할 데이터가 생길 때만 응답하자는 아이디어죠.
+
+> **비유로 이해하기**  
+> 음식 배달 앱에서 주문 상태를 확인하는 상황을 생각해보세요.
+>
+> - **폴링**: 5초마다 앱을 열어서 "배달 왔나요?" → "아직이요" 반복
+> - **롱 폴링**: 가게에 전화해서 "배달 도착하면 바로 알려주세요"라고 하고 전화를 끊지 않고 대기
+
+즉, **서버가 새로운 데이터가 있을 때까지 연결을 유지했다가, 데이터가 준비되면 응답하는 방식**입니다.
+
+---
+
+## 2. 롱 폴링(Long Polling)의 동작 원리
+
+롱 폴링은 다음과 같은 흐름으로 동작합니다:
+
+1. **클라이언트**가 `/longpoll`로 요청을 보냅니다.
+2. **서버**는 새 데이터가 없다면 응답을 보류하고 연결을 유지합니다.
+3. 새 데이터가 생기면 **즉시 응답**을 보냅니다.
+4. 클라이언트는 응답을 받은 직후 다시 `/longpoll` 요청을 보내 연결을 유지합니다.
+5. 만약 일정 시간(예: 10초) 동안 새 데이터가 없으면 서버가 `408 Request Timeout`을 보내고 연결을 종료합니다.  
+   클라이언트는 다시 요청을 시도합니다.
+
+이런 방식으로 **실시간성을 확보**하면서도 **불필요한 요청을 줄일 수** 있습니다.
+
+---
+
+## 3. 서버 구현하기
+
+Node.js `http` 모듈로 롱 폴링 서버를 구성해봅시다.
+
+### 메시지 객체
+
+먼저 주고받을 메시지를 정의합니다:
+
+```js
+class Message {
+  constructor(text) {
+    this.text = text;
+    this.timestamp = Date.now();
+  }
+
+  toString() {
+    return JSON.stringify({
+      text: this.text,
+      timestamp: this.timestamp,
+    });
+  }
+}
+```
+
+### 서버 코드 상세 분석
+
+```js
+const http = require('http');
+
+// 핵심 데이터 구조
+let waitingClients = []; // 응답을 기다리는 클라이언트들의 response 객체 배열
+let message = null; // 현재 전달할 메시지
+
+// 롱 폴링 요청 핸들러
+const longPoll = (req, res) => {
+  const WAITING_MS = 10_000; // 최대 대기 시간 10초
+
+  if (!message) {
+    // 전달할 메시지가 없으면 클라이언트를 대기열에 추가
+    waitingClients.push(res);
+
+    // 무한정 기다릴 수 없으므로 타임아웃 설정
+    // 10초 후 자동으로 408 응답을 보내고 연결 종료
+    res.setTimeout(WAITING_MS, () => {
+      res.statusCode = 408; // Request Timeout
+      res.end();
+    });
+    return;
+  }
+
+  // 메시지가 있다면 즉시 전송
+  res.setHeader('Content-Type', 'application/json');
+  res.end(`${message}`);
+  message = null; // 메시지 전송 후 초기화
+};
+
+// 메시지 업데이트 핸들러 (새로운 채팅 메시지 전송)
+const update = (req, res) => {
+  let body = '';
+
+  // POST 데이터를 청크 단위로 수신
+  req.on('data', (chunk) => (body += chunk.toString()));
+
+  req.on('end', () => {
+    const { text } = JSON.parse(body);
+
+    // 유효성 검사
+    if (!text) {
+      res.statusCode = 400;
+      return res.end(JSON.stringify({ error: 'text 필드를 채워주세요' }));
+    }
+
+    // 새 메시지 생성
+    message = new Message(text);
+
+    // 중요: 대기 중인 모든 클라이언트에게 메시지 전달
+    for (const client of waitingClients) {
+      client.setHeader('Content-Type', 'application/json');
+      client.end(`${message}`);
+    }
+    waitingClients = []; // 대기열 초기화
+
+    // 업데이트 요청한 클라이언트에게도 응답
+    res.setHeader('Content-Type', 'application/json');
+    res.end(`${message}`);
+  });
+};
+
+// 라우팅
+const handler = (req, res) => {
+  const { pathname } = new URL(req.url, `http://${req.headers.host}`);
+  if (pathname === '/longpoll') return longPoll(req, res);
+  if (pathname === '/update') return update(req, res);
+  res.statusCode = 404;
+  res.end('Not Found');
+};
+
+http.createServer(handler).listen(8080, () => {
+  console.log('server running ::8080');
+});
+```
+
+**코드의 핵심 포인트:**
+
+1. **`waitingClients` 배열**: 서버가 즉시 응답하지 않고 대기 중인 클라이언트들의 response 객체를 저장합니다.
+2. **타임아웃 처리**: 무한정 연결을 유지할 수 없으므로 10초 제한을 둡니다. 서버 리소스를 보호하는 중요한 장치입니다.
+3. **브로드캐스트**: 새 메시지가 오면 대기 중인 모든 클라이언트에게 동시에 전달합니다. 실시간 채팅의 핵심입니다.
+
+---
+
+## 4. 요청 흐름 살펴보기
+
+### 1) 롱 폴링 요청 보내기
+
+```bash
+curl http://localhost:8080/longpoll -v
+```
+
+→ 응답이 바로 오지 않고 대기 상태에 들어갑니다.
+10초가 지나면 다음과 같은 응답이 옵니다:
+
+```
+< HTTP/1.1 408 Request Timeout
+```
+
+### 2) 메시지 업데이트 보내기
+
+10초 이내에 다른 터미널에서:
+
+```bash
+curl http://localhost:8080/update \
+  -H "Content-Type: application/json" \
+  -d '{"text":"고구마"}' -v
+```
+
+응답:
+
+```
+< HTTP/1.1 200 OK
+{"text":"고구마","timestamp":1756026935210}
+```
+
+→ 동시에 `/longpoll` 요청으로 대기 중이던 클라이언트들에게도 메시지가 전달됩니다.
+
+---
+
+## 5. 클라이언트 구현하기
+
+브라우저에서 `/longpoll`을 지속적으로 호출하여 메시지를 받아보겠습니다.
+
+```js
+const longPollServer = async () => {
+  const response = await fetch('/longpoll');
+
+  if (response.status === 408) {
+    // 타임아웃 발생 → 즉시 재연결
+    // 재귀 호출로 끊김 없는 연결 유지
+    return longPollServer();
+  }
+
+  // 정상 메시지 수신
+  const message = await response.json();
+  render(message);
+
+  // 핵심: 응답을 받자마자 즉시 다시 요청
+  // 이렇게 해야 다음 메시지도 놓치지 않고 받을 수 있음
+  longPollServer();
+};
+
+const render = (message) => {
+  const div = document.createElement('div');
+  div.textContent = `${message.text} (${new Date(
+    message.timestamp
+  ).toLocaleTimeString()})`;
+  document.body.appendChild(div);
+};
+
+// 페이지 로드 시 롱 폴링 시작
+document.addEventListener('DOMContentLoaded', longPollServer);
+```
+
+**클라이언트 구현의 핵심:**
+
+1. **재귀 호출**: 타임아웃이든 정상 응답이든, 항상 다시 요청을 보내 연결을 유지합니다.
+2. **즉시 재연결**: 응답을 받자마자 다시 요청해야 메시지를 놓치지 않습니다.
+3. **타임아웃 처리**: 408 응답을 받으면 에러가 아니라 정상 흐름으로 처리합니다.
+
+이제 다른 클라이언트에서 메시지를 업데이트하면, 즉시 화면에 반영되는 것을 확인할 수 있습니다:
+
+```bash
+curl http://localhost:8080/update \
+  -H "Content-Type: application/json" \
+  -d '{"text":"고구마"}' -v
+```
+
+---
+
+## 6. 롱 폴링(Long Polling)의 장단점
+
+### 장점
+
+- **네트워크 효율성**: 데이터가 있을 때만 응답하므로 불필요한 트래픽 감소
+- **실시간성**: 새 데이터가 생기면 즉시 전달 (폴링의 주기적 지연 없음)
+- **구현 간단함**: 특별한 프로토콜 없이 기존 HTTP 인프라 활용 가능
+- **방화벽 친화적**: HTTP/HTTPS를 사용하므로 대부분 환경에서 동작
+
+### 단점
+
+- **서버 리소스 부담**: 연결을 오래 유지 = 메모리/스레드 점유
+- **확장성 문제**: 동시 접속자가 많으면 서버 부하 급증
+- **연결 관리 복잡**: 타임아웃, 재연결, 에러 처리 등 고려사항 많음
+- **단방향 통신**: 서버→클라이언트 푸시만 가능 (양방향 실시간 통신 제한적)
+
+---
+
+## 7. 폴링 vs 롱 폴링 비교
+
+| 구분          | 폴링(Polling)         | 롱 폴링(Long Polling)              |
+| ------------- | --------------------- | ---------------------------------- |
+| 요청 방식     | 일정 주기마다 요청    | 요청 후 새 데이터 생길 때까지 대기 |
+| 응답 시점     | 즉시(데이터 없어도)   | 데이터 생길 때 응답                |
+| 네트워크 효율 | 불필요한 요청 많음    | 요청 횟수 감소                     |
+| 실시간성      | 요청 주기에 따라 지연 | 데이터 발생 시 즉시 전달           |
+| 서버 부담     | 비교적 적음           | 연결 유지로 리소스 부담 증가       |
+| 구현 복잡도   | 매우 단순             | 타임아웃, 재연결 처리 필요         |
+
+실제 서비스에서의 선택:
+
+- **롱 폴링이 여전히 사용되는 경우**:
+
+  - HTTP 인프라만 있는 환경 (WebSocket 지원 불가)
+  - 프록시/방화벽이 엄격한 기업 환경
+  - 간헐적인 업데이트만 필요한 서비스
+  - 실제로 Facebook, Gmail 등도 부분적으로 롱 폴링 사용한다고 합니다.
+
+- **SSE나 WebSocket을 선택하는 경우**:
+  - 양방향 실시간 통신이 필요한 경우 (게임, 협업 도구)
+  - 높은 빈도의 데이터 스트리밍 (주식 시세, 스포츠 중계)
+  - 수천~수만 명의 동시 접속자 처리
+
+결국 **만능 해결책은 없다**가 정답입니다.
+각 기술의 트레이드오프를 이해하고 상황에 맞게 선택해야 합니다.
+
+---
+
+## 8. 마무리
+
+이번 글에서는 `롱 폴링(Long Polling)`의 개념과 구현을 다뤘습니다.
+
+롱 폴링은 폴링의 **실시간성 문제를 해결**했지만, **서버 리소스 부담**이라는 새로운 과제를 안게 되었습니다.
+특히 많은 사용자가 동시에 접속하는 서비스에서는 각 연결이 서버의 메모리와 CPU를 점유하므로, 확장성 측면에서 한계가 명확합니다.
+
+다음 글에서는 롱 폴링의 한계를 극복하는 기술, `SSE(Server-Sent Events)`와 `WebSocket`을 살펴보겠습니다.
+이들은 더 효율적인 실시간 통신을 가능하게 하는 현대적인 해결책입니다.
