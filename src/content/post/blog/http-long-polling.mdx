@@ -18,16 +18,16 @@ HTTP는 본질적으로 `비연결성(stateless, connectionless)`을 가진 프�
 **실시간성이 필요한 서비스**—예를 들어 **채팅 애플리케이션**—에서는 곤란한 제약이 됩니다.
 
 [이전 포스트](https://www.yolog.co.kr/post/http-polling)에서는 이 한계를 극복하기 위한 단순한 방법인 `폴링(Polling)`을 살펴봤습니다.
-이번에는 그보다 발전된 기법인 **롱 폴링(Long Polling)**을 이해하고 구현해보겠습니다.
+이번에는 그보다 발전된 기법인 **롱 폴링**을 이해하고 구현해보겠습니다.
 
 ---
 
-## 1. 왜 롱 폴링(Long Polling)인가?
+## 1. 왜 롱 폴링인가?
 
 폴링은 주기적으로 서버에 요청을 보내 "새 데이터가 있나요?"라고 묻습니다.  
 하지만 서버에 새 데이터가 없을 때도 "없어요"라는 응답이 오기 때문에, **불필요한 네트워크 낭비**가 발생합니다.
 
-이를 개선한 방식이 **롱 폴링(Long Polling)**입니다.
+이를 개선한 방식이 **롱 폴링**입니다.
 
 서버가 클라이언트의 요청을 받았을 때, 새로운 데이터가 있을 때까지 응답을 보류하는 방식입니다.
 "아무것도 없다"는 응답조차 네트워크 자원을 소모하니까, 정말 전달할 데이터가 생길 때만 응답하자는 아이디어죠.
@@ -43,7 +43,7 @@ HTTP는 본질적으로 `비연결성(stateless, connectionless)`을 가진 프�
 
 ---
 
-## 2. 롱 폴링(Long Polling)의 동작 원리
+## 2. 롱 폴링의 동작 원리
 
 롱 폴링은 다음과 같은 흐름으로 동작합니다:
 
@@ -267,7 +267,7 @@ curl http://localhost:8080/update \
 
 ---
 
-## 6. 롱 폴링(Long Polling)의 장단점
+## 6. 롱 폴링의 장단점
 
 ### 장점
 
@@ -292,7 +292,7 @@ curl http://localhost:8080/update \
 
 ## 7. 폴링 vs 롱 폴링 비교
 
-| 구분          | [폴링(Polling)](https://www.yolog.co.kr/post/http-polling)         | 롱 폴링(Long Polling)              |
+| 구분          | [폴링(Polling)](https://www.yolog.co.kr/post/http-polling)         | 롱 폴링              |
 | ------------- | --------------------- | ---------------------------------- |
 | 요청 방식     | 일정 주기마다 요청    | 요청 후 새 데이터 생길 때까지 대기 |
 | 응답 시점     | 즉시(데이터 없어도)   | 데이터 생길 때 응답                |
@@ -305,12 +305,12 @@ curl http://localhost:8080/update \
 
 - **롱 폴링이 여전히 사용되는 경우**:
 
-  - HTTP 인프라만 있는 환경 (WebSocket 지원 불가)
+  - HTTP 인프라만 있는 환경 ([WebSocket](https://www.yolog.co.kr/post/http-websocket) 지원 불가)
   - 프록시/방화벽이 엄격한 기업 환경
   - 간헐적인 업데이트만 필요한 서비스
   - Facebook, Gmail 등이 초창기에는 롱 폴링을 주력으로 사용했으며, 현재도 일부 제약 환경에서 폴백으로 사용
 
-- **SSE나 WebSocket을 선택하는 경우**:
+- **[SSE](https://www.yolog.co.kr/post/http-sse)나 [WebSocket](https://www.yolog.co.kr/post/http-websocket)을 선택하는 경우**:
   - 양방향 실시간 통신이 필요한 경우 (게임, 협업 도구)
   - 높은 빈도의 데이터 스트리밍 (주식 시세, 스포츠 중계)
   - 수천~수만 명의 동시 접속자 처리
@@ -322,10 +322,10 @@ curl http://localhost:8080/update \
 
 ## 8. 마무리
 
-이번 글에서는 `롱 폴링(Long Polling)`의 개념과 구현을 다뤘습니다.
+이번 글에서는 `롱 폴링`의 개념과 구현을 다뤘습니다.
 
 롱 폴링은 폴링의 **실시간성 문제를 해결**했지만, **서버 리소스 부담**이라는 새로운 과제를 안게 되었습니다.
 특히 많은 사용자가 동시에 접속하는 서비스에서는 각 연결이 서버의 메모리와 CPU를 점유하므로, 확장성 측면에서 한계가 명확합니다.
 
-다음 글에서는 롱 폴링의 한계를 극복하는 기술, [`SSE(Server-Sent Events)`](https://www.yolog.co.kr/post/http-sse)와 `WebSocket`을 살펴보겠습니다.
+다음 글에서는 롱 폴링의 한계를 극복하는 기술, [`SSE(Server-Sent Events)`](https://www.yolog.co.kr/post/http-sse)와 [WebSocket](https://www.yolog.co.kr/post/http-websocket)을 살펴보겠습니다.
 이들은 더 효율적인 실시간 통신을 가능하게 하는 현대적인 해결책입니다.

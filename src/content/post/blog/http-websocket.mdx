@@ -1,0 +1,614 @@
+---
+title: WebSocket - 실시간 채팅 구현부터 HTTP와의 차이점까지
+date: 2025-08-27
+updatedDate: 2025-08-27
+tags: [WebSocket, HTTP, 실시간통신, 채팅구현, WebSocket핸드셰이크, 양방향통신]
+category: HTTP
+image: '/images/http-websocket/thumbnail.png'
+---
+
+# WebSocket 완벽 가이드: 실시간 채팅 구현부터 HTTP와의 차이점까지
+
+웹 개발자라면 실시간 채팅, 주식 시세, 게임 같은 기능을 구현할 때 HTTP의 한계를 느껴보셨을 겁니다.
+
+HTTP는 클라이언트가 요청하면 서버가 응답하는 단방향 통신입니다. 실시간 양방향 통신이 필요할 때는 어떻게 해야 할까요?
+
+이번 포스트에서는 HTTP의 한계를 극복하고 진정한 실시간 양방향 통신을 가능하게 하는 WebSocket 프로토콜을 깊이 있게 살펴보겠습니다.
+
+![고구마 매출을 올릴려면 웹소켓도 필요해](/images/http-websocket/thumbnail.png)
+
+## 1. WebSocket이 필요한 이유
+
+### HTTP의 한계
+
+HTTP는 요청-응답 구조의 단방향 통신입니다. 서버는 클라이언트의 요청 없이는 데이터를 보낼 수 없죠.
+
+실시간 통신을 위해 [폴링(Polling)](https://www.yolog.co.kr/post/http-polling), [롱 폴링(Long Polling)](https://www.yolog.co.kr/post/http-long-polling), [SSE(Server-Sent Events)](https://www.yolog.co.kr/post/http-sse) 같은 기법들을 사용했지만, 이들은 모두 HTTP의 단방향 특성을 완전히 극복하지는 못합니다.
+
+### WebSocket의 등장
+
+WebSocket은 HTTP와 마찬가지로 [TCP](https://www.yolog.co.kr/post/http-tcp) 위에서 동작하는 애플리케이션 계층 프로토콜입니다. 하지만 한 가지 큰 차이점이 있습니다:
+
+- **HTTP**: 요청 → 응답 → 연결 종료 (단방향)
+- **WebSocket**: 연결 유지 → 양방향 통신 가능
+
+---
+
+## 2. WebSocket 핸드셰이크: HTTP에서 WebSocket으로
+
+브라우저와 서버는 처음에는 HTTP로 통신을 시작합니다. 그리고 서로 합의하에 WebSocket으로 프로토콜을 전환합니다. 이 과정을 **WebSocket 핸드셰이크**라고 합니다.
+
+![핸드셰이크 짝 👏🏻](/images/http-websocket/slamdunk.webp)
+
+### 핸드셰이크 과정 상세 분석
+
+먼저 간단한 WebSocket 서버를 만들어보겠습니다:
+
+```bash
+npm i ws  # WebSocket 라이브러리 설치
+```
+
+### 기본 WebSocket 서버 구현
+
+```javascript
+// websocket-server.js
+const { WebSocketServer } = require('ws');
+
+// WebSocket 서버 인스턴스 생성
+const wss = new WebSocketServer({ port: 8080 });
+
+// 클라이언트 연결 이벤트 처리
+wss.on('connection', (ws) => {
+  console.log('새로운 클라이언트 연결됨');
+
+  // 연결 시 환영 메시지 전송
+  ws.send('환영합니다! WebSocket 서버에 연결되었습니다.');
+
+  // 클라이언트로부터 메시지 수신
+  ws.on('message', (data) => {
+    console.log('받은 메시지:', data.toString());
+    // 받은 메시지를 그대로 에코백
+    ws.send(`Echo: ${data.toString()}`);
+  });
+
+  // 연결 종료 처리
+  ws.on('close', () => {
+    console.log('클라이언트 연결 종료');
+  });
+});
+
+console.log('WebSocket 서버가 8080 포트에서 실행 중...');
+```
+
+### 핸드셰이크 과정 직접 확인하기
+
+WebSocket은 일반 curl로는 테스트하기 어렵습니다. macOS/Linux에서는 `netcat(nc)` 명령어를 사용해 [TCP](https://www.yolog.co.kr/post/http-tcp) 메시지를 직접 보낼 수 있습니다:
+
+```bash
+# netcat 설치 확인
+which nc  # /usr/bin/nc
+
+# WebSocket 핸드셰이크 요청 보내기
+nc localhost 8080 -c
+```
+
+직접 HTTP 요청을 입력해 WebSocket 핸드셰이크를 시도해봅시다:
+
+```http
+GET / HTTP/1.1
+Host: localhost:8080
+Connection: Upgrade                    # 연결 업그레이드 요청
+Upgrade: websocket                     # WebSocket으로 전환
+Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==  # 보안 키
+Sec-WebSocket-Version: 13              # WebSocket 버전
+
+```
+
+### 핸드셰이크 응답 분석
+
+서버로부터 다음과 같은 응답을 받게 됩니다:
+
+```http
+HTTP/1.1 101 Switching Protocols      # 101: 프로토콜 전환 승인
+Upgrade: websocket                     # WebSocket으로 업그레이드
+Connection: Upgrade                    # 연결 업그레이드 확인
+Sec-WebSocket-Accept: [해시값]         # 클라이언트 키의 검증 값
+```
+
+![netcat 명령어를 활용한 응답 확인](/images/http-websocket/1.png)
+
+**핵심 포인트:**
+
+- `101 Switching Protocols`: HTTP 상태 코드 중 100번대는 정보성 응답입니다. 101은 프로토콜 전환을 승인한다는 의미
+- 이 응답 이후부터는 HTTP가 아닌 WebSocket 프로토콜로 통신
+- HTTP는 **메시지** 단위로 통신하지만, WebSocket은 **프레임** 단위로 통신
+
+---
+
+## 3. 브라우저에서 WebSocket 사용하기
+
+브라우저는 WebSocket을 위한 전용 API를 제공합니다. 이 API를 사용하면 자동으로 핸드셰이크를 수행하고 실시간 통신을 할 수 있습니다.
+
+### 브라우저 WebSocket API 기본 사용법
+
+브라우저 콘솔에서 직접 WebSocket 연결을 테스트해보겠습니다:
+
+```javascript
+// 브라우저 콘솔에서 실행
+const ws = new WebSocket('ws://localhost:8080');
+
+// 연결 성공 시
+ws.onopen = () => {
+  console.log('WebSocket 연결 성공!');
+  ws.send('안녕하세요, WebSocket 서버!');
+};
+
+// 메시지 수신 시
+ws.onmessage = (event) => {
+  console.log('받은 메시지:', event.data);
+};
+
+// 연결 종료 시
+ws.onclose = () => {
+  console.log('WebSocket 연결 종료');
+};
+
+// 에러 발생 시
+ws.onerror = (error) => {
+  console.error('WebSocket 에러:', error);
+};
+```
+
+![브라우저 console에서 웹소켓 연결 요청](/images/http-websocket/2.png)
+
+### Network 탭에서 WebSocket 통신 확인
+
+개발자 도구의 Network 탭에서 WebSocket 연결을 아래와 같이 확인할 수 있습니다.
+
+![브라우저 network 탭에서 웹소켓 연결 확인](/images/http-websocket/3.png)
+
+- **Status**: 101 Switching Protocols 확인 가능
+- **Headers**: Upgrade: websocket, Sec-WebSocket-Key, Sec-WebSocket-Version 등 확인
+- **Messages**: 실시간으로 주고받는 메시지 확인 가능
+
+![브라우저 Messages 에서 주고받은 메시지 확인](/images/http-websocket/4.png)
+
+---
+
+## 4. HTTP + WebSocket 하이브리드 서버 구현
+
+실제 서비스에서는 HTTP 서버와 WebSocket 서버를 함께 운영하는 경우가 많습니다. 하나의 포트에서 HTTP와 WebSocket을 모두 처리하는 서버를 만들어보겠습니다.
+
+### HTTP 서버에 WebSocket 기능 추가하기
+
+WebSocket 라이브러리는 기존 HTTP 서버와 결합할 수 있는 인터페이스를 제공합니다:
+
+```javascript
+// hybrid-server.js
+const http = require('http');
+const path = require('path');
+const { WebSocketServer } = require('ws');
+const static = require('../shared/serve-static');
+
+// HTTP 요청 처리 핸들러
+const handler = (req, res) => {
+  // 정적 파일 제공 (HTML, CSS, JS 등)
+  static(path.join(__dirname, 'public'))(req, res);
+};
+
+// HTTP 서버 생성
+const server = http.createServer(handler);
+
+// 서버 시작
+server.listen(8080, () => {
+  console.log('하이브리드 서버 실행 중:');
+  console.log('- HTTP: http://localhost:8080');
+  console.log('- WebSocket: ws://localhost:8080');
+});
+
+// 기존 HTTP 서버에 WebSocket 기능 추가
+const wss = new WebSocketServer({ server });
+
+// WebSocket 연결 처리
+wss.on('connection', (ws) => {
+  console.log('새 WebSocket 클라이언트 연결');
+
+  // 환영 메시지 전송
+  ws.send('WebSocket 서버에 연결되었습니다!');
+
+  // 메시지 수신 처리
+  ws.on('message', (data) => {
+    console.log('받은 메시지:', data.toString());
+    ws.send(`Echo: ${data.toString()}`);
+  });
+
+  // 연결 종료 처리
+  ws.on('close', () => {
+    console.log('WebSocket 클라이언트 연결 종료');
+  });
+});
+```
+
+**핵심 포인트:**
+
+- 하나의 포트(8080)에서 HTTP와 WebSocket 모두 처리
+- 초기 연결은 HTTP로 시작, 필요시 WebSocket으로 업그레이드
+- 정적 파일 제공과 실시간 통신을 동시에 지원
+
+---
+
+## 5. 실시간 채팅 애플리케이션 구현
+
+이제 WebSocket의 양방향 통신 특성을 활용해 실시간 채팅 애플리케이션을 만들어보겠습니다.
+
+### 채팅 서버 구현
+
+여러 클라이언트가 동시에 접속해서 메시지를 주고받을 수 있는 채팅 서버를 구현합니다:
+
+```javascript
+// chat-server.js
+const http = require('http');
+const path = require('path');
+const { WebSocketServer } = require('ws');
+const static = require('../shared/serve-static');
+const Message = require('../shared/message');
+
+// 연결된 모든 클라이언트를 저장하는 배열
+let webSocketClients = [];
+
+// HTTP 요청 처리
+const handler = (req, res) => {
+  static(path.join(__dirname, 'public'))(req, res);
+};
+
+// HTTP 서버 생성 및 시작
+const server = http.createServer(handler);
+server.listen(8080, () => {
+  console.log('채팅 서버가 8080 포트에서 실행 중...');
+});
+
+// WebSocket 서버 생성
+const wss = new WebSocketServer({ server });
+
+// 새로운 클라이언트 연결 처리
+wss.on('connection', (ws) => {
+  // 환영 메시지 생성 및 전송
+  const welcomeMessage = new Message('채팅방에 입장했습니다.');
+  ws.send(JSON.stringify(welcomeMessage));
+
+  // 연결된 클라이언트 목록에 추가
+  webSocketClients.push(ws);
+
+  // 다른 클라이언트들에게 입장 알림
+  broadcast(ws, '새로운 사용자가 입장했습니다.', true);
+
+  // 클라이언트로부터 메시지 수신
+  ws.on('message', (data) => {
+    const messageText = data.toString('utf-8');
+
+    // 모든 클라이언트에게 메시지 전달 (브로드캐스트)
+    for (const client of webSocketClients) {
+      // 연결이 열려있는 클라이언트에게만 전송
+      if (client.readyState === ws.OPEN) {
+        const prefix = client === ws ? '나' : '상대방';
+        const text = `${prefix}: ${messageText}`;
+        const message = new Message(text);
+
+        // JSON 형식으로 메시지 전송
+        client.send(JSON.stringify(message));
+      }
+    }
+  });
+
+  // 연결 종료 처리
+  ws.on('close', () => {
+    // 클라이언트 목록에서 제거
+    webSocketClients = webSocketClients.filter((client) => client !== ws);
+
+    // 다른 클라이언트들에게 퇴장 알림
+    broadcast(null, '사용자가 퇴장했습니다.', true);
+  });
+});
+
+// 브로드캐스트 헬퍼 함수
+function broadcast(sender, text, isSystemMessage = false) {
+  const message = new Message(isSystemMessage ? `[시스템] ${text}` : text);
+
+  webSocketClients.forEach((client) => {
+    if (client !== sender && client.readyState === ws.OPEN) {
+      client.send(JSON.stringify(message));
+    }
+  });
+}
+```
+
+**코드 설명:**
+
+- `webSocketClients`: 연결된 모든 클라이언트를 관리
+- `broadcast`: 특정 메시지를 모든 클라이언트에게 전달
+- `readyState`: WebSocket 연결 상태 확인 (OPEN, CLOSED 등)
+- JSON 형식으로 메시지를 구조화하여 전송
+
+### 채팅 클라이언트 구현
+
+이제 사용자가 실제로 채팅을 할 수 있는 웹 인터페이스를 만들어보겠습니다.
+
+#### HTML 구조
+
+```html
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebSocket 채팅</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="chat-container">
+      <div id="messages"></div>
+      <div id="input-container">
+        <input
+          type="text"
+          id="text-field"
+          placeholder="메시지를 입력하세요..."
+        />
+        <button id="send-button">전송</button>
+      </div>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>
+```
+
+#### JavaScript 클라이언트 코드
+
+```javascript
+// script.js
+let webSocket;
+let messageContainer;
+
+// WebSocket 연결 초기화
+const initWebSocket = () => {
+  // 현재 페이지의 호스트를 사용하여 WebSocket 연결
+  const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  webSocket = new WebSocket(`${wsProtocol}//${location.host}`);
+
+  // 연결 성공
+  webSocket.addEventListener('open', () => {
+    console.log('WebSocket 연결 성공');
+    addSystemMessage('서버에 연결되었습니다.');
+  });
+
+  // 메시지 수신
+  webSocket.addEventListener('message', (event) => {
+    try {
+      const message = JSON.parse(event.data);
+      renderMessage(message);
+    } catch (error) {
+      console.error('메시지 파싱 에러:', error);
+    }
+  });
+
+  // 연결 종료
+  webSocket.addEventListener('close', () => {
+    console.log('WebSocket 연결 종료');
+    addSystemMessage('서버와의 연결이 끊어졌습니다.');
+  });
+
+  // 에러 처리
+  webSocket.addEventListener('error', (error) => {
+    console.error('WebSocket 에러:', error);
+    addSystemMessage('연결 중 오류가 발생했습니다.');
+  });
+};
+
+// 메시지 렌더링
+const renderMessage = (message) => {
+  const messageElement = document.createElement('div');
+  messageElement.className = 'message';
+
+  // 메시지 내용
+  const textSpan = document.createElement('span');
+  textSpan.className = 'message-text';
+  textSpan.textContent = message.text;
+
+  // 타임스탬프
+  const timeSpan = document.createElement('span');
+  timeSpan.className = 'message-time';
+  const time = new Date(message.timestamp).toLocaleTimeString();
+  timeSpan.textContent = time;
+
+  messageElement.appendChild(textSpan);
+  messageElement.appendChild(timeSpan);
+  messageContainer.appendChild(messageElement);
+
+  // 스크롤을 최하단으로
+  messageContainer.scrollTop = messageContainer.scrollHeight;
+};
+
+// 시스템 메시지 추가
+const addSystemMessage = (text) => {
+  const systemElement = document.createElement('div');
+  systemElement.className = 'system-message';
+  systemElement.textContent = text;
+  messageContainer.appendChild(systemElement);
+  messageContainer.scrollTop = messageContainer.scrollHeight;
+};
+
+// 메시지 전송 기능 초기화
+const initSendButton = () => {
+  const sendButton = document.querySelector('#send-button');
+  const textField = document.querySelector('#text-field');
+
+  // 전송 함수
+  const sendMessage = () => {
+    const text = textField.value.trim();
+
+    if (!text) return;
+
+    // WebSocket이 열려있는지 확인
+    if (webSocket && webSocket.readyState === WebSocket.OPEN) {
+      webSocket.send(text);
+      textField.value = '';
+    } else {
+      addSystemMessage('연결이 끊어졌습니다. 새로고침해주세요.');
+    }
+  };
+
+  // 버튼 클릭 이벤트
+  sendButton.addEventListener('click', sendMessage);
+
+  // Enter 키 이벤트
+  textField.addEventListener('keypress', (event) => {
+    if (event.key === 'Enter') {
+      sendMessage();
+    }
+  });
+};
+
+// 초기화
+const init = () => {
+  messageContainer = document.querySelector('#messages');
+  initWebSocket();
+  initSendButton();
+};
+
+// DOM 로드 완료 후 실행
+document.addEventListener('DOMContentLoaded', init);
+```
+
+**코드 설명:**
+
+- `initWebSocket()`: WebSocket 연결을 초기화하고 이벤트 핸들러 등록
+- `renderMessage()`: 받은 메시지를 화면에 표시
+- `addSystemMessage()`: 연결/종료 등 시스템 메시지 표시
+- `sendMessage()`: 메시지 전송 및 연결 상태 확인
+- Enter 키로도 메시지 전송 가능
+
+### 실행 결과
+
+채팅 애플리케이션을 실행하면 다음과 같은 화면을 볼 수 있습니다:
+
+![만든 웹 사이트로, 연결된 것을 확인](/images/http-websocket/5.png)
+
+여러 브라우저 탭이나 창을 열어서 실시간 채팅을 테스트할 수 있습니다:
+
+![고구마를 좋아하는지 여부를 채팅으로 나누는 이야기 확인](/images/http-websocket/6.png)
+
+개발자 도구의 Network 탭 > WS(WebSocket) 필터를 선택하면 실시간으로 주고받는 메시지를 확인할 수 있습니다:
+
+![Messages 탭에서 메시지들을 확인할 수 있다.](/images/http-websocket/7.png)
+
+---
+
+## 6. WebSocket의 특징과 장단점
+
+### WebSocket의 핵심 특징
+
+| 특징            | 설명                                          |
+| --------------- | --------------------------------------------- |
+| **양방향 통신** | 클라이언트와 서버가 언제든지 메시지 전송 가능 |
+| **실시간성**    | 프레임 단위로 즉시 메시지 전달                |
+| **효율성**      | HTTP 헤더 오버헤드 없이 데이터만 전송         |
+| **지속 연결**   | 한 번 연결하면 명시적으로 종료할 때까지 유지  |
+
+### 장점
+
+1. **낮은 레이턴시**: 연결이 유지되므로 즉각적인 데이터 전송 가능
+2. **적은 오버헤드**: HTTP 헤더를 반복해서 보내지 않음
+3. **실시간 양방향**: 서버 푸시와 클라이언트 요청이 자유로움
+4. **TCP 연결 재사용**: [3-Way Handshake](https://www.yolog.co.kr/post/http-tcp)를 한 번만 수행
+
+### 단점
+
+1. **재연결 로직 필요**: 연결이 끊기면 자동 재연결 기능을 직접 구현해야 함
+2. **서버 리소스**: 각 연결마다 메모리와 CPU 사용
+3. **프록시/방화벽 이슈**: 일부 네트워크 환경에서 차단될 수 있음
+4. **스케일링 복잡도**: 여러 서버 간 상태 동기화 필요
+
+---
+
+## 7. HTTP 통신 기법 비교
+
+이제 우리가 학습한 모든 HTTP 통신 기법을 비교해보겠습니다:
+
+| 기법                                                                        | 통신 방향       | 실시간성  | 효율성    | 복잡도 | 사용 사례             |
+| --------------------------------------------------------------------------- | --------------- | --------- | --------- | ------ | --------------------- |
+| **[폴링(Polling)](https://www.yolog.co.kr/post/http-polling)**              | 단방향          | 낮음      | 낮음      | 낮음   | 주기적 데이터 갱신    |
+| **[롱 폴링(Long Polling)](https://www.yolog.co.kr/post/http-long-polling)** | 단방향          | 중간      | 중간      | 중간   | 실시간 알림           |
+| **[SSE(Server-Sent Events)](https://www.yolog.co.kr/post/http-sse)**        | 서버→클라이언트 | 높음      | 높음      | 낮음   | 실시간 피드, 알림     |
+| **WebSocket**                                                               | 양방향          | 매우 높음 | 매우 높음 | 높음   | 채팅, 게임, 협업 도구 |
+
+### 각 기법의 선택 기준
+
+#### [폴링](https://www.yolog.co.kr/post/http-polling)을 선택해야 할 때
+
+- 실시간성이 크게 중요하지 않은 경우
+- 구현이 간단해야 하는 경우
+- 서버 부하가 예측 가능해야 하는 경우
+
+#### [롱 폴링](https://www.yolog.co.kr/post/http-long-polling)을 선택해야 할 때
+
+- 실시간 알림이 필요하지만 빈도가 낮은 경우
+- WebSocket을 지원하지 않는 환경
+- 단방향 서버 푸시만 필요한 경우
+
+#### [SSE](https://www.yolog.co.kr/post/http-sse)를 선택해야 할 때
+
+- 서버에서 클라이언트로의 단방향 스트리밍이 필요한 경우
+- 자동 재연결이 필요한 경우
+- 텍스트 기반 데이터를 전송하는 경우
+
+#### WebSocket을 선택해야 할 때
+
+- 진정한 실시간 양방향 통신이 필요한 경우
+- 채팅, 게임 등 즉각적인 상호작용이 중요한 경우
+- 바이너리 데이터 전송이 필요한 경우
+
+---
+
+## 마무리: 실시간 웹의 진화와 선택
+
+WebSocket은 2011년 RFC 6455로 표준화된 이후, 웹 애플리케이션의 실시간 통신 패러다임을 완전히
+바꿔놓았습니다. HTTP의 요청-응답 모델이라는 근본적 한계를 극복하고, 진정한 양방향 통신을 가능하게
+만든 것입니다.
+
+---
+
+### 🎯 핵심 인사이트
+
+이번 시리즈를 통해 살펴본 4가지 실시간 통신 기법은 각각의 진화 과정을 보여줍니다:
+
+1. **[폴링](https://www.yolog.co.kr/post/http-polling)**: 단순하지만 비효율적인 첫 번째 시도
+2. **[롱 폴링](https://www.yolog.co.kr/post/http-long-polling)**: 리소스를 절약하려는 개선된 접근
+3. **[SSE](https://www.yolog.co.kr/post/http-sse)**: 서버 푸시에 특화된 표준화된 솔루션
+4. **WebSocket**: 완전한 양방향 통신을 위한 프로토콜 레벨의 혁신
+
+---
+
+### 💡 현명한 기술 선택을 위한 가이드
+
+실제 프로덕션 환경에서는 "가장 좋은 기술"이 아닌 "가장 적합한 기술"을 선택해야 합니다:
+
+- **폴링이 적합한 경우**: 실시간성이 크게 중요하지 않고, 구현 단순성이 우선인 경우
+- **롱 폴링을 선택할 때**: WebSocket을 지원하지 않는 레거시 환경이나 프록시 제약이 있는 경우
+- **SSE가 최선인 상황**: 서버에서 클라이언트로의 단방향 스트리밍이 충분한 경우 (주식 시세, 뉴스
+  피드)
+- **WebSocket이 필수인 경우**: 낮은 지연시간의 양방향 통신이 핵심인 경우 (게임, 협업 도구, 실시간
+  채팅)
+
+---
+
+### 🚀 미래를 향한 발걸음
+
+WebSocket은 끝이 아니라 시작입니다. WebTransport, WebRTC DataChannel 같은 새로운 기술들이 계속
+등장하고 있으며, HTTP/3와 QUIC는 더 나은 실시간 통신의 가능성을 열어가고 있습니다.
+
+기술의 선택은 항상 문제 해결에서 시작되어야 합니다.
+실시간 통신이 정말 필요한지, 필요하다면 어느 정도의 실시간성이 요구되는지를 먼저 고민해보는 자세를
+갖는 것이 중요하다고 생각합니다.
+
+이 시리즈가 여러분의 실시간 웹 애플리케이션 개발 여정에 나침반이 되었기를 바랍니다.
+각 기법의 원리를 이해하고, 상황에 맞는 최적의 선택을 하실 수 있는데 약간이나마 도움이 되었기를! 🍠

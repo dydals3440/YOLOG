@@ -17,11 +17,11 @@ image: '/images/http-tcp/thumbnail.png'
 
 ![HTTP 통신의 핵심 개념: TCP 3-Way Handshake부터 응답까지](/images/http-tcp/thumbnail.png)
 
-## 1. TCP 3-Way Handshake: HTTP 통신의 시작점
+## 1. TCP 핸드셰이크: HTTP 통신의 시작점
 
 HTTP는 애플리케이션 계층 프로토콜로, 전송 계층의 TCP 위에서 동작합니다. 따라서 HTTP 통신을 시작하기 전에 반드시 TCP 연결이 먼저 수립되어야 합니다.
 
-### 3-Way Handshake 과정
+### 핸드셰이크 과정
 
 ```
 Client                    Server
@@ -69,7 +69,7 @@ curl https://dummyjson.com/comments/1 --verbose // -v 단축 가능
 * Connected to dummyjson.com (66.33.22.3) port 443
 ```
 
-- 3-Way Handshake 완료
+- TCP 핸드셰이크 완료
 - 이제 TLS 핸드셰이크와 HTTP 통신 가능
 
 ### TCP 연결의 특징
@@ -321,7 +321,7 @@ HTTP 응답은 서버가 클라이언트의 요청을 처리한 결과를 전달
 ```
 
 - TCP 연결을 재사용하여 성능 향상
-- 매 요청마다 3-Way Handshake 불필요
+- 매 요청마다 TCP 핸드셰이크 불필요
 - HTTP/2에서는 다중화(Multiplexing)로 더욱 개선
 
 ---
@@ -330,7 +330,7 @@ HTTP 응답은 서버가 클라이언트의 요청을 처리한 결과를 전달
 
 1. **URL 파싱**: 클라이언트가 요청할 리소스의 주소 해석
 2. **DNS 조회**: 도메인을 IP 주소로 변환
-3. **TCP 연결**: 3-Way Handshake로 안정적인 연결 수립
+3. **TCP 연결**: 핸드셰이크로 안정적인 연결 수립
 4. **HTTP 요청**: 메서드, 헤더, 본문으로 구성된 요청 전송
 5. **서버 처리**: 요청 해석 및 비즈니스 로직 수행
 6. **HTTP 응답**: 상태 코드, 헤더, 본문으로 결과 반환
