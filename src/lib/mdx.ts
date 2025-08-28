@@ -49,10 +49,25 @@ export const getPostInfoList = async (): Promise<PostInfoModel[]> => {
 export const generateDescription = (content: string) => {
   const parsedContent = content
     .replace(/:{3}.*?:{3}/gs, '')
+    // HTML 태그 완전히 제거 (script, style 포함 모든 태그)
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    .replace(/<[^>]+>/g, '')
+    // 이미지 마크다운 제거
     .replace(/!\[.*?\]\(.*?\)/g, '')
+    // 링크 마크다운에서 텍스트만 추출
     .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+    // URL 제거
     .replace(/(?<!\S)((http)(s?):\/\/|www\.).+?(?=\s)/g, '')
+    // 마크다운 문법 제거
     .replace(/[#*|[\]]|(-{3,})|(`{3})(\S*)(?=\s)/g, '')
+    // HTML 엔티티 디코드
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+    // 다중 공백을 단일 공백으로
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 157);
