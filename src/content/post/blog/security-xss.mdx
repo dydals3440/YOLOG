@@ -2,18 +2,24 @@
 title: XSS(Cross-Site Scripting) 크로스 사이트 스크립팅 공격이란?
 date: 2025-08-29
 updatedDate: 2025-08-29
-tags: [XSS, 웹보안, Cross-Site-Scripting, CSP, Sanitize, Escape, 웹취약점]
+tags: [XSS, 웹보안, Cross-Site-Scripting, Sanitize, Escape, 웹취약점]
 category: HTTP
 image: '/images/security-xss/thumbnail.png'
 ---
 
 # XSS(Cross-Site Scripting) 완벽 가이드: 실습으로 이해하는 웹 보안
 
-"우리 서비스에 사용자가 `<script>alert('해킹당함')</script>`를 입력했는데 진짜 알림이 떴어요!"
+"우리 서비스에 사용자가 아래와 같은 스크립트를 입력했는데 진짜 알림이 떴어요!"
 
-실제로 제가 주니어 개발자 시절 겪었던 일입니다. 단순한 게시판 기능에서 발생한 이 문제는 XSS(Cross-Site Scripting)라는 심각한 보안 취약점이었죠.
+```html
+<script>
+  alert('해킹당함');
+</script>
+```
 
-이번 포스트에서는 웹 개발자라면 반드시 알아야 할 XSS 공격의 원리부터 실제 방어 방법까지 실습을 통해 완벽하게 이해해보겠습니다.
+단순한 `CREATE` 기능에서 발생한 이 문제는 `XSS(Cross-Site Scripting)`라는 심각한 보안 취약점이었습니다.
+
+이번 포스트에서는 웹 개발자라면 반드시 알아야 할 `XSS` 공격의 원리부터 실제 방어 방법까지 실습을 통해 완벽하게 이해해보겠습니다.
 
 ![XSS 공격으로부터 웹을 지키자](/images/security-xss/thumbnail.png)
 
@@ -29,11 +35,11 @@ image: '/images/security-xss/thumbnail.png'
 </script>
 ```
 
-만약 알림창이 뜬다면? 축하합니다. 여러분의 사이트는 XSS 공격에 취약합니다. 🚨
+만약 알림창이 뜬다면? 축하합니다. 여러분의 사이트는 `XSS` 공격에 취약합니다. 🚨
 
 ### XSS의 정의와 위험성
 
-XSS(Cross-Site Scripting)는 공격자가 웹 애플리케이션에 악성 스크립트를 삽입해 다른 사용자의 브라우저에서 실행되도록 하는 공격입니다.
+`XSS(Cross-Site Scripting)`는 공격자가 웹 애플리케이션에 악성 스크립트를 삽입해 다른 사용자의 브라우저에서 실행되도록 하는 공격입니다.
 
 **왜 위험한가?**
 
@@ -133,7 +139,7 @@ node vulnerable-app.js
 </script>
 ```
 
-놀랍게도 실제 JavaScript 코드가 실행됩니다!
+놀랍게도 실제 `JavaScript` 코드가 실행됩니다!
 
 ![실제로 Input에 스크립트 주입하면 어떻게 될까?](/images/security-xss/2.png)
 
@@ -141,7 +147,7 @@ node vulnerable-app.js
 
 1. 사용자가 입력한 스크립트 태그가 그대로 데이터베이스에 저장됨
 2. HTML을 생성할 때 `${product}`로 그대로 출력
-3. 브라우저가 이를 실제 JavaScript 코드로 해석하여 실행
+3. 브라우저가 이를 실제 `JavaScript` 코드로 해석하여 실행
 
 이것이 바로 **Stored XSS** 공격입니다. 한 번 저장되면 모든 사용자가 영향을 받게 됩니다.
 
@@ -151,9 +157,9 @@ node vulnerable-app.js
 
 ### 방법 1: HTML Sanitization (정화)
 
-Sanitize는 "살균 처리"라는 뜻으로, 위험한 HTML 태그와 JavaScript를 제거하는 방법입니다.
+`Sanitize`는 "살균 처리"라는 뜻으로, 위험한 `HTML` 태그와 `JavaScript`를 제거하는 방법입니다.
 
-가장 신뢰받는 라이브러리인 **DOMPurify**를 사용해보겠습니다:
+가장 신뢰받는 라이브러리인 `DOMPurify`를 사용해보겠습니다:
 
 ```javascript
 const DOMPurify = require('isomorphic-dompurify');
@@ -173,17 +179,17 @@ console.log(cleanHTML); // <p>안녕하세요</p>
 
 ### 방법 2: HTML 이스케이프 처리
 
-하지만 때로는 사용자가 입력한 내용을 그대로 보여주되, HTML로 해석되지 않게 하고 싶을 때가 있습니다.
+하지만 때로는 사용자가 입력한 내용을 그대로 보여주되, `HTML`로 해석되지 않게 하고 싶을 때가 있습니다.
 
 예를 들어, 사용자가 `<h1>왕 고구마</h1>`를 입력했다고 해봅시다:
 
 ![HTML 코드를 Input에 입력하면 어떻게 될까?](/images/security-xss/4.png)
 
-브라우저가 이를 HTML로 해석해서 큰 제목으로 보여주는데, 이는 우리가 원한 것이 아닙니다.
+브라우저가 이를 `HTML`로 해석해서 큰 제목으로 보여주는데, 이는 우리가 원한 것이 아닙니다.
 
 **해결책: 이스케이프(Escape) 처리**
 
-HTML 특수 문자를 브라우저가 해석할 수 없는 문자로 변환합니다:
+`HTML` 특수 문자를 브라우저가 해석할 수 없는 문자로 변환합니다:
 
 ```html
 <!-- 원본 -->
@@ -222,7 +228,7 @@ req.on('end', () => {
 
 **왜 `&`를 먼저 치환해야 할까요?**
 
-`&`는 HTML 엔티티의 시작 문자입니다. 만약 `<`를 먼저 `&lt;`로 치환한 후 `&`를 치환하면:
+`&`는 `HTML` 엔티티의 시작 문자입니다. 만약 `<`를 먼저 `&lt;`로 치환한 후 `&`를 치환하면:
 
 - `<` → `&lt;` → `&amp;lt;` (잘못된 이중 이스케이프!)
 
@@ -235,11 +241,11 @@ req.on('end', () => {
 
 **결과를 확인해보면:**
 
-이제 `<h1>왕 고구마</h1>`가 그대로 텍스트로 출력됩니다!
+이제 `<h1>왕 고구마</h1>`가 그대로 텍스트로 출력됩니다! 이렇게 하면 브라우저가 이를 `HTML`로 해석하지 않고 그대로 텍스트로 출력합니다.
 
 ### 실무에서 자주 사용하는 이스케이프 함수
 
-**lodash의 \_.escape 함수 구현:**
+**lodash의 `_.escape` 함수 구현:**
 
 ```javascript
 // lodash의 _.escape 함수 구현 방식
@@ -267,7 +273,7 @@ console.log(lodashEscape('<script>alert("XSS")</script>'));
 
 ### 왜 "Cross-Site" Scripting인가?
 
-XSS의 핵심은 **신뢰할 수 없는 출처의 스크립트가 신뢰받는 사이트에서 실행되는 것**입니다.
+`XSS`의 핵심은 **신뢰할 수 없는 출처의 스크립트가 신뢰받는 사이트에서 실행되는 것**입니다.
 
 ```javascript
 // 공격 시나리오
@@ -279,7 +285,7 @@ XSS의 핵심은 **신뢰할 수 없는 출처의 스크립트가 신뢰받는 �
 
 ### XSS로 가능한 공격들
 
-XSS는 단순한 alert창을 띄우는 것 이상의 심각한 공격이 가능합니다:
+`XSS`는 단순한 `alert`창을 띄우는 것 이상의 심각한 공격이 가능합니다:
 
 1. **🍪 세션 하이재킹**: 쿠키를 훔쳐 사용자 계정 탈취
 2. **🎣 피싱 공격**: 가짜 로그인 창으로 비밀번호 수집
