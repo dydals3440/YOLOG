@@ -1,0 +1,292 @@
+---
+title: XSS(Cross-Site Scripting) 크로스 사이트 스크립팅 공격이란?
+date: 2025-08-29
+updatedDate: 2025-08-29
+tags: [XSS, 웹보안, Cross-Site-Scripting, CSP, Sanitize, Escape, 웹취약점]
+category: HTTP
+image: '/images/security-xss/thumbnail.png'
+---
+
+# XSS(Cross-Site Scripting) 완벽 가이드: 실습으로 이해하는 웹 보안
+
+"우리 서비스에 사용자가 `<script>alert('해킹당함')</script>`를 입력했는데 진짜 알림이 떴어요!"
+
+실제로 제가 주니어 개발자 시절 겪었던 일입니다. 단순한 게시판 기능에서 발생한 이 문제는 XSS(Cross-Site Scripting)라는 심각한 보안 취약점이었죠.
+
+이번 포스트에서는 웹 개발자라면 반드시 알아야 할 XSS 공격의 원리부터 실제 방어 방법까지 실습을 통해 완벽하게 이해해보겠습니다.
+
+![XSS 공격으로부터 웹을 지키자](/images/security-xss/thumbnail.png)
+
+## 1. XSS가 뭐길래 이렇게 위험한가?
+
+### 간단한 실험: 당신의 웹사이트는 안전한가요?
+
+여러분의 웹사이트 입력 폼에 아래 텍스트를 한 번 입력해보세요:
+
+```html
+<script>
+  alert('XSS 취약점 발견!');
+</script>
+```
+
+만약 알림창이 뜬다면? 축하합니다. 여러분의 사이트는 XSS 공격에 취약합니다. 🚨
+
+### XSS의 정의와 위험성
+
+XSS(Cross-Site Scripting)는 공격자가 웹 애플리케이션에 악성 스크립트를 삽입해 다른 사용자의 브라우저에서 실행되도록 하는 공격입니다.
+
+**왜 위험한가?**
+
+- 🍪 **쿠키 탈취**: 사용자의 세션 쿠키를 훔쳐 계정 탈취
+- 📝 **피싱 공격**: 가짜 로그인 폼을 띄워 비밀번호 수집
+- 🎭 **신원 도용**: 사용자 대신 악의적인 행동 수행
+- 💣 **웹사이트 변조**: 페이지 내용을 마음대로 수정
+
+---
+
+## 2. 실습으로 이해하는 XSS 공격
+
+### 취약한 웹 애플리케이션 만들기
+
+먼저 XSS에 취약한 간단한 상품 목록 앱을 만들어보겠습니다:
+
+```jsx
+const http = require('http');
+const queryString = require('querystring');
+
+// 메모리에 있는 데이터베이스
+const database = {
+  products: ['군고구마', '고구마 아이스크림'],
+};
+
+// http 추가 요청 처리
+const postProduct = (req, res) => {
+  let body = '';
+  req.on('data', (chunk) => {
+    body = body + chunk.toString();
+  });
+
+  req.on('end', () => {
+    const { product } = queryString.parse(body);
+    database.products.push(product);
+
+    res.statusCode = 302;
+    res.setHeader('Location', '/');
+    res.end();
+  });
+};
+
+// 루트 인덱스를 처리 할 핸들러
+// index.html을 동적으로 만들 것임 (데이터 베이스 내용갖고)
+const index = (req, res) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+       <meta charset="utf-8">
+       <style>input {width: 600px;}</style>
+    </head>
+    <body>
+    <form method="POST" action="/product">
+    <input name="product" type="text"/>
+    <button type="submit">Add</button>
+    </form>
+    <ul>
+    ${database.products.map((product) => `<li>${product}</li>`).join('')}
+    </ul>
+    </body>
+    </html>`);
+  res.end();
+};
+
+const server = http.createServer((req, res) => {
+  const { pathname } = new URL(req.url, `http://${req.headers.host}`);
+
+  if (pathname === '/product') return postProduct(req, res);
+  index(req, res);
+});
+
+server.listen(8080, () => {
+  console.log('Server is running on port 8080');
+});
+```
+
+### XSS 공격 시연
+
+서버를 실행하고 브라우저에서 접속해보겠습니다:
+
+```bash
+node vulnerable-app.js
+# http://localhost:8080 접속
+```
+
+정상적으로 상품을 추가하면 잘 작동합니다:
+
+![간단하게 만든 서버에 추가해보기](/images/security-xss/1.png)
+
+하지만 악의적인 사용자가 다음과 같은 스크립트를 입력한다면 어떻게 될까요?
+
+```html
+<script>
+  alert('감자가 더 좋아');
+</script>
+```
+
+놀랍게도 실제 JavaScript 코드가 실행됩니다!
+
+![실제로 Input에 스크립트 주입하면 어떻게 될까?](/images/security-xss/2.png)
+
+**무슨 일이 일어난 건가요?**
+
+1. 사용자가 입력한 스크립트 태그가 그대로 데이터베이스에 저장됨
+2. HTML을 생성할 때 `${product}`로 그대로 출력
+3. 브라우저가 이를 실제 JavaScript 코드로 해석하여 실행
+
+이것이 바로 **Stored XSS** 공격입니다. 한 번 저장되면 모든 사용자가 영향을 받게 됩니다.
+
+---
+
+## 3. XSS 방어 전략
+
+### 방법 1: HTML Sanitization (정화)
+
+Sanitize는 "살균 처리"라는 뜻으로, 위험한 HTML 태그와 JavaScript를 제거하는 방법입니다.
+
+가장 신뢰받는 라이브러리인 **DOMPurify**를 사용해보겠습니다:
+
+```javascript
+const DOMPurify = require('isomorphic-dompurify');
+
+// 위험한 HTML
+const dirtyHTML = '<script>alert("XSS")</script><p>안녕하세요</p>';
+
+// 정화 처리
+const cleanHTML = DOMPurify.sanitize(dirtyHTML);
+console.log(cleanHTML); // <p>안녕하세요</p>
+// script 태그가 완전히 제거됨!
+```
+
+**DOMPurify Playground에서 직접 테스트해보세요:** https://cure53.de/purify
+
+![DOM Purify를 통해서 처리된 결과](/images/security-xss/3.png)
+
+### 방법 2: HTML 이스케이프 처리
+
+하지만 때로는 사용자가 입력한 내용을 그대로 보여주되, HTML로 해석되지 않게 하고 싶을 때가 있습니다.
+
+예를 들어, 사용자가 `<h1>왕 고구마</h1>`를 입력했다고 해봅시다:
+
+![HTML 코드를 Input에 입력하면 어떻게 될까?](/images/security-xss/4.png)
+
+브라우저가 이를 HTML로 해석해서 큰 제목으로 보여주는데, 이는 우리가 원한 것이 아닙니다.
+
+**해결책: 이스케이프(Escape) 처리**
+
+HTML 특수 문자를 브라우저가 해석할 수 없는 문자로 변환합니다:
+
+```html
+<!-- 원본 -->
+<h1>왕 고구마</h1>
+
+<!-- 이스케이프 처리 후 -->
+&lt;h1&gt;왕 고구마&lt;/h1&gt;
+```
+
+**주요 이스케이프 문자:**
+
+- `<` → `&lt;` (Less Than)
+- `>` → `&gt;` (Greater Than)
+- `&` → `&amp;` (Ampersand)
+- `"` → `&quot;` (Quote)
+- `'` → `&#39;` (Apostrophe)
+
+이제 우리 코드에 이스케이프 처리를 적용해보겠습니다:
+
+```tsx
+req.on('end', () => {
+  const { product } = queryString.parse(body);
+
+  const escapedProduct = product
+    .replace(/&/g, '&amp;') // & 문자를 &amp;로 치환 (반드시 첫 번째로 실행!)
+    .replace(/</g, '&lt;') // < 문자를 &lt;로 치환
+    .replace(/>/g, '&gt;'); // > 문자를 &gt;로 치환
+
+  database.products.push(escapedProduct);
+
+  res.statusCode = 302;
+  res.setHeader('Location', '/');
+  res.end();
+});
+```
+
+**왜 `&`를 먼저 치환해야 할까요?**
+
+`&`는 HTML 엔티티의 시작 문자입니다. 만약 `<`를 먼저 `&lt;`로 치환한 후 `&`를 치환하면:
+
+- `<` → `&lt;` → `&amp;lt;` (잘못된 이중 이스케이프!)
+
+올바른 순서로 치환하면:
+
+- `&` → `&amp;` (먼저 실행)
+- `<` → `&lt;` (이미 치환된 & 문자는 영향받지 않음)
+
+![HTML 코드를 이스케이프 처리 후 출력](/images/security-xss/5.png)
+
+**결과를 확인해보면:**
+
+이제 `<h1>왕 고구마</h1>`가 그대로 텍스트로 출력됩니다!
+
+### 실무에서 자주 사용하는 이스케이프 함수
+
+**lodash의 \_.escape 함수 구현:**
+
+```javascript
+// lodash의 _.escape 함수 구현 방식
+const escapeHtmlChar = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+};
+
+function lodashEscape(string) {
+  // 정규표현식으로 특수문자를 찾아서 치환
+  return string && string.replace(/[&<>"']/g, (char) => escapeHtmlChar[char]);
+}
+
+// 사용 예시
+console.log(lodashEscape('<script>alert("XSS")</script>'));
+// 출력: &lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;
+```
+
+---
+
+## 4. XSS 공격의 본질 이해하기
+
+### 왜 "Cross-Site" Scripting인가?
+
+XSS의 핵심은 **신뢰할 수 없는 출처의 스크립트가 신뢰받는 사이트에서 실행되는 것**입니다.
+
+```javascript
+// 공격 시나리오
+// 1. 해커가 악성 스크립트를 우리 사이트에 주입
+// 2. 다른 사용자가 우리 사이트 방문
+// 3. 브라우저는 우리 사이트를 신뢰하므로 스크립트 실행
+// 4. 사용자 정보 탈취 성공!
+```
+
+### XSS로 가능한 공격들
+
+XSS는 단순한 alert창을 띄우는 것 이상의 심각한 공격이 가능합니다:
+
+1. **🍪 세션 하이재킹**: 쿠키를 훔쳐 사용자 계정 탈취
+2. **🎣 피싱 공격**: 가짜 로그인 창으로 비밀번호 수집
+3. **📸 키로거**: 키보드 입력 모니터링
+4. **🔄 리다이렉트**: 악성 사이트로 자동 이동
+5. **💾 정보 유출**: 개인정보, 결제정보 등 탈취
+
+이러한 고급 공격 기법들은 다음 포스트 **세션 하이재킹과 CSRF 공격**에서 자세히 다루겠습니다.
+
+---
