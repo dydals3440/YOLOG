@@ -190,7 +190,7 @@ res.setHeader('Set-Cookie', 'sid=1; Secure');
 ### HttpOnly
 
 JavaScript에서 `document.cookie` 접근 차단  
-XSS 공격 방어에 필수
+[XSS 공격](https://www.yolog.co.kr/post/security-xss) 방어에 필수
 
 ```js
 res.setHeader('Set-Cookie', 'sid=1; HttpOnly');
@@ -236,4 +236,4 @@ Cookies.remove('checked');
 도메인·경로·생명주기·보안 옵션을 이해하면, 로그인, 세션 관리, 사용자 경험 개선까지 모두 손에 넣을 수 있습니다.
 
 > **팁**: 실무에서는 쿠키를 세션 저장소와 연계하거나, JWT 등과 조합해 사용하는 경우가 많습니다.  
-> 특히 보안 속성(Secure, HttpOnly)은 반드시 사용하는 것을 추천합니다.
+> 특히 보안 속성(Secure, HttpOnly)은 [세션 하이재킹](https://www.yolog.co.kr/post/security-session-hijacking)과 [XSS 공격](https://www.yolog.co.kr/post/security-xss)을 방어하기 위해 반드시 사용하는 것을 추천합니다.

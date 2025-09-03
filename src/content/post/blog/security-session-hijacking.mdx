@@ -20,7 +20,7 @@ image: '/images/security-session-hijacking/thumbnail.png'
 
 "로그인된 사용자의 세션을 훔쳐서 그 사람인 것처럼 행동할 수 있다면?"
 
-웹 개발자라면 한 번쯤 이런 질문을 받아보셨을 겁니다. 바로 **세션 하이재킹(Session Hijacking)**이라는 공격 기법입니다.
+웹 개발자라면 한 번쯤 이런 질문을 받아보셨을 겁니다. 바로 `세션 하이재킹(Session Hijacking)`이라는 공격 기법입니다.
 
 이번 포스트에서는 `Node.js`로 직접 **취약한 인증 시스템**을 구현하고, **실제 공격**을 시연한 후, **방어 방법**까지 단계별로 알아보겠습니다.
 
@@ -32,15 +32,15 @@ image: '/images/security-session-hijacking/thumbnail.png'
 
 `HTTP` 프로토콜은 **무상태(Stateless)** 특성을 가집니다. 즉, 서버는 이전 요청을 기억하지 못합니다. 그렇다면 어떻게 로그인 상태를 유지할까요?
 
-**답은 세션(Session)과 쿠키(Cookie)입니다.**
+**답은 세션(Session)과 [쿠키(Cookie)](https://www.yolog.co.kr/post/http-cookie)입니다.**
 
 ### 웹 인증 프로세스
 
 1.  **로그인 요청**: 사용자가 아이디/비밀번호 입력
 2.  **인증 검증**: 서버가 DB와 대조하여 신원 확인
 3.  **세션 생성**: 인증 성공 시 서버가 고유한 세션 ID 발급
-4.  **쿠키 전송**: 세션 ID를 쿠키에 담아 브라우저로 전송
-5.  **상태 유지**: 이후 모든 요청에 쿠키가 자동으로 포함됨
+4.  **[쿠키](https://www.yolog.co.kr/post/http-cookie) 전송**: 세션 ID를 쿠키에 담아 브라우저로 전송
+5.  **상태 유지**: 이후 모든 요청에 [쿠키](https://www.yolog.co.kr/post/http-cookie)가 자동으로 포함됨
 
 이제 이 과정을 코드로 직접 구현해보겠습니다.
 
@@ -220,11 +220,11 @@ node vulnerable-app.js
 
 이제 본격적으로 **세션 하이재킹 공격**을 시연해보겠습니다.
 
-### XSS를 이용한 쿠키 탈취 시나리오
+### [XSS](https://www.yolog.co.kr/post/security-xss)를 이용한 쿠키 탈취 시나리오
 
 **공격 시나리오:**
 
-1. 공격자가 XSS 취약점을 이용해 악성 스크립트 주입
+1. 공격자가 [XSS](https://www.yolog.co.kr/post/security-xss) 취약점을 이용해 악성 스크립트 주입
 2. 다른 사용자가 페이지 방문 시 스크립트 실행
 3. 스크립트가 세션 쿠키를 공격자 서버로 전송
 4. 공격자가 탈취한 세션으로 피해자 계정 접근
@@ -278,7 +278,7 @@ sudo vi /private/etc/hosts
 **matthew.com**: 정상 서비스 도메인 (포트 8080)
 **hacker.com**: 공격자 서버 도메인 (포트 8081)
 
-### XSS 취약점 활성화
+### [XSS](https://www.yolog.co.kr/post/security-xss) 취약점 활성화
 
 실습을 위해 일시적으로 **이스케이프 처리를 제거**합니다:
 
@@ -392,9 +392,9 @@ curl http://matthew.com:8080 -H "Cookie: sid=session-id-1756852495508"
 
 ## 4. 세션 하이재킹 방어 전략
 
-### 방법 1: XSS 취약점 제거
+### 방법 1: [XSS](https://www.yolog.co.kr/post/security-xss) 취약점 제거
 
-가장 근본적인 해결책은 **XSS 공격 자체를 차단**하는 것입니다:
+가장 근본적인 해결책은 **[XSS 공격](https://www.yolog.co.kr/post/security-xss) 자체를 차단**하는 것입니다:
 
 ```javascript
 const postProduct = (req, res) => {
@@ -422,7 +422,7 @@ const postProduct = (req, res) => {
 **HttpOnly 플래그의 효과:**
 
 - `document.cookie`로 접근 불가
-- `XSS` 공격으로부터 세션 쿠키 보호
+- [`XSS` 공격](https://www.yolog.co.kr/post/security-xss)으로부터 세션 쿠키 보호
 - `HTTP` 요청에는 정상적으로 포함됨
 
 이제 로그인 함수를 수정해보겠습니다:
@@ -484,7 +484,7 @@ const login = (req, res) => {
   // 👉 보안 이슈 터지고 난 후...
   const cookieOptions = [
     `sid=${sid}`,
-    'HttpOnly', // XSS 공격 방어
+    'HttpOnly', // [XSS 공격](https://www.yolog.co.kr/post/security-xss) 방어
     'Secure', // HTTPS에서만 전송 (개발 환경에서는 빼세요!)
     'SameSite=Strict', // CSRF 공격 방어
     'Path=/', // 특정 경로에서만 사용
@@ -501,12 +501,12 @@ const login = (req, res) => {
 > ⚠️ **중요**: SameSite는 CSRF를 "어느 정도" 막아주지만, 완벽한 방어는 아닙니다!  
 > 진짜 CSRF 방어는 **CSRF 토큰**이나 **Custom Header 검증**이 필요합니다.
 
-| 플래그       | 언제 쓰나요?        | 막아주는 공격     | 주의사항                      |
-| ------------ | ------------------- | ----------------- | ----------------------------- |
-| **HttpOnly** | 필수! 무조건 써야함 | XSS로 쿠키 훔치기 | 개발자 도구에서도 안 보임     |
-| **Secure**   | HTTPS 사용 시 필수  | 와이파이 해킹     | localhost에서는 제외          |
-| **SameSite** | 외부 링크가 있다면  | CSRF 공격         | Strict는 UX에 영향 줄 수 있음 |
-| **Max-Age**  | 민감한 서비스라면   | 세션 고정         | 너무 짧으면 UX 나빠짐         |
+| 플래그       | 언제 쓰나요?        | 막아주는 공격                                                  | 주의사항                      |
+| ------------ | ------------------- | -------------------------------------------------------------- | ----------------------------- |
+| **HttpOnly** | 필수! 무조건 써야함 | [XSS](https://www.yolog.co.kr/post/security-xss)로 쿠키 훔치기 | 개발자 도구에서도 안 보임     |
+| **Secure**   | HTTPS 사용 시 필수  | 와이파이 해킹                                                  | localhost에서는 제외          |
+| **SameSite** | 외부 링크가 있다면  | CSRF 공격                                                      | Strict는 UX에 영향 줄 수 있음 |
+| **Max-Age**  | 민감한 서비스라면   | 세션 고정                                                      | 너무 짧으면 UX 나빠짐         |
 
 ### 🛡️ 더 강력한 보안을 위한 3가지 테크닉
 
@@ -583,7 +583,7 @@ const validateSession = (req, sid) => {
 **1. AWS WAF 설정 (월 $5부터 시작)**
 
 ```javascript
-// XSS 패턴 자동 차단 규칙
+// [XSS](https://www.yolog.co.kr/post/security-xss) 패턴 자동 차단 규칙
 {
   "Name": "XSSProtection",
   "Statement": {
@@ -650,7 +650,7 @@ cookieOptions += '; Max-Age=1800';
 
 **Q: `HTTPS`만 쓰면 세션 하이재킹에 대하여 안전한가요?**
 
-> A: `네트워크 스니핑`은 막지만, `XSS` 공격은 막지 못합니다.
+> A: `네트워크 스니핑`은 막지만, [`XSS` 공격](https://www.yolog.co.kr/post/security-xss)은 막지 못합니다.
 
 **Q: 개발 환경에서 `Secure` 플래그 때문에 쿠키가 안 보여요! 때문에 세션 하이재킹에 대하여 안전한가요?**
 

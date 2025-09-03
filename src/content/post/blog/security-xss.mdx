@@ -43,7 +43,7 @@ image: '/images/security-xss/thumbnail.png'
 
 **왜 위험한가?**
 
-- 🍪 **쿠키 탈취**: 사용자의 세션 쿠키를 훔쳐 계정 탈취
+- 🍪 **쿠키 탈취**: 사용자의 [세션 쿠키를 훔쳐 계정 탈취](https://www.yolog.co.kr/post/security-session-hijacking)
 - 📝 **피싱 공격**: 가짜 로그인 폼을 띄워 비밀번호 수집
 - 🎭 **신원 도용**: 사용자 대신 악의적인 행동 수행
 - 💣 **웹사이트 변조**: 페이지 내용을 마음대로 수정
@@ -287,12 +287,12 @@ console.log(lodashEscape('<script>alert("XSS")</script>'));
 
 `XSS`는 단순한 `alert`창을 띄우는 것 이상의 심각한 공격이 가능합니다:
 
-1. **🍪 세션 하이재킹**: 쿠키를 훔쳐 사용자 계정 탈취
+1. **🍪 [세션 하이재킹](https://www.yolog.co.kr/post/security-session-hijacking)**: 쿠키를 훔쳐 사용자 계정 탈취
 2. **🎣 피싱 공격**: 가짜 로그인 창으로 비밀번호 수집
 3. **📸 키로거**: 키보드 입력 모니터링
 4. **🔄 리다이렉트**: 악성 사이트로 자동 이동
 5. **💾 정보 유출**: 개인정보, 결제정보 등 탈취
 
-이러한 고급 공격 기법들은 다음 포스트 **세션 하이재킹과 CSRF 공격**에서 자세히 다루겠습니다.
+이러한 고급 공격 기법들은 [**세션 하이재킹**](https://www.yolog.co.kr/post/security-session-hijacking) 포스트에서 실습을 통해 자세히 다루고 있습니다.
 
 ---

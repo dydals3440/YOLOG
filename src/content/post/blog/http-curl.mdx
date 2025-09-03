@@ -104,7 +104,7 @@ curl https://dummyjson.com/comments/1 --verbose
 | `x-content-type-options: nosniff`               | 브라우저가 MIME 타입을 추측하지 못하게 방지 (보안).                                |
 | `x-dns-prefetch-control: off`                   | 브라우저의 DNS prefetching 비활성화.                                               |
 | `x-download-options: noopen`                    | 파일 다운로드 시 자동 실행 방지 (IE용).                                            |
-| `x-frame-options: SAMEORIGIN`                   | XSS 공격을 막기 위해 iframe 삽입 제한.                                             |
+| `x-frame-options: SAMEORIGIN`                   | [XSS](https://www.yolog.co.kr/post/security-xss) 공격을 막기 위해 iframe 삽입 제한.                                             |
 | `x-powered-by: Cats on Keyboards`               | 서버가 장난스럽게 자신을 소개. 실질적 의미 없음.                                   |
 | `x-railway-*`                                   | Railway(호스팅 서비스)에서 붙이는 정보. 엣지 위치 및 요청 ID.                      |
 | `x-ratelimit-*`                                 | API 호출 제한 관련 정보. (예: 100개 중 아직 99개 남음)                             |
