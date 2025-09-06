@@ -1,0 +1,98 @@
+<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="800" height="600" fill="#f8fafc"/>
+  
+  <!-- Base Button (Center) -->
+  <g id="base-button">
+    <rect x="325" y="250" width="150" height="50" rx="25" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="2"/>
+    <text x="400" y="285" text-anchor="middle" fill="#64748b" font-family="Arial" font-size="16" font-weight="bold">기본 버튼 스타일</text>
+    
+    <!-- Base Button Label -->
+    <rect x="350" y="320" width="100" height="30" rx="15" fill="#64748b"/>
+    <text x="400" y="340" text-anchor="middle" fill="white" font-family="Arial" font-size="12" font-weight="bold">button</text>
+  </g>
+  
+  <!-- Base Style Box -->
+  <g id="base-style">
+    <rect x="300" y="150" width="200" height="80" rx="8" fill="white" stroke="#64748b" stroke-width="2" stroke-dasharray="4,4"/>
+    <text x="400" y="175" text-anchor="middle" fill="#64748b" font-family="Arial" font-size="14" font-weight="bold">기본 스타일</text>
+    <text x="320" y="195" fill="#64748b" font-family="Arial" font-size="11">• 폰트 패밀리</text>
+    <text x="320" y="210" fill="#64748b" font-family="Arial" font-size="11">• 테두리 둥글기</text>
+    <text x="420" y="195" fill="#64748b" font-family="Arial" font-size="11">• 패딩</text>
+    <text x="420" y="210" fill="#64748b" font-family="Arial" font-size="11">• 기본 크기</text>
+  </g>
+  
+  <!-- Submit Button (Left) -->
+  <g id="submit-button">
+    <rect x="100" y="400" width="150" height="50" rx="25" fill="#22c55e" stroke="#16a34a" stroke-width="2"/>
+    <text x="175" y="435" text-anchor="middle" fill="white" font-family="Arial" font-size="16" font-weight="bold">제출</text>
+    
+    <!-- Submit Label -->
+    <rect x="125" y="470" width="100" height="30" rx="15" fill="#f59e0b"/>
+    <text x="175" y="490" text-anchor="middle" fill="white" font-family="Arial" font-size="12" font-weight="bold">button--submit</text>
+    
+    <!-- Submit Style Details -->
+    <rect x="80" y="520" width="190" height="50" rx="8" fill="white" stroke="#22c55e" stroke-width="1"/>
+    <text x="175" y="540" text-anchor="middle" fill="#22c55e" font-family="Arial" font-size="12" font-weight="bold">상속 + 추가</text>
+    <text x="90" y="555" fill="#64748b" font-family="Arial" font-size="10">• 배경: 초록색</text>
+    <text x="90" y="565" fill="#64748b" font-family="Arial" font-size="10">• 텍스트: 흰색</text>
+  </g>
+  
+  <!-- Cancel Button (Right) -->
+  <g id="cancel-button">
+    <rect x="550" y="400" width="150" height="50" rx="25" fill="#ef4444" stroke="#dc2626" stroke-width="2"/>
+    <text x="625" y="435" text-anchor="middle" fill="white" font-family="Arial" font-size="16" font-weight="bold">취소</text>
+    
+    <!-- Cancel Label -->
+    <rect x="575" y="470" width="100" height="30" rx="15" fill="#f59e0b"/>
+    <text x="625" y="490" text-anchor="middle" fill="white" font-family="Arial" font-size="12" font-weight="bold">button--cancel</text>
+    
+    <!-- Cancel Style Details -->
+    <rect x="530" y="520" width="190" height="50" rx="8" fill="white" stroke="#ef4444" stroke-width="1"/>
+    <text x="625" y="540" text-anchor="middle" fill="#ef4444" font-family="Arial" font-size="12" font-weight="bold">상속 + 추가</text>
+    <text x="540" y="555" fill="#64748b" font-family="Arial" font-size="10">• 배경: 빨간색</text>
+    <text x="540" y="565" fill="#64748b" font-family="Arial" font-size="10">• 텍스트: 흰색</text>
+  </g>
+  
+  <!-- Inheritance Arrows -->
+  <g id="inheritance-arrows" stroke="#f59e0b" stroke-width="3" marker-end="url(#reuse-arrow)">
+    <path d="M 350 300 Q 250 350 175 400" fill="none"/>
+    <path d="M 450 300 Q 550 350 625 400" fill="none"/>
+  </g>
+  
+  <!-- Inheritance Labels -->
+  <g id="inheritance-labels">
+    <text x="250" y="340" text-anchor="middle" fill="#f59e0b" font-family="Arial" font-size="12" font-weight="bold">기본 스타일</text>
+    <text x="250" y="355" text-anchor="middle" fill="#f59e0b" font-family="Arial" font-size="12" font-weight="bold">상속받음</text>
+    
+    <text x="550" y="340" text-anchor="middle" fill="#f59e0b" font-family="Arial" font-size="12" font-weight="bold">기본 스타일</text>
+    <text x="550" y="355" text-anchor="middle" fill="#f59e0b" font-family="Arial" font-size="12" font-weight="bold">상속받음</text>
+  </g>
+  
+  <!-- Reuse Pattern Description -->
+  <g id="reuse-description">
+    <rect x="50" y="50" width="700" height="80" rx="8" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="70" y="75" fill="#1e293b" font-family="Arial" font-size="18" font-weight="bold">BEM Modifier 재사용 패턴</text>
+    <text x="70" y="95" fill="#64748b" font-family="Arial" font-size="13">기본 블록의 스타일을 상속받아 특정 속성만 변경하여 다양한 변형을 만듭니다.</text>
+    <text x="70" y="115" fill="#64748b" font-family="Arial" font-size="13">코드 중복을 줄이고 일관성 있는 디자인 시스템을 구축할 수 있습니다.</text>
+  </g>
+  
+  <!-- CSS Logic Visualization -->
+  <g id="css-logic">
+    <rect x="320" y="370" width="160" height="15" rx="7" fill="#3b82f6" opacity="0.2"/>
+    <text x="400" y="382" text-anchor="middle" fill="#3b82f6" font-family="Arial" font-size="10" font-weight="bold">공통 스타일 적용</text>
+    
+    <line x1="250" y1="380" x2="320" y2="380" stroke="#3b82f6" stroke-width="2"/>
+    <line x1="480" y1="380" x2="550" y2="380" stroke="#3b82f6" stroke-width="2"/>
+  </g>
+  
+  <!-- Arrow marker definitions -->
+  <defs>
+    <marker id="reuse-arrow" markerWidth="12" markerHeight="8" refX="12" refY="4" orient="auto">
+      <polygon points="0 0, 12 4, 0 8" fill="#f59e0b"/>
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" fill="#1e293b" font-family="Arial" font-size="24" font-weight="bold">BEM 재사용 패턴</text>
+</svg>

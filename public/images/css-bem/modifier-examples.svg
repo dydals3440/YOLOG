@@ -1,0 +1,126 @@
+<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="800" height="600" fill="#f8fafc"/>
+  
+  <!-- Base Button -->
+  <g id="base-button">
+    <rect x="100" y="200" width="120" height="40" rx="20" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="2"/>
+    <text x="160" y="225" text-anchor="middle" fill="#64748b" font-family="Arial" font-size="14" font-weight="bold">기본 버튼</text>
+    
+    <!-- Base Label -->
+    <rect x="120" y="260" width="80" height="25" rx="12" fill="#64748b"/>
+    <text x="160" y="277" text-anchor="middle" fill="white" font-family="Arial" font-size="11">button</text>
+  </g>
+  
+  <!-- Large Button -->
+  <g id="large-button">
+    <rect x="280" y="180" width="160" height="60" rx="30" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="2"/>
+    <text x="360" y="220" text-anchor="middle" fill="#64748b" font-family="Arial" font-size="18" font-weight="bold">큰 버튼</text>
+    
+    <!-- Large Label -->
+    <rect x="320" y="260" width="80" height="25" rx="12" fill="#f59e0b"/>
+    <text x="360" y="277" text-anchor="middle" fill="white" font-family="Arial" font-size="11">button--large</text>
+  </g>
+  
+  <!-- Primary Button -->
+  <g id="primary-button">
+    <rect x="500" y="200" width="120" height="40" rx="20" fill="#3b82f6" stroke="#2563eb" stroke-width="2"/>
+    <text x="560" y="225" text-anchor="middle" fill="white" font-family="Arial" font-size="14" font-weight="bold">주요 버튼</text>
+    
+    <!-- Primary Label -->
+    <rect x="520" y="260" width="80" height="25" rx="12" fill="#f59e0b"/>
+    <text x="560" y="277" text-anchor="middle" fill="white" font-family="Arial" font-size="11">button--primary</text>
+  </g>
+  
+  <!-- Disabled Button -->
+  <g id="disabled-button">
+    <rect x="100" y="350" width="120" height="40" rx="20" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="2"/>
+    <text x="160" y="375" text-anchor="middle" fill="#cbd5e1" font-family="Arial" font-size="14">비활성 버튼</text>
+    
+    <!-- Disabled Label -->
+    <rect x="120" y="410" width="80" height="25" rx="12" fill="#f59e0b"/>
+    <text x="160" y="427" text-anchor="middle" fill="white" font-family="Arial" font-size="11">button--disabled</text>
+  </g>
+  
+  <!-- Success Button -->
+  <g id="success-button">
+    <rect x="280" y="350" width="120" height="40" rx="20" fill="#22c55e" stroke="#16a34a" stroke-width="2"/>
+    <text x="340" y="375" text-anchor="middle" fill="white" font-family="Arial" font-size="14" font-weight="bold">성공 버튼</text>
+    
+    <!-- Success Label -->
+    <rect x="300" y="410" width="80" height="25" rx="12" fill="#f59e0b"/>
+    <text x="340" y="427" text-anchor="middle" fill="white" font-family="Arial" font-size="11">button--success</text>
+  </g>
+  
+  <!-- Danger Button -->
+  <g id="danger-button">
+    <rect x="460" y="350" width="120" height="40" rx="20" fill="#ef4444" stroke="#dc2626" stroke-width="2"/>
+    <text x="520" y="375" text-anchor="middle" fill="white" font-family="Arial" font-size="14" font-weight="bold">위험 버튼</text>
+    
+    <!-- Danger Label -->
+    <rect x="480" y="410" width="80" height="25" rx="12" fill="#f59e0b"/>
+    <text x="520" y="427" text-anchor="middle" fill="white" font-family="Arial" font-size="11">button--danger</text>
+  </g>
+  
+  <!-- Small Button -->
+  <g id="small-button">
+    <rect x="640" y="210" width="80" height="30" rx="15" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="2"/>
+    <text x="680" y="230" text-anchor="middle" fill="#64748b" font-family="Arial" font-size="12" font-weight="bold">작은 버튼</text>
+    
+    <!-- Small Label -->
+    <rect x="650" y="260" width="60" height="25" rx="12" fill="#f59e0b"/>
+    <text x="680" y="277" text-anchor="middle" fill="white" font-family="Arial" font-size="10">button--small</text>
+  </g>
+  
+  <!-- Modifier Arrows -->
+  <g id="modifier-arrows" stroke="#f59e0b" stroke-width="2" marker-end="url(#modifier-arrow)">
+    <line x1="160" y1="250" x2="160" y2="260"/>
+    <line x1="360" y1="250" x2="360" y2="260"/>
+    <line x1="560" y1="250" x2="560" y2="260"/>
+    <line x1="680" y1="250" x2="680" y2="260"/>
+    <line x1="160" y1="400" x2="160" y2="410"/>
+    <line x1="340" y1="400" x2="340" y2="410"/>
+    <line x1="520" y1="400" x2="520" y2="410"/>
+  </g>
+  
+  <!-- Explanation Panel -->
+  <g id="explanation">
+    <rect x="50" y="480" width="700" height="100" rx="8" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="70" y="505" fill="#1e293b" font-family="Arial" font-size="16" font-weight="bold">BEM Modifier 예시</text>
+    <text x="70" y="525" fill="#64748b" font-family="Arial" font-size="13">같은 블록(button)에 다양한 수식어(modifier)를 적용하여 다른 스타일과 상태를 나타냅니다.</text>
+    <text x="70" y="545" fill="#64748b" font-family="Arial" font-size="13">기본 스타일은 유지하면서 특정 속성만 변경하여 일관성 있는 디자인을 구현할 수 있습니다.</text>
+    <text x="70" y="565" fill="#64748b" font-family="Arial" font-size="13">Modifier는 블록이나 요소의 모양, 상태, 동작을 변경할 때 사용합니다.</text>
+  </g>
+  
+  <!-- Legend -->
+  <g id="legend">
+    <rect x="50" y="100" width="700" height="50" rx="8" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="70" y="120" fill="#1e293b" font-family="Arial" font-size="14" font-weight="bold">Modifier 종류</text>
+    
+    <circle cx="180" cy="135" r="4" fill="#64748b"/>
+    <text x="195" y="140" fill="#64748b" font-family="Arial" font-size="12">기본 (Base)</text>
+    
+    <circle cx="300" cy="135" r="4" fill="#f59e0b"/>
+    <text x="315" y="140" fill="#64748b" font-family="Arial" font-size="12">크기 (Size)</text>
+    
+    <circle cx="410" cy="135" r="4" fill="#3b82f6"/>
+    <text x="425" y="140" fill="#64748b" font-family="Arial" font-size="12">타입 (Type)</text>
+    
+    <circle cx="520" cy="135" r="4" fill="#22c55e"/>
+    <text x="535" y="140" fill="#64748b" font-family="Arial" font-size="12">상태 (State)</text>
+    
+    <circle cx="620" cy="135" r="4" fill="#ef4444"/>
+    <text x="635" y="140" fill="#64748b" font-family="Arial" font-size="12">의미 (Semantic)</text>
+  </g>
+  
+  <!-- Arrow marker definitions -->
+  <defs>
+    <marker id="modifier-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#f59e0b"/>
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="400" y="40" text-anchor="middle" fill="#1e293b" font-family="Arial" font-size="24" font-weight="bold">BEM Modifier 예시</text>
+  <text x="400" y="65" text-anchor="middle" fill="#64748b" font-family="Arial" font-size="16">다양한 수식어로 버튼 변형하기</text>
+</svg>

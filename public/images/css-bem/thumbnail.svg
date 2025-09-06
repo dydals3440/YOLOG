@@ -1,0 +1,61 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="backgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="cardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.95" />
+      <stop offset="100%" style="stop-color:#f8fafc;stop-opacity:0.95" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#backgroundGradient)"/>
+  
+  <!-- Main content card -->
+  <rect x="80" y="80" width="1040" height="470" rx="20" fill="url(#cardGradient)" opacity="0.95"/>
+  
+  <!-- BEM Title -->
+  <text x="600" y="180" font-family="Arial, sans-serif" font-size="72" font-weight="bold" text-anchor="middle" fill="#2d3748">BEM</text>
+  <text x="600" y="220" font-family="Arial, sans-serif" font-size="24" text-anchor="middle" fill="#4a5568">CSS Methodology</text>
+  
+  <!-- Block Element Modifier boxes -->
+  <g transform="translate(250, 280)">
+    <!-- Block -->
+    <rect x="0" y="0" width="180" height="80" rx="8" fill="#3182ce" opacity="0.9"/>
+    <text x="90" y="30" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="white">BLOCK</text>
+    <text x="90" y="50" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="white">.card</text>
+    <text x="90" y="65" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#e2e8f0">독립적 컴포넌트</text>
+    
+    <!-- Element -->
+    <rect x="220" y="0" width="180" height="80" rx="8" fill="#38a169" opacity="0.9"/>
+    <text x="310" y="30" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="white">ELEMENT</text>
+    <text x="310" y="50" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="white">.card__title</text>
+    <text x="310" y="65" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#e2e8f0">블록의 하위 요소</text>
+    
+    <!-- Modifier -->
+    <rect x="440" y="0" width="180" height="80" rx="8" fill="#e53e3e" opacity="0.9"/>
+    <text x="530" y="30" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="white">MODIFIER</text>
+    <text x="530" y="50" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="white">.card--large</text>
+    <text x="530" y="65" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#e2e8f0">상태/외형 변화</text>
+  </g>
+  
+  <!-- Connection lines -->
+  <g stroke="#718096" stroke-width="2" fill="none" opacity="0.6">
+    <path d="M 340 380 L 340 400 L 530 400 L 530 380"/>
+    <path d="M 530 380 L 530 400 L 720 400 L 720 380"/>
+  </g>
+  
+  <!-- Code example -->
+  <rect x="250" y="420" width="620" height="80" rx="8" fill="#2d3748" opacity="0.9"/>
+  <text x="270" y="445" font-family="Monaco, monospace" font-size="14" fill="#68d391">.card__title--highlighted</text>
+  <text x="270" y="470" font-family="Arial, sans-serif" font-size="12" fill="#a0aec0">체계적이고 유지보수가 쉬운 CSS 클래스 네이밍</text>
+  <text x="270" y="490" font-family="Arial, sans-serif" font-size="12" fill="#a0aec0">Block + Element + Modifier = 명확한 구조</text>
+  
+  <!-- Decorative elements -->
+  <circle cx="150" cy="150" r="3" fill="#ffffff" opacity="0.7"/>
+  <circle cx="1050" cy="200" r="4" fill="#ffffff" opacity="0.5"/>
+  <circle cx="120" cy="400" r="2" fill="#ffffff" opacity="0.8"/>
+  <circle cx="1080" cy="450" r="3" fill="#ffffff" opacity="0.6"/>
+</svg>

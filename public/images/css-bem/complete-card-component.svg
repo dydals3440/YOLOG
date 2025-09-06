@@ -1,0 +1,149 @@
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- 배경 -->
+  <rect width="800" height="600" fill="#f8f9fa"/>
+  
+  <!-- 제목 -->
+  <text x="400" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#2c3e50">
+    완전한 BEM 카드 컴포넌트 예시
+  </text>
+  
+  <!-- 카드 컨테이너 -->
+  <g transform="translate(250, 80)">
+    <!-- 카드 배경 -->
+    <rect width="300" height="400" rx="8" fill="white" stroke="#e0e0e0" stroke-width="1"/>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.1"/>
+    </filter>
+    <rect width="300" height="400" rx="8" fill="white" filter="url(#shadow)"/>
+    
+    <!-- Featured 뱃지 -->
+    <rect x="10" y="10" width="80" height="28" rx="4" fill="#ff4444"/>
+    <text x="50" y="28" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">
+      Featured
+    </text>
+    
+    <!-- 이미지 영역 -->
+    <rect x="0" y="0" width="300" height="180" rx="8 8 0 0" fill="#87CEEB" opacity="0.3"/>
+    <text x="150" y="100" text-anchor="middle" font-family="Arial" font-size="18" fill="#4a5568">
+      Product Image
+    </text>
+    
+    <!-- 콘텐츠 영역 -->
+    <!-- 제목 -->
+    <text x="20" y="210" font-family="Arial" font-size="20" font-weight="bold" fill="#2d3748">
+      Amazing Wireless Headphones
+    </text>
+    
+    <!-- 설명 -->
+    <text x="20" y="235" font-family="Arial" font-size="14" fill="#718096">
+      Premium quality sound with noise cancellation
+    </text>
+    
+    <!-- 평점 -->
+    <rect x="20" y="250" width="80" height="24" rx="4" fill="#ffc107"/>
+    <text x="60" y="267" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="white">
+      ★★★★★ 4.8
+    </text>
+    <text x="110" y="267" font-family="Arial" font-size="12" fill="#718096">
+      (124 reviews)
+    </text>
+    
+    <!-- 가격 -->
+    <text x="20" y="310" font-family="Arial" font-size="28" font-weight="bold" fill="#2d3748">
+      $199.99
+    </text>
+    <text x="130" y="310" font-family="Arial" font-size="18" fill="#a0aec0" text-decoration="line-through">
+      $249.99
+    </text>
+    
+    <!-- 버튼들 -->
+    <rect x="20" y="340" width="120" height="40" rx="6" fill="#4299e1"/>
+    <text x="80" y="365" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">
+      Add to Cart
+    </text>
+    
+    <rect x="150" y="340" width="130" height="40" rx="6" fill="white" stroke="#e2e8f0" stroke-width="2"/>
+    <text x="215" y="365" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#718096">
+      ♡ Save
+    </text>
+  </g>
+  
+  <!-- BEM 라벨들 왼쪽 -->
+  <g>
+    <!-- product card featured -->
+    <rect x="50" y="130" width="170" height="30" rx="4" fill="#2c3e50"/>
+    <text x="135" y="150" text-anchor="middle" font-family="monospace" font-size="13" fill="white">
+      product-card--featured
+    </text>
+    <line x1="220" y1="145" x2="260" y2="100" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- product card title -->
+    <rect x="50" y="250" width="150" height="30" rx="4" fill="#27ae60"/>
+    <text x="125" y="270" text-anchor="middle" font-family="monospace" font-size="13" fill="white">
+      product-card__title
+    </text>
+    <line x1="200" y1="265" x2="250" y2="280" stroke="#27ae60" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- product card meta -->
+    <rect x="50" y="330" width="150" height="30" rx="4" fill="#f39c12"/>
+    <text x="125" y="350" text-anchor="middle" font-family="monospace" font-size="13" fill="white">
+      product-card__meta
+    </text>
+    <line x1="200" y1="345" x2="250" y2="350" stroke="#f39c12" stroke-width="2" marker-end="url(#arrowhead)"/>
+  </g>
+  
+  <!-- BEM 라벨들 오른쪽 -->
+  <g>
+    <!-- product card image -->
+    <rect x="580" y="150" width="170" height="30" rx="4" fill="#3498db"/>
+    <text x="665" y="170" text-anchor="middle" font-family="monospace" font-size="13" fill="white">
+      product-card__image
+    </text>
+    <line x1="580" y1="165" x2="550" y2="170" stroke="#3498db" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- product card header -->
+    <rect x="580" y="210" width="170" height="30" rx="4" fill="#27ae60"/>
+    <text x="665" y="230" text-anchor="middle" font-family="monospace" font-size="13" fill="white">
+      product-card__header
+    </text>
+    <line x1="580" y1="225" x2="550" y2="280" stroke="#27ae60" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- product card footer -->
+    <rect x="580" y="330" width="170" height="30" rx="4" fill="#e91e63"/>
+    <text x="665" y="350" text-anchor="middle" font-family="monospace" font-size="13" fill="white">
+      product-card__footer
+    </text>
+    <line x1="580" y1="345" x2="550" y2="370" stroke="#e91e63" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- product card price -->
+    <rect x="580" y="390" width="170" height="30" rx="4" fill="#9b59b6"/>
+    <text x="665" y="410" text-anchor="middle" font-family="monospace" font-size="13" fill="white">
+      product-card__price
+    </text>
+    <line x1="580" y1="405" x2="550" y2="390" stroke="#9b59b6" stroke-width="2" marker-end="url(#arrowhead)"/>
+  </g>
+  
+  <!-- BEM 라벨들 아래쪽 버튼 -->
+  <g>
+    <!-- product card button primary -->
+    <rect x="150" y="500" width="220" height="30" rx="4" fill="#3498db"/>
+    <text x="260" y="520" text-anchor="middle" font-family="monospace" font-size="13" fill="white">
+      product-card__button--primary
+    </text>
+    <line x1="260" y1="500" x2="330" y2="460" stroke="#3498db" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- product card button secondary -->
+    <rect x="400" y="500" width="240" height="30" rx="4" fill="#95a5a6"/>
+    <text x="520" y="520" text-anchor="middle" font-family="monospace" font-size="13" fill="white">
+      product-card__button--secondary
+    </text>
+    <line x1="520" y1="500" x2="465" y2="460" stroke="#95a5a6" stroke-width="2" marker-end="url(#arrowhead)"/>
+  </g>
+  
+  <!-- 화살표 마커 정의 -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+    </marker>
+  </defs>
+</svg>
