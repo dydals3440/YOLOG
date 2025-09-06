@@ -1,0 +1,501 @@
+---
+title: 프론트엔드·백엔드 개발자라면 꼭 알아야 할 CSRF 공격과 방어법
+date: 2025-09-06
+updatedDate: 2025-09-06
+tags:
+  [
+    CSRF,
+    CrossSiteRequestForgery,
+    웹보안,
+    SameSite,
+    CSRF토큰,
+    웹취약점,
+    보안헤더,
+  ]
+category: HTTP
+image: '/images/security-csrf/thumbnail.png'
+---
+
+# CSRF(Cross-Site Request Forgery) 완벽 가이드: 실습으로 이해하는 교차 사이트 요청 위조
+
+"로그인한 사용자가 모르는 사이에 자동으로 송금이 되었다면?"
+
+웹 개발자라면 꼭 알아야 할 심각한 보안 취약점, `CSRF(Cross-Site Request Forgery)`에 대해 알아보겠습니다.
+
+이번 포스트에서는 직접 **공격 서버**를 구축하고, **실제 공격**을 시연한 후, **SameSite 쿠키**와 **CSRF 토큰**으로 방어하는 방법까지 단계별로 실습해보겠습니다.
+
+![CSRF 공격](/images/security-csrf/thumbnail.png)
+
+## 1. CSRF 공격이란? 피해자 모르게 실행되는 위험한 요청
+
+### CSRF 공격의 핵심 원리
+
+`CSRF`는 **인증된 사용자의 권한을 도용**하여 원하지 않는 작업을 수행하게 만드는 공격입니다:
+
+1. **피해자가 은행 사이트에 로그인** (세션 쿠키 발급)
+2. **공격자 사이트 방문** (악성 링크 클릭)
+3. **자동으로 은행 API 호출** (송금, 비밀번호 변경 등)
+4. **브라우저가 쿠키를 자동 전송** (인증된 요청으로 처리)
+
+이제 직접 간단하게 공격을 구현해보면서 CSRF의 위험성을 체험해보겠습니다.
+
+---
+
+## 2. CSRF 공격 서버 구축하기
+
+### 공격 시나리오 설정
+
+이전 포스트의 [세션 하이재킹](https://www.yolog.co.kr/post/security-session-hijacking) 실습 환경을 활용합니다.
+`matthew.com`이 결제 기능을 제공한다고 가정하고, 공격자가 이를 악용하는 상황을 재현해보겠습니다.
+
+### 악성 웹 서버 구현
+
+**attacker-csrf.js**
+
+```javascript
+const http = require('http');
+
+// csrf 라는 핸들러 함수를 만듬
+const csrf = (req, res) => {
+  // 간단한 HTML 을 제공
+  res.setHeader('Content-Type', 'text/html');
+
+  res.write(`
+    <!DOCTYPE html>
+    <html>
+        <head></head>
+        <body>
+            CSRF
+            <!-- img 태그를 사용해 공격 대상인 matthew.com:8080 요청을 보낸다. -->
+            <img src="http://matthew.com:8080" /> 
+        </body>
+    </html>    
+ `);
+  res.end();
+};
+
+const server = http.createServer(csrf);
+server.listen(8082, () => {
+  console.log('Attacker server is running on port 8082');
+});
+```
+
+### 공격 코드 분석
+
+간단한 HTML을 제공하고, HTML을 보면 바디에 이미지가 하나 있습니다. 그런데 이 이미지는 바로 공격 대상인 `matthew.com`으로 네트워크 요청을 보내는 이미지 태그입니다.
+
+이 악성 HTML의 핵심 트릭:
+
+1. **자동 실행**: 페이지 로딩만으로 요청 발생
+2. **보이지 않는 요청**: `1x1 픽셀` + `display:none`
+3. **다중 공격**: 송금, 비밀번호 변경 동시 시도
+4. **사회공학적 미끼**: "무료 쿠폰" 으로 클릭 유도
+
+공격용 웹 페이지를 제공하는 공격 서버에서 이 URL로 요청을 보내면, 다른 사용자의 결제를 대신 해버릴 수도 있습니다. 만약 `matthew.com`이 결제할 수 있는 URL을 제공한다고 하면, 문제가 더 심각해질 수 있습니다.
+
+### 브라우저 보안 설정 해제 (실습용)
+
+실습을 위해 일시적으로 브라우저 보안을 해제합니다. `Firefox`의 향상된 추적 방지 부분에서 사용자 지정으로 해서 쿠키 체크박스를 해제할 것입니다.
+
+:::warning
+
+**경고: 실습 후 반드시 원래 설정으로 복구하세요!**
+
+:::
+
+**Firefox 설정 변경:**
+
+1. 설정 → 개인정보 및 보안
+2. 향상된 추적 방지 → 사용자 지정
+3. 쿠키 체크박스 해제
+4. 세이프 브라우징을 보호되지 않게 설정
+
+기본적으로 브라우저가 조치해주는 보안 기능을 끈 것입니다.
+
+![Firefox 브라우저 보안 설정 해제](/images/security-csrf/1.png)
+
+:::info
+
+**왜 브라우저 설정을 변경하나요?**
+
+:::
+
+> 최신 브라우저들은 기본적으로 `CSRF 공격`을 어느 정도 방어합니다.
+> 실습을 위해 이러한 보호 기능을 일시적으로 해제합니다.
+
+---
+
+## 3. CSRF 공격 시연
+
+### 공격 준비
+
+**1단계: 정상 사이트 로그인** (인증 된 상태)
+
+먼저 `matthew.com`에 정상적으로 로그인합니다:
+
+![matthew.com 로그인 및 세션 쿠키 발급](/images/security-csrf/2.png)
+
+- `http://matthew.com:8080/login` 접속
+- 세션 ID가 쿠키로 저장됨
+- 인증된 상태로 홈페이지 리다이렉트
+
+**2단계: 공격 사이트 방문** (인증 되지 않은 상태)
+
+이제 다른 탭에서 공격자 사이트를 방문해보겠습니다:
+
+![hacker.com:8082 접속 화면](/images/security-csrf/3.png)
+
+### 공격 메커니즘 분석
+
+브라우저가 공격 페이지를 렌더링하는 과정:
+
+1. **HTML 파싱**: 브라우저가 화면을 렌더링하다가 이미지 태그를 만남
+2. **img 태그 발견**: 이미지에 등록된 주소로 네트워크 요청을 보냄
+3. **자동 요청**: 이것이 바로 `matthew.com:8080`으로 요청을 보내는 것
+4. **쿠키 자동 전송**: 이때 중요한 것은 쿠키 값도 똑같이 보낸다는 것입니다! 🚨
+
+![CSRF 공격: 인증 쿠키가 자동으로 전송됨](/images/security-csrf/4.png)
+
+### 공격 성공! 무슨 일이 일어났나?
+
+**네트워크 탭을 확인해보면:**
+
+```http
+GET http://matthew.com:8080/transfer?amount=10000&to=hacker
+Cookie: sid=session-id-1756852495508  ← 자동으로 포함됨!
+```
+
+:::warning
+
+**핵심 문제점** 🚨
+
+:::
+
+방금 다른 탭인 `matthew.com`에서 로그인해서 발급받은 쿠키인데, `hacker.com`에서도 이 쿠키를 실어서 `matthew.com` 쪽으로 요청을 보낸 것입니다.
+
+1. `hacker.com`에서 발생한 요청인데
+2. `matthew.com`의 세션 쿠키가 자동 전송됨
+3. `matthew.com` 측에서는 이 요청이 인증된 요청이라고 판단하고, 비즈니스 로직을 수행할 것입니다
+4. 만약 이 요청이 결제 프로세스라면 `matthew.com`에서는 인증된 요청이라고 생각하고 실행할 수도 있다는 것을 보았습니다!
+
+---
+
+이렇게 **서로 다른 사이트 간의 요청을 위조해서 공격하는 기법을 교차 사이트 요청 위조**라고 부릅니다.
+`Cross Site Request Forgery`라고 해서 `CSRF`라고도 부릅니다.
+
+이것도 마찬가지로 잘못된 요청에 쿠키가 전달되는 것이 원인입니다. `matthew.com`에서 사용할 쿠키인데 `hacker.com`에서 발생한 네트워크 요청에도 이 쿠키가 실립니다.
+
+---
+
+## 4. CSRF 방어 전략
+
+### 방법 1: SameSite 쿠키 (가장 간단한 해결책)
+
+간단한 해결방법은 쿠키 디렉티브를 설정하는 것입니다. 이전 [쿠키 편](https://www.yolog.co.kr/post/http-cookie)에서 본 것처럼 `SameSite` 디렉티브를 사용하면 쿠키를 사용할 수 있는 사이트를 제한할 수 있습니다.
+
+`SameSite` 속성은 쿠키가 전송되는 조건을 제한합니다:
+
+```javascript
+// ❌ 취약한 쿠키 설정
+res.setHeader('Set-Cookie', `sid=${sid}`);
+
+// ✅ SameSite로 보호된 쿠키
+res.setHeader('Set-Cookie', `sid=${sid}; SameSite=Strict`);
+```
+
+`SameSite=Strict` 속성으로 인해 브라우저는 이 쿠키를 받으면, 이 서버인 `matthew.com`으로 요청할 때만 이 쿠키를 사용할 것입니다.
+
+**SameSite 옵션 비교:**
+
+| 옵션       | 동작                                     | 사용 시나리오     | 보안 수준 |
+| ---------- | ---------------------------------------- | ----------------- | --------- |
+| **Strict** | 같은 사이트에서만 쿠키 전송              | 은행, 결제 시스템 | ⭐⭐⭐    |
+| **Lax**    | 일부 크로스 사이트 허용 (GET, 링크 클릭) | 일반 웹사이트     | ⭐⭐      |
+| **None**   | 모든 요청에 쿠키 전송 (Secure 필수)      | 임베드 위젯       | ⭐        |
+
+### SameSite 적용 후 테스트
+
+**서버 코드 수정:**
+
+```javascript
+const login = (req, res) => {
+  // ... 세션 생성 로직 ...
+
+  // SameSite=Strict 추가
+  res.setHeader('Set-Cookie', `sid=${sid}; SameSite=Strict; HttpOnly`);
+  res.setHeader('Location', '/');
+  res.statusCode = 302;
+  res.end();
+};
+```
+
+![SameSite=Strict 쿠키 설정 확인](/images/security-csrf/5.png)
+
+### 공격 재시도
+
+이렇게 `SameSite=Strict` 속성이 잘 들어감을 확인할 수 있습니다.
+
+다시 `hacker.com:8082`로 들어가서 요청을 보내보겠습니다:
+
+![SameSite 적용 후: 쿠키가 전송되지 않음](/images/security-csrf/6.png)
+
+이미지 태그를 발견하고 `matthew.com` 쪽으로 요청을 보내는데, 이때 쿠키 값을 보면 SID 쿠키가 없습니다.
+
+**네트워크 요청 분석:**
+
+```http
+GET http://matthew.com:8080/transfer?amount=10000&to=hacker
+Cookie: (비어있음)  ← 쿠키가 전송되지 않음! ✅
+```
+
+더이상 브라우저는 `matthew.com`이 아닌 곳에서는 이 쿠키를 보내지 않습니다.
+
+:::info
+
+`SameSite=Strict`의 효과
+
+:::
+
+> 브라우저가 자동으로 쿠키 전송을 차단합니다:
+>
+> - `matthew.com` → `matthew.com`: 쿠키 전송 ⭕
+> - `hacker.com` → `matthew.com`: 쿠키 차단 ❌
+
+---
+
+### SameSite의 한계점
+
+이 `SameSite` 쿠키는 MDN 문서에서 한 번 자세하게 읽어보는 것이 좋습니다.
+
+![MDN: SameSite 쿠키 문서](/images/security-csrf/7.png)
+
+이런 식으로, 아직 실험 중인 기법입니다.
+아직은 여전히 실험 중이면서 모든 브라우저에 제공되지 않고 있다고 합니다.
+
+**주의사항:**
+
+- 2020년 이후 대부분 브라우저가 지원하지만 레거시 브라우저 고려 필요
+- `Chrome` 80부터 기본값이 `Lax`로 변경됨
+- Safari는 일부 버그가 있을 수 있음
+
+![Can I Use: SameSite 브라우저 지원 현황](/images/security-csrf/8.png)
+
+---
+
+## 5. CSRF 토큰: 더 강력한 방어
+
+### CSRF 토큰의 작동 원리
+
+그래서 다른 예방책이 있습니다. 특별한 토큰을 `HTML` 문서에 주입하고, 다음 요청 시에 이 토큰이 HTTP 요청에 들어오는지 서버가 확인하는 방식입니다.
+
+예를 들어서, 인증을 하고 나서 HTML 문서를 응답할 때 이런 식으로 할 수 있을 것입니다.
+
+`SameSite`만으로 부족할 때 사용하는 전통적이면서도 강력한 방법입니다:
+
+1. **서버가 고유 토큰 생성**
+2. **`HTML` 폼에 토큰 삽입**
+3. **요청 시 토큰 검증**
+4. **토큰 불일치 시 요청 거부**
+
+### CSRF 토큰 구현
+
+**서버 측 구현:**
+
+```javascript
+const crypto = require('crypto');
+
+// `CSRF` 토큰 생성 및 세션에 저장
+const generateCSRFToken = (sessionId) => {
+  const token = crypto.randomBytes(32).toString('hex');
+  database.session[sessionId].csrfToken = token;
+  return token;
+};
+
+// `HTML` 응답에 토큰 포함
+const index = (req, res) => {
+  const sid = parseCookie(req).sid || '';
+  const userAccount = database.session[sid];
+
+  // CSRF 토큰 생성
+  const csrfToken = userAccount ? generateCSRFToken(sid) : '';
+
+  res.write(`
+    <!DOCTYPE html>
+    <html>
+    <body>
+      <form method="POST" action="/transfer">
+        <!-- 🔐 CSRF 토큰을 hidden 필드로 포함 -->
+        <input type="hidden" name="csrf_token" value="${csrfToken}" />
+        
+        <input name="amount" placeholder="송금액" />
+        <input name="recipient" placeholder="받는 사람" />
+        <button type="submit">송금</button>
+      </form>
+      
+      <script>
+        // JavaScript 요청 시에도 토큰 포함
+        const csrfToken = '${csrfToken}';
+        
+        // 브라우저에서는 fetch로 요청을 보낼 때
+        fetch('/submit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken  // 헤더에다가 custom-header를 보내는 것이다
+          },
+          body: JSON.stringify({ amount: 1000 })
+        });
+      </script>
+    </body>
+    </html>
+  `);
+};
+
+// 요청 검증
+const validateCSRFToken = (req) => {
+  const sid = parseCookie(req).sid;
+  const session = database.session[sid];
+
+  // 헤더 또는 바디에서 토큰 추출
+  const receivedToken = req.headers['x-csrf-token'] || req.body.csrf_token;
+
+  // 세션의 토큰과 비교
+  // matthew.com에서 제공한 HTML에만 요 토큰이 있을 것이다
+  if (!session || session.csrfToken !== receivedToken) {
+    throw new Error('❌ CSRF 토큰 검증 실패!');
+  }
+
+  // 서버가 민감한 요청을 처리할 때 이 토큰이 요청 헤더에 실렸는지 확인하고
+  // 비즈니스 로직을 실행하도록 예방하는 것이다
+  return true;
+};
+```
+
+이렇게 `matthew.com`에서 제공한 HTML에만 있는 토큰을 네트워크 헤더에 실어서 보내면, 서버는 정상적인 요청이라고 판단할 수 있습니다.
+
+---
+
+### CSRF 토큰의 장점과 단점
+
+실제로 CSRF 토큰을 구현하면서 느낀 장단점을 정리해보면:
+
+**✅ 장점 - 강력하고 유연한 보안**
+
+• **모든 브라우저 지원**: 레거시 브라우저에서도 완벽하게 작동  
+• **이중 방어 가능**: SameSite 쿠키와 함께 사용하면 더욱 견고한 보안  
+• **세밀한 제어**: 특정 액션이나 폼별로 다른 토큰 적용 가능  
+• **검증된 방법**: 오랜 기간 사용되어 안정성이 입증됨
+
+**❌ 단점 - 구현과 관리의 복잡성**
+
+• **구현 복잡도**: 토큰 생성, 저장, 검증 로직이 모두 필요  
+• **개발 오버헤드**: 모든 폼과 AJAX 요청에 토큰을 수동으로 추가  
+• **토큰 관리**: 세션별 토큰 저장과 만료 처리가 필요  
+• **완벽하지 않음**: XSS 공격으로 토큰이 유출될 가능성 존재
+
+---
+
+## 6. CAPTCHA - "너 로봇 아니지?"
+
+그래서 이게 정말 사람인지 로봇인지 확인해서 사이트를 보호하는 방법이 있는데, 바로 **CAPTCHA**입니다.
+
+`CAPTCHA`의 정식 명칭은... **Completely Automated Public Turing test to tell Computers and Humans Apart** 🤯
+
+네, 저도 압니다. 너무 깁니다. 그냥 "사람과 컴퓨터를 구별하는 자동화된 테스트"라고 생각하시면 됩니다.
+
+여러분도 한 번쯤은 겪어보셨을 거예요:
+
+- "신호등이 있는 사진을 모두 선택하세요"
+- "횡단보도가 보이는 칸을 클릭하세요"
+- "이 흐릿한 글자가 뭔지 맞춰보세요" (요즘은 거의 안 보이죠)
+
+사용자 입장에선 짜증나지만, 자동화된 봇 공격을 막는 데는 꽤 효과적입니다.
+
+구글의 reCAPTCHA 같은 서비스를 통해 자동화된 공격을 차단할 수 있습니다:
+
+![Google reCAPTCHA 예시 - CAPTCHA는 이런 것을 의미해요](/images/security-csrf/9.png)
+
+사용하는 방법은 아래와 같습니다. 매우 간단한 예제로 직접 만들어보겠습니다:
+
+**reCAPTCHA v3 구현 예제:**
+
+```javascript
+// 클라이언트 측 (HTML)
+const index = (req, res) => {
+  res.write(`
+    <html>
+    <head>
+      <!-- reCAPTCHA v3 스크립트 로드 -->
+      <script src="https://www.google.com/recaptcha/api.js?render=YOUR_SITE_KEY"></script>
+    </head>
+    <body>
+      <form id="transferForm">
+        <input name="amount" placeholder="송금액" />
+        <button type="submit">송금하기</button>
+      </form>
+
+      <script>
+        document.getElementById('transferForm').onsubmit = (e) => {
+          e.preventDefault();
+
+          // reCAPTCHA 토큰 생성
+          grecaptcha.ready(() => {
+            grecaptcha.execute('YOUR_SITE_KEY', {action: 'transfer'})
+              .then(token => {
+                // 토큰과 함께 요청 전송
+                fetch('/transfer', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    amount: e.target.amount.value,
+                    recaptchaToken: token
+                  })
+                });
+              });
+          });
+        };
+      </script>
+    </body>
+    </html>
+  `);
+};
+
+// 서버 측 검증
+const verifyRecaptcha = async (token) => {
+  const response = await fetch(
+    'https://www.google.com/recaptcha/api/siteverify',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `secret=YOUR_SECRET_KEY&response=${token}`,
+    }
+  );
+
+  const data = await response.json();
+
+  // 점수가 0.5 이상이면 사람으로 판단
+  if (data.success && data.score > 0.5) {
+    return true;
+  }
+
+  throw new Error('❌ reCAPTCHA 검증 실패: 봇으로 의심됨');
+};
+```
+
+---
+
+## 7. 마치며
+
+솔직히 CSRF 공격이라는 게 처음엔 "이게 진짜 가능해?"싶었는데, 직접 실습해보니 정말 간단한 `img` 태그 하나로도 공격이 가능한 것을 확인할 수 있었습니다.
+
+무서운 건 사용자는 전혀 눈치채지 못한다는 거죠.
+
+저도 처음엔 보안을 너무 빡빡하게 하려다가 사용자들이 "왜 이렇게 불편해요?"라는 피드백을 많이 받았습니다. 캡차 넣고, 재인증 넣고... 결국 보안과 사용성 사이에서 균형을 찾는 게 제일 어려운 것 같아요.
+
+요즘은 AI가 캡차도 뚫는다고 하니, 완벽한 보안은 정말 없는 것 같습니다.
+
+결국 제가 생각하는 좋은 서비스는, 사용자가 보안 기능이 있는지도 모르면서 안전하게 쓸 수 있는 서비스인 것 같습니다. 마치 자동차의 에어백처럼, 평소엔 신경 안 쓰다가 필요할 때 알아서 작동하는 그런 보안이요.
+
+잘못된 내용이나, 조금 더 보완했으면 좋은 부분이 있으시다면 언제든지 저의 성장을 위해 댓글로 남겨주시면 감사하겠습니다!
