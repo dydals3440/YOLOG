@@ -1,0 +1,454 @@
+---
+title: type vs interface 어떤 것을 사용해야 할까?
+date: 2025-09-08
+updatedDate: 2025-09-08
+tags: [Type, Interface, TypeScript]
+category: DEVELOPMENT
+image: '/images/ts-interface-type/thumbnail.png'
+---
+
+# 끊이지 않는 논쟁, Type vs Interface
+
+우리가 사용하는 언어는 **TypeScript**인데, 실제로 리액트 개발을 하다보면 왜인지는 모르겠지만 **InterfaceScript** 같은 느낌이 드는 경우가 있습니다. Type 보다 왜인지 모르겠지만, Interface를 쓰는 경우가 자연스럽게 더 많았기 때문입니다.
+
+신규 프로젝트를 시작하면서 팀 내 개발 컨벤션을 만들어야 하는데, 막상 저부터도 type과 interface의 차이와 장단점을 명확하게 설명하기 어려웠습니다.
+
+그래서, 이번 블로그를 통해서 그동안 다양한 자료들을 통해 학습한 내용을 정리하며, 우리팀은 어떠한 방식을 선택했는지 공유하려고 합니다.
+
+## 일관성만 있으면 아무거나 사용해도 상관이 없는 것일까?
+
+성능 차이가 크게 없다면 아무거나 사용해도 된다고는 하지만, 실제로는 성능 차이가 없지는 않습니다.
+
+실제로, 아래는 흔히 빡빡이 아저씨라고 불리는 타입스크립트에서 유명하신 [Matt Pocock씨가 작성한 내용](https://www.totaltypescript.com/type-vs-interface-which-should-you-use)을 토대로 한번 설명해보겠습니다.
+
+## 실제 성능 사례: Sentry의 경험
+
+Matt Pocock의 [Type vs Interface에 대한 블로그 포스트](https://www.totaltypescript.com/type-vs-interface-which-should-you-use)를 보면, 실제 성능 문제점에 대해서 Sentry의 경험을 공유해주었습니다.
+
+Sentry 팀이 교차 타입(`&`)을 인터페이스 `extends`로 바꿨더니 **컴파일 성능이 눈에 띄게 개선되었다**고 보고했습니다. 구체적인 수치는 프로젝트마다 다르지만, 대규모 코드베이스에서는 확실히 체감할 수 있는 차이가 있었다고 합니다.
+
+우리가 보통 버튼 컴포넌트를 만든다고 할 때, 버튼에서 활용할 수 있는 props들을 모두 일일이 선언하는 게 불가능하기 때문에 우리는 이를 확장합니다.
+
+### 타입으로 확장하는 경우 (intersection 활용)
+
+```tsx
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant: 'primary' | 'secondary';
+  loading?: boolean;
+};
+```
+
+### 인터페이스로 확장하는 경우 (extends 활용)
+
+```tsx
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant: 'primary' | 'secondary';
+  loading?: boolean;
+}
+```
+
+[TypeScript 성능 위키](https://github.com/microsoft/TypeScript/wiki/Performance#preferring-interfaces-over-intersections)에서도 명시적으로 권장합니다:
+
+> `interface Foo extends Bar, Baz {}`가 `type Foo = Bar & Baz & {...}`보다 타입 체킹 성능이 좋습니다.
+
+## 그러면 왜 interface의 extends가 빠를까?
+
+이를 이해하기 위해서는 TypeScript 컴파일러가 타입을 처리하는 방식을 알아야 합니다. (세부 메커니즘은 복합적이지만, 핵심 차이점을 설명하겠습니다)
+
+### 1. Interface extends의 동작 방식 (빠름 ⚡)
+
+```tsx
+// 실무 예제: 유저 관련 인터페이스
+interface BaseUser {
+  id: string;
+  email: string;
+  createdAt: Date;
+}
+
+interface UserProfile {
+  nickname: string;
+  avatar?: string;
+  bio?: string;
+}
+
+// Interface extends - 캐싱 가능
+interface AuthenticatedUser extends BaseUser, UserProfile {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+}
+```
+
+**왜 빠른가?**
+
+1. **이름 기반 캐싱**: TypeScript는 `AuthenticatedUser`라는 이름으로 이 타입을 내부 레지스트리에 저장합니다
+2. **재사용 시 빠른 참조**: 다른 곳에서 `AuthenticatedUser`를 사용할 때, 컴파일러는 캐시된 타입을 바로 가져옵니다
+3. **계층적 체크**: 각 부모 인터페이스를 독립적으로 체크할 수 있어 효율적입니다
+
+### 2. Type intersection의 동작 방식 (느림 🐢)
+
+```tsx
+// Type intersection - 매번 재계산
+type AuthenticatedUser = BaseUser &
+  UserProfile & {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: number;
+  };
+```
+
+**왜 느린가?**
+
+1. **익명 타입 생성**: 매번 새로운 "익명" 타입을 만듭니다
+2. **캐싱 제한**: 구조적으로 매번 재계산이 필요합니다
+3. **플래튼(Flatten) 과정**: 모든 속성을 하나의 평면 구조로 합쳐야 합니다
+
+### 실제 성능 차이 예시
+
+```tsx
+// 대규모 컴포넌트 라이브러리에서의 사용
+
+// ❌ 느림 - 매번 재계산
+type SlowButton = HTMLButtonElement & BaseComponentProps & ThemeProps;
+type SlowInput = HTMLInputElement & BaseComponentProps & ThemeProps;
+type SlowSelect = HTMLSelectElement & BaseComponentProps & ThemeProps;
+
+// ✅ 빠름 - 한 번 계산 후 캐싱
+interface FastButton
+  extends HTMLButtonElement,
+    BaseComponentProps,
+    ThemeProps {}
+interface FastInput extends HTMLInputElement, BaseComponentProps, ThemeProps {}
+interface FastSelect
+  extends HTMLSelectElement,
+    BaseComponentProps,
+    ThemeProps {}
+```
+
+## Interface와 Type 각각 존재하는 독특한 특징들
+
+### Interface의 특징
+
+#### 1. Declaration Merging (선언 병합)
+
+```tsx
+// 라이브러리 타입 확장 시나리오
+interface Window {
+  // 기존 Window 인터페이스에 추가
+  gtag: (command: string, ...args: any[]) => void;
+  kakao: any;
+}
+
+// 두 interface가 자동으로 병합됨!
+window.gtag('config', 'GA_MEASUREMENT_ID'); // ✅ 타입 체크 통과
+```
+
+이것은 Interface의 명과 암을 잘 보여주는 특징입니다. 의도적으로 사용하면 강력하지만, 실수로 같은 이름을 선언하면 문제가 됩니다.
+
+우리는 이러한 문제를 방지할 수 있습니다:
+
+- **ESLint**: [`@typescript-eslint/no-unsafe-declaration-merging`](https://typescript-eslint.io/rules/no-unsafe-declaration-merging/)
+- **Biome**: [`noRedeclare`](https://biomejs.dev/linter/rules/no-redeclare/), [`noUnsafeDeclarationMerging`](https://biomejs.dev/linter/rules/no-unsafe-declaration-merging/)
+
+#### 2. 인덱스 시그니처 차이
+
+**타입 별칭은 "닫힌(closed)" 특성**을 가지고, **인터페이스는 선언 병합으로 "열린(open)" 특성**을 가집니다. 이로 인해 인터페이스는 암묵적 인덱스 시그니처를 가정하기 어렵습니다.
+
+```tsx
+interface UserInterface {
+  name: string;
+  age: number;
+}
+
+type UserType = {
+  name: string;
+  age: number;
+};
+
+const userI: UserInterface = { name: 'Kim', age: 30 };
+const userT: UserType = { name: 'Lee', age: 25 };
+
+// Record<string, unknown>에 할당
+type AnyRecord = Record<string, unknown>;
+
+const record1: AnyRecord = userT; // ✅ OK - type은 가능
+const record2: AnyRecord = userI; // ❌ Error - interface는 불가능
+```
+
+### Type의 특별한 기능들 (Interface가 할 수 없는 것들)
+
+#### 1. Union Types - 실무에서 가장 많이 쓰는 패턴
+
+```tsx
+// API 상태 관리
+type ApiStatus = 'idle' | 'loading' | 'success' | 'error';
+
+// HTTP 메서드
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+
+// 비동기 상태 관리 (제네릭과 함께)
+type AsyncState<T> =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'success'; data: T }
+  | { status: 'error'; error: Error };
+
+// 실제 사용
+function useApiCall<T>(): AsyncState<T> {
+  // 구현...
+  return { status: 'idle' };
+}
+```
+
+#### 2. Discriminated Union (판별 유니온) - 타입 안정성의 핵심
+
+```tsx
+// 폼 액션 타입
+type FormAction =
+  | { type: 'SET_FIELD'; field: string; value: string }
+  | { type: 'SET_ERROR'; field: string; error: string }
+  | { type: 'RESET_FORM' }
+  | { type: 'SUBMIT_START' }
+  | { type: 'SUBMIT_SUCCESS'; data: any }
+  | { type: 'SUBMIT_FAILURE'; error: Error };
+
+// 리듀서에서 완벽한 타입 추론
+function formReducer(state: FormState, action: FormAction) {
+  switch (action.type) {
+    case 'SET_FIELD':
+      return { ...state, [action.field]: action.value }; // field, value 자동 추론
+    case 'SET_ERROR':
+      return {
+        ...state,
+        errors: { ...state.errors, [action.field]: action.error },
+      };
+    case 'SUBMIT_SUCCESS':
+      return { ...state, data: action.data }; // data 자동 추론
+    // ...
+  }
+}
+```
+
+#### 3. Branded Types - 타입 안정성 강화
+
+```tsx
+// 단순 string이 아닌 구별되는 타입
+type UserId = string & { __brand: 'UserId' };
+type PostId = string & { __brand: 'PostId' };
+type Email = string & { __brand: 'Email' };
+
+// API 함수에서 타입 안정성 보장
+async function fetchUser(id: UserId): Promise<User> {
+  return api.get(`/users/${id}`);
+}
+
+async function fetchPost(id: PostId): Promise<Post> {
+  return api.get(`/posts/${id}`);
+}
+
+// 사용
+const userId = 'user_123' as UserId;
+const postId = 'post_456' as PostId;
+
+fetchUser(postId); // ❌ 컴파일 에러! 타입 안정성 보장
+```
+
+#### 4. Template Literal Types - 동적 타입 생성
+
+```tsx
+// 반응형 브레이크포인트
+type Breakpoint = 'sm' | 'md' | 'lg' | 'xl';
+type ResponsiveProperty<T extends string> = T | `${T}-${Breakpoint}`;
+
+type Spacing = ResponsiveProperty<'m' | 'p'>;
+// 결과: 'm' | 'p' | 'm-sm' | 'm-md' | 'm-lg' | 'm-xl' | 'p-sm' | ...
+
+// CSS-in-JS 스타일 props
+interface BoxProps {
+  m?: Spacing;
+  p?: Spacing;
+  display?: ResponsiveProperty<'block' | 'flex' | 'none'>;
+}
+
+// 사용
+<Box m='m-lg' p='p' display='flex-sm' />; // 타입 체크 완벽!
+```
+
+#### 5. Conditional Types - 타입 레벨 프로그래밍
+
+```tsx
+// React 컴포넌트 Props 추출
+type ComponentProps<T> = T extends React.ComponentType<infer P> ? P : never;
+
+// 사용 예시
+type ButtonProps = ComponentProps<typeof Button>; // Button의 props 타입 추출
+
+// API 응답 래퍼
+type ApiWrapper<T> = T extends { error: true }
+  ? { success: false; error: string }
+  : { success: true; data: T };
+
+// 조건부 Required
+type ConditionalRequired<T, K extends keyof T> = T & Required<Pick<T, K>>;
+
+interface UserForm {
+  name?: string;
+  email?: string;
+  password?: string;
+}
+
+// 회원가입 시 모든 필드 필수
+type SignupForm = ConditionalRequired<UserForm, 'name' | 'email' | 'password'>;
+```
+
+#### 6. Utility Types 실무 활용
+
+```tsx
+// API 응답과 폼 데이터 분리
+interface User {
+  id: string;
+  email: string;
+  password: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// 생성 시: id와 timestamp 제외
+type CreateUserDto = Omit<User, 'id' | 'createdAt' | 'updatedAt'>;
+
+// 업데이트 시: 모든 필드 선택적, password 제외
+type UpdateUserDto = Partial<Omit<User, 'id' | 'password'>>;
+
+// 응답 시: password 제외
+type UserResponse = Omit<User, 'password'>;
+
+// 함수 파라미터 타입 추출
+function createUser(data: CreateUserDto) {
+  /* ... */
+}
+type CreateUserParams = Parameters<typeof createUser>[0];
+```
+
+#### 7. 고급 매핑 타입
+
+```tsx
+// Getter 자동 생성 타입
+type Getters<T> = {
+  [K in keyof T as `get${Capitalize<string & K>}`]: () => T[K];
+};
+
+interface State {
+  name: string;
+  age: number;
+  isActive: boolean;
+}
+
+type StateGetters = Getters<State>;
+// 결과: {
+//   getName: () => string;
+//   getAge: () => number;
+//   getIsActive: () => boolean;
+// }
+
+// Deep Partial (중첩 객체도 모두 선택적으로)
+type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
+
+// 실제 사용: 설정 객체 업데이트
+interface AppConfig {
+  api: {
+    baseUrl: string;
+    timeout: number;
+    retry: {
+      count: number;
+      delay: number;
+    };
+  };
+}
+
+function updateConfig(partial: DeepPartial<AppConfig>) {
+  // 어떤 깊이의 속성도 선택적으로 업데이트 가능
+}
+
+updateConfig({ api: { retry: { count: 5 } } }); // ✅ OK
+```
+
+## 그래서 우리 팀은 어떤 걸 선택했나?
+
+우리 팀은 **Interface를 기본으로 사용하고, Type의 특별한 기능이 필요할 때만 Type을 사용**하기로 정했습니다.
+
+TypeScript 공식 문서에서도 "인터페이스는 열림(open), 타입은 닫힘(closed)"의 특성 차이를 강조하며, 용도에 따라 선택하라고 권장합니다.
+
+### 선택 이유
+
+1. **성능**: Interface의 extends는 Type의 intersection보다 확실히 빠릅니다
+2. **위험 관리 가능**: Declaration Merging 같은 Interface의 위험성은 린터로 관리 가능
+3. **드문 문제**: 인덱스 시그니처 문제는 실제 개발에서 매우 드물게 발생
+
+### 우리 팀의 컨벤션
+
+```tsx
+// ✅ Good - 객체 타입 정의는 interface
+interface UserDto {
+  id: string;
+  email: string;
+  name: string;
+}
+
+// ✅ Good - React 컴포넌트 Props는 interface + extends
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant: 'primary' | 'secondary' | 'danger';
+  size: 'small' | 'medium' | 'large';
+  loading?: boolean;
+}
+
+// ✅ Good - API 응답은 interface
+interface ApiResponse<T> {
+  data: T;
+  status: number;
+  message: string;
+}
+
+// ✅ Good - Union, Conditional 등이 필요한 경우만 type
+type ButtonVariant = 'primary' | 'secondary' | 'danger';
+type AsyncStatus = 'idle' | 'loading' | 'success' | 'error';
+
+// ✅ Good - 유틸리티 타입 활용
+type PartialUser = Partial<UserDto>;
+type RequiredUser = Required<UserDto>;
+
+// ✅ Good - Discriminated Union은 type
+type Action =
+  | { type: 'FETCH_START' }
+  | { type: 'FETCH_SUCCESS'; payload: UserDto[] }
+  | { type: 'FETCH_ERROR'; error: Error };
+```
+
+### ESLint 설정 예시
+
+```json
+{
+  "rules": {
+    "@typescript-eslint/consistent-type-definitions": ["error", "interface"],
+    "@typescript-eslint/no-unsafe-declaration-merging": "error",
+    "@typescript-eslint/prefer-interface": "error"
+  }
+}
+```
+
+## 마무리
+
+Type vs Interface 논쟁은 계속될 것입니다. 하지만 중요한 것은 팀 내에서 일관된 컨벤션을 유지하고, 각각의 장단점을 이해한 상태에서 적절히 활용하는 것입니다.
+
+우리 팀은 성능과 확장성을 고려하여 Interface를 기본으로 선택했지만, Type의 강력한 기능이 필요한 순간을 놓치지 않고 활용하고 있습니다.
+
+더 자세한 내용은 다음 자료들을 참고하세요:
+
+- [Matt Pocock의 원문](https://www.totaltypescript.com/type-vs-interface-which-should-you-use)
+- [TypeScript 공식 문서](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#differences-between-type-aliases-and-interfaces)
+- [TypeScript 성능 위키](https://github.com/microsoft/TypeScript/wiki/Performance#preferring-interfaces-over-intersections)
+
+여러분의 팀도 프로젝트 특성에 맞는 최적의 선택을 하시길 바랍니다!
+또한 이 주제는 정말 다양한 관점과 경험을 나눌 수 있는 영역이기 때문에,
+더 좋은 의견이나 추천하실 방안이 있다면 댓글로 공유해 주시면 감사하겠습니다.
