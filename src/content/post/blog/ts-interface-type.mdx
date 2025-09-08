@@ -1,7 +1,7 @@
 ---
 title: type vs interface 어떤 것을 사용해야 할까?
-date: 2025-09-08
-updatedDate: 2025-09-08
+date: 2025-09-09
+updatedDate: 2025-09-09
 tags: [Type, Interface, TypeScript]
 category: DEVELOPMENT
 image: '/images/ts-interface-type/thumbnail.png'
@@ -9,15 +9,19 @@ image: '/images/ts-interface-type/thumbnail.png'
 
 # 끊이지 않는 논쟁, Type vs Interface
 
-우리가 사용하는 언어는 **TypeScript**인데, 실제로 리액트 개발을 하다보면 왜인지는 모르겠지만 **InterfaceScript** 같은 느낌이 드는 경우가 있습니다. Type 보다 왜인지 모르겠지만, Interface를 쓰는 경우가 자연스럽게 더 많았기 때문입니다.
+우리가 사용하는 언어는 **TypeScript**인데, 실제로 리액트 개발을 하다보면 왜인지는 모르겠지만 **InterfaceScript** 같은 느낌이 드는 경우가 있습니다. `type` 보다 왜인지 모르겠지만, `interface`를 쓰는 경우가 자연스럽게 더 많았기 때문입니다.
 
-신규 프로젝트를 시작하면서 팀 내 개발 컨벤션을 만들어야 하는데, 막상 저부터도 type과 interface의 차이와 장단점을 명확하게 설명하기 어려웠습니다.
+![Type vs Interface](/images/ts-interface-type/thumbnail.png)
+
+신규 프로젝트를 시작하면서 팀 내 개발 컨벤션을 만들어야 하는데, 막상 저부터도 `type`과 `interface`의 차이와 장단점을 명확하게 설명하기 어려웠습니다.
 
 그래서, 이번 블로그를 통해서 그동안 다양한 자료들을 통해 학습한 내용을 정리하며, 우리팀은 어떠한 방식을 선택했는지 공유하려고 합니다.
 
 ## 일관성만 있으면 아무거나 사용해도 상관이 없는 것일까?
 
 성능 차이가 크게 없다면 아무거나 사용해도 된다고는 하지만, 실제로는 성능 차이가 없지는 않습니다.
+
+![이 아저씨는 아닙니당..!](/images/ts-interface-type/1.png)
 
 실제로, 아래는 흔히 빡빡이 아저씨라고 불리는 타입스크립트에서 유명하신 [Matt Pocock씨가 작성한 내용](https://www.totaltypescript.com/type-vs-interface-which-should-you-use)을 토대로 한번 설명해보겠습니다.
 
@@ -51,11 +55,11 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 > `interface Foo extends Bar, Baz {}`가 `type Foo = Bar & Baz & {...}`보다 타입 체킹 성능이 좋습니다.
 
-## 그러면 왜 interface의 extends가 빠를까?
+## 그러면 왜 `interface`의 `extends`가 빠를까?
 
 이를 이해하기 위해서는 TypeScript 컴파일러가 타입을 처리하는 방식을 알아야 합니다. (세부 메커니즘은 복합적이지만, 핵심 차이점을 설명하겠습니다)
 
-### 1. Interface extends의 동작 방식 (빠름 ⚡)
+### 1. `interface` `extends`의 동작 방식 (빠름 ⚡)
 
 ```tsx
 // 실무 예제: 유저 관련 인터페이스
@@ -85,7 +89,7 @@ interface AuthenticatedUser extends BaseUser, UserProfile {
 2. **재사용 시 빠른 참조**: 다른 곳에서 `AuthenticatedUser`를 사용할 때, 컴파일러는 캐시된 타입을 바로 가져옵니다
 3. **계층적 체크**: 각 부모 인터페이스를 독립적으로 체크할 수 있어 효율적입니다
 
-### 2. Type intersection의 동작 방식 (느림 🐢)
+### 2. `type` intersection의 동작 방식 (느림 🐢)
 
 ```tsx
 // Type intersection - 매번 재계산
@@ -125,9 +129,9 @@ interface FastSelect
     ThemeProps {}
 ```
 
-## Interface와 Type 각각 존재하는 독특한 특징들
+## `interface`와 `type` 각각 존재하는 독특한 특징들
 
-### Interface의 특징
+### `interface`의 특징
 
 #### 1. Declaration Merging (선언 병합)
 
@@ -143,7 +147,7 @@ interface Window {
 window.gtag('config', 'GA_MEASUREMENT_ID'); // ✅ 타입 체크 통과
 ```
 
-이것은 Interface의 명과 암을 잘 보여주는 특징입니다. 의도적으로 사용하면 강력하지만, 실수로 같은 이름을 선언하면 문제가 됩니다.
+이것은 `interface`의 명과 암을 잘 보여주는 특징입니다. 의도적으로 사용하면 강력하지만, 실수로 같은 이름을 선언하면 문제가 됩니다.
 
 우리는 이러한 문제를 방지할 수 있습니다:
 
@@ -171,11 +175,11 @@ const userT: UserType = { name: 'Lee', age: 25 };
 // Record<string, unknown>에 할당
 type AnyRecord = Record<string, unknown>;
 
-const record1: AnyRecord = userT; // ✅ OK - type은 가능
-const record2: AnyRecord = userI; // ❌ Error - interface는 불가능
+const record1: AnyRecord = userT; // ✅ OK - `type`은 가능
+const record2: AnyRecord = userI; // ❌ Error - `interface`는 불가능
 ```
 
-### Type의 특별한 기능들 (Interface가 할 수 없는 것들)
+### `type`의 특별한 기능들 (`interface`가 할 수 없는 것들)
 
 #### 1. Union Types - 실무에서 가장 많이 쓰는 패턴
 
@@ -376,41 +380,41 @@ updateConfig({ api: { retry: { count: 5 } } }); // ✅ OK
 
 ## 그래서 우리 팀은 어떤 걸 선택했나?
 
-우리 팀은 **Interface를 기본으로 사용하고, Type의 특별한 기능이 필요할 때만 Type을 사용**하기로 정했습니다.
+우리 팀은 **`interface`를 기본으로 사용하고, `type`의 특별한 기능이 필요할 때만 `type`을 사용**하기로 정했습니다.
 
-TypeScript 공식 문서에서도 "인터페이스는 열림(open), 타입은 닫힘(closed)"의 특성 차이를 강조하며, 용도에 따라 선택하라고 권장합니다.
+TypeScript 공식 문서에서도 "`interface`는 열림(open), `type`은 닫힘(closed)"의 특성 차이를 강조하며, 용도에 따라 선택하라고 권장합니다.
 
 ### 선택 이유
 
-1. **성능**: Interface의 extends는 Type의 intersection보다 확실히 빠릅니다
-2. **위험 관리 가능**: Declaration Merging 같은 Interface의 위험성은 린터로 관리 가능
+1. **성능**: `interface`의 `extends`는 `type`의 intersection보다 확실히 빠릅니다
+2. **위험 관리 가능**: Declaration Merging 같은 `interface`의 위험성은 린터로 관리 가능
 3. **드문 문제**: 인덱스 시그니처 문제는 실제 개발에서 매우 드물게 발생
 
 ### 우리 팀의 컨벤션
 
 ```tsx
-// ✅ Good - 객체 타입 정의는 interface
+// ✅ Good - 객체 타입 정의는 `interface`
 interface UserDto {
   id: string;
   email: string;
   name: string;
 }
 
-// ✅ Good - React 컴포넌트 Props는 interface + extends
+// ✅ Good - React 컴포넌트 Props는 `interface` + `extends`
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant: 'primary' | 'secondary' | 'danger';
   size: 'small' | 'medium' | 'large';
   loading?: boolean;
 }
 
-// ✅ Good - API 응답은 interface
+// ✅ Good - API 응답은 `interface`
 interface ApiResponse<T> {
   data: T;
   status: number;
   message: string;
 }
 
-// ✅ Good - Union, Conditional 등이 필요한 경우만 type
+// ✅ Good - Union, Conditional 등이 필요한 경우만 `type`
 type ButtonVariant = 'primary' | 'secondary' | 'danger';
 type AsyncStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -418,7 +422,7 @@ type AsyncStatus = 'idle' | 'loading' | 'success' | 'error';
 type PartialUser = Partial<UserDto>;
 type RequiredUser = Required<UserDto>;
 
-// ✅ Good - Discriminated Union은 type
+// ✅ Good - Discriminated Union은 `type`
 type Action =
   | { type: 'FETCH_START' }
   | { type: 'FETCH_SUCCESS'; payload: UserDto[] }
@@ -439,9 +443,9 @@ type Action =
 
 ## 마무리
 
-Type vs Interface 논쟁은 계속될 것입니다. 하지만 중요한 것은 팀 내에서 일관된 컨벤션을 유지하고, 각각의 장단점을 이해한 상태에서 적절히 활용하는 것입니다.
+`type` vs `interface` 논쟁은 계속될 것입니다. 하지만 중요한 것은 팀 내에서 일관된 컨벤션을 유지하고, 각각의 장단점을 이해한 상태에서 적절히 활용하는 것입니다.
 
-우리 팀은 성능과 확장성을 고려하여 Interface를 기본으로 선택했지만, Type의 강력한 기능이 필요한 순간을 놓치지 않고 활용하고 있습니다.
+우리 팀은 성능과 확장성을 고려하여 `interface`를 기본으로 선택했지만, `type`의 강력한 기능이 필요한 순간을 놓치지 않고 활용하고 있습니다.
 
 더 자세한 내용은 다음 자료들을 참고하세요:
 
