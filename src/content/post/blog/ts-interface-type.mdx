@@ -55,11 +55,11 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 > `interface Foo extends Bar, Baz {}`가 `type Foo = Bar & Baz & {...}`보다 타입 체킹 성능이 좋습니다.
 
-## 그러면 왜 `interface`의 `extends`가 빠를까?
+## 그러면 왜 interface의 extends가 빠를까?
 
 이를 이해하기 위해서는 TypeScript 컴파일러가 타입을 처리하는 방식을 알아야 합니다. (세부 메커니즘은 복합적이지만, 핵심 차이점을 설명하겠습니다)
 
-### 1. `interface` `extends`의 동작 방식 (빠름 ⚡)
+### 1. interface extends의 동작 방식 (빠름 ⚡)
 
 ```tsx
 // 실무 예제: 유저 관련 인터페이스
@@ -89,7 +89,7 @@ interface AuthenticatedUser extends BaseUser, UserProfile {
 2. **재사용 시 빠른 참조**: 다른 곳에서 `AuthenticatedUser`를 사용할 때, 컴파일러는 캐시된 타입을 바로 가져옵니다
 3. **계층적 체크**: 각 부모 인터페이스를 독립적으로 체크할 수 있어 효율적입니다
 
-### 2. `type` intersection의 동작 방식 (느림 🐢)
+### 2. type intersection의 동작 방식 (느림 🐢)
 
 ```tsx
 // Type intersection - 매번 재계산
@@ -129,9 +129,9 @@ interface FastSelect
     ThemeProps {}
 ```
 
-## `interface`와 `type` 각각 존재하는 독특한 특징들
+## interface와 type 각각 존재하는 독특한 특징들
 
-### `interface`의 특징
+### interface의 특징
 
 #### 1. Declaration Merging (선언 병합)
 
@@ -179,7 +179,7 @@ const record1: AnyRecord = userT; // ✅ OK - `type`은 가능
 const record2: AnyRecord = userI; // ❌ Error - `interface`는 불가능
 ```
 
-### `type`의 특별한 기능들 (`interface`가 할 수 없는 것들)
+### type의 특별한 기능들 (interface가 할 수 없는 것들)
 
 #### 1. Union Types - 실무에서 가장 많이 쓰는 패턴
 
