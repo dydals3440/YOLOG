@@ -1,0 +1,323 @@
+---
+title: useState 대신 useReducer를 선택해야 하는 순간
+date: 2025-09-13
+updatedDate: 2025-09-13
+tags: [useState, useReducer, React]
+category: DEVELOPMENT
+image: '/images/when-to-use-usestate-vs-usereducer/thumbnail.png'
+---
+
+# useState 대신 useReducer를 선택해야 하는 순간
+
+React 개발을 하다 보면 대부분의 상태 관리는 `useState`로 충분합니다. 하지만 프로젝트가 커지고 단순한 컴포넌트여도 내부의 상태가 점점 복잡해질수록, `useState`만으로는 관리가 어려워지는 순간이 옵니다.
+
+![useState 대신 useReducer를 선택해야 하는 순간](/images/when-to-use-usestate-vs-usereducer/thumbnail.png)
+
+오늘은 실제 사내 금융 서비스 개발 중 겪었던 문제를 사례로 들어, 왜 `useReducer`가 필요한지 이야기해보겠습니다.
+
+---
+
+## 언제 useReducer가 필요한가?
+
+저는 크게 두 가지 경우에 `useReducer`를 권장합니다.
+
+1. **다수의 하위 필드를 포함한 복잡한 상태 로직을 다룰 때**
+2. **다음 상태가 이전 상태에 강하게 의존할 때**
+
+특히 두 번째 경우가 정말 중요합니다. 상태가 이전 상태와 밀접하게 연결되어 있다면, `setState`의 단편적인 업데이트로는 버그를 막기 어렵습니다.
+
+---
+
+## 실제 사례: NumberPad 컴포넌트
+
+저희가 만들던 서비스의 **금액 입력 패드(NumberPad)** 기능은 아래와 같은 요구사항을 가지고 있었습니다.
+
+![실제 서비스와 대략적으로 비슷하게 동작하는 영상](/images/when-to-use-usestate-vs-usereducer/numberpad.gif)
+
+- 숫자 패드를 통한 금액 입력
+- 천 단위 콤마 자동 포맷팅
+- 최소 금액(1,000원) / 최대 금액(10억 원) 검증
+- 빠른 금액 입력 버튼 (+1만, +5만, +10만, +100만)
+- 입력 히스토리 관리
+- 00으로 시작하는 입력 방지
+
+언뜻 단순해 보이지만, 실제로는 상태 관리가 꽤나 복잡했습니다. 이를 `useState`로만 구현하면 무려 6개의 상태가 필요했습니다.
+
+```tsx
+const [displayAmount, setDisplayAmount] = useState('0');
+const [rawValue, setRawValue] = useState('');
+const [isError, setIsError] = useState(false);
+const [errorMessage, setErrorMessage] = useState('');
+const [history, setHistory] = useState<string[]>([]);
+const [isFirstInput, setIsFirstInput] = useState(true);
+```
+
+---
+
+## 문제점 1. 상태 간 동기화 지옥
+
+한 번의 사용자 액션이 6개의 상태 업데이트를 일으켰습니다.
+
+```tsx
+const handleNumberClick = (num: string) => {
+  let newRawValue;
+
+  if (isFirstInput) {
+    if (num === '00') return;
+    newRawValue = num;
+    setIsFirstInput(false);
+  } else if (rawValue === '0') {
+    if (num === '00') return;
+    newRawValue = num;
+  } else {
+    if (rawValue.length >= 10) return;
+    newRawValue = rawValue + num;
+  }
+
+  setRawValue(newRawValue);
+  setDisplayAmount(formatWithComma(newRawValue));
+
+  const numValue = parseInt(newRawValue);
+  if (numValue > MAX_AMOUNT) {
+    setIsError(true);
+    setErrorMessage('최대 금액 초과');
+    return;
+  }
+
+  if (history[history.length - 1] !== formatted) {
+    setHistory([...history, formatted]);
+  }
+};
+```
+
+여기서 발생하는 문제는:
+
+- 상태 업데이트 순서가 조금이라도 잘못되면 UI가 깨진다.
+- 상태들이 서로 강하게 얽혀 있어서, 하나를 빠뜨리면 예기치 못한 버그가 터진다.
+- \*“displayAmount가 왜 이 값이지?”\*\*라는 질문에 답하려면 모든 이벤트 핸들러 코드를 뒤져야 한다.
+
+---
+
+## 문제점 2. 일관성 없는 상태 관리
+
+비슷한 목적의 함수조차 상태 업데이트 순서가 들쭉날쭉했습니다.
+
+```tsx
+const handleDelete = () => {
+  if (rawValue.length > 1) {
+    const newRawValue = rawValue.slice(0, -1);
+    setRawValue(newRawValue);
+    setDisplayAmount(formatWithComma(newRawValue));
+    validateAmount(newRawValue);
+  } else {
+    setRawValue('');
+    setDisplayAmount('0');
+    setIsFirstInput(true);
+    setIsError(false);
+    setErrorMessage('');
+  }
+};
+
+const handleClear = () => {
+  setDisplayAmount('0');
+  setRawValue('');
+  setIsError(false);
+  setErrorMessage('');
+  setIsFirstInput(true);
+};
+```
+
+두 함수 모두 “초기화”라는 목적을 가지지만, 상태 업데이트 순서와 처리 방식이 다릅니다. 이 작은 차이가 버그를 만들어냅니다.
+
+---
+
+## 문제점 3. 복잡한 규칙 관리의 어려움
+
+추가로 이런 상황도 있었습니다:
+
+- **빠른 금액 버튼과 직접 입력의 충돌**
+  사용자가 "5,000"을 입력한 상태에서 "+10만" 버튼을 누르면 "105,000"이 되어야 합니다.
+  하지만 최대 금액(10억) 검증, 천 단위 포맷팅, 히스토리 업데이트를 모두 동기화해야 합니다.
+  `useState`로 관리하면 이 중 하나라도 빠뜨리면 "+10만" 버튼을 눌렀는데 화면엔 "5,000"이 그대로 표시되는 버그가 발생합니다.
+
+- **00 입력 방지와 첫 입력 처리**
+  첫 입력이 "00"일 때는 무시하지만, "100"을 입력 중일 때 "00"은 허용해야 합니다.
+  이런 **컨텍스트에 따른 규칙**을 `useState`로 관리하면, `isFirstInput`, `rawValue` 체크를 매번 다르게 구현하게 되어 일관성이 깨집니다.
+
+---
+
+## useReducer로 해결하기
+
+이럴 때는 `useReducer`가 답입니다. `dispatch`로 “무엇을 할지(action)”만 전달하고, 상태 변경의 “어떻게(reducer)”는 한 곳에서 관리합니다.
+
+```tsx
+type NumberPadAction =
+  | { type: 'INPUT_NUMBER'; payload: string }
+  | { type: 'INPUT_DOUBLE_ZERO' }
+  | { type: 'DELETE_DIGIT' }
+  | { type: 'CLEAR' }
+  | { type: 'SET_QUICK_AMOUNT'; payload: number }
+  | { type: 'CONFIRM' };
+
+interface NumberPadState {
+  displayAmount: string;
+  rawValue: string;
+  isError: boolean;
+  errorMessage: string;
+  history: string[];
+  isFirstInput: boolean;
+}
+```
+
+리듀서는 모든 상태를 일관성 있게 갱신합니다.
+
+```tsx
+export const numberPadReducer = (
+  state: NumberPadState,
+  action: NumberPadAction
+): NumberPadState => {
+  switch (action.type) {
+    case 'INPUT_NUMBER': {
+      const digit = action.payload;
+
+      if (!canInputNumber(state.rawValue.length)) {
+        return {
+          ...state,
+          isError: true,
+          errorMessage: '더 이상 입력할 수 없어요',
+        };
+      }
+
+      let newRawValue = state.isFirstInput ? digit : state.rawValue + digit;
+      const numericValue = parseAmount(newRawValue);
+      const validation = validateAmount(numericValue);
+
+      return {
+        ...state,
+        rawValue: newRawValue,
+        displayAmount: formatWithComma(newRawValue),
+        isFirstInput: false,
+        isError: !validation.isValid,
+        errorMessage: validation.error || '',
+        history: updateHistory(state.history, formatWithComma(newRawValue)),
+      };
+    }
+
+    case 'CLEAR':
+      return { ...initialState, history: state.history };
+
+    default:
+      return state;
+  }
+};
+```
+
+핸들러는 이제 간단해집니다.
+
+```tsx
+const [state, dispatch] = useReducer(numberPadReducer, initialState);
+
+const handleNumberClick = (num: string) =>
+  dispatch({ type: 'INPUT_NUMBER', payload: num });
+
+const handleClear = () => dispatch({ type: 'CLEAR' });
+```
+
+---
+
+## 🎯 useReducer로 얻은 이점
+
+### 1. 예측 가능한 상태 변경
+
+- `useState` → 여러 곳의 함수를 뒤져야 원인을 찾음
+- `useReducer` → 리듀서에서 해당 action만 보면 끝
+
+### 2. 완벽한 타입 안정성
+
+```tsx
+dispatch({ type: 'INPUT_NUMBER' }); // ❌ payload 필요
+dispatch({ type: 'INPUT_NUMBER', payload: '1' }); // ✅ 정상
+dispatch({ type: 'INVALID_ACTION' }); // ❌ 에러
+```
+
+### 3. 테스트 용이성
+
+**useState를 사용한 경우:**
+
+```tsx
+it('숫자 입력 시 천 단위 콤마 추가', () => {
+  const { result } = renderHook(() => useNumberPad());
+
+  act(() => {
+    result.current.handleNumberClick('1');
+  });
+  expect(result.current.displayAmount).toBe('1');
+
+  act(() => {
+    result.current.handleNumberClick('0');
+    result.current.handleNumberClick('0');
+    result.current.handleNumberClick('0');
+  });
+  expect(result.current.displayAmount).toBe('1,000');
+
+  // 상태 간 동기화 검증이 복잡함
+  expect(result.current.rawValue).toBe('1000');
+  expect(result.current.isError).toBe(false);
+  expect(result.current.history).toContain('1,000');
+});
+```
+
+**useReducer를 사용한 경우:**
+
+```tsx
+it('숫자 입력 시 천 단위 콤마 추가', () => {
+  let state = initialState;
+
+  state = numberPadReducer(state, {
+    type: 'INPUT_NUMBER',
+    payload: '1',
+  });
+  expect(state.displayAmount).toBe('1');
+
+  state = numberPadReducer(state, {
+    type: 'INPUT_NUMBER',
+    payload: '0',
+  });
+  state = numberPadReducer(state, {
+    type: 'INPUT_NUMBER',
+    payload: '0',
+  });
+  state = numberPadReducer(state, {
+    type: 'INPUT_NUMBER',
+    payload: '0',
+  });
+
+  // 모든 상태가 자동으로 동기화됨
+  expect(state).toEqual({
+    displayAmount: '1,000',
+    rawValue: '1000',
+    isError: false,
+    errorMessage: '',
+    history: ['1', '10', '100', '1,000'],
+    isFirstInput: false,
+  });
+});
+```
+
+리듀서는 순수 함수이므로 React 환경 없이도 테스트 가능하며, 모든 상태 변경이 한 곳에서 일어나므로 검증이 간단합니다.
+
+### 4. 성능 최적화
+
+- `useState`: 여러 `setState` 호출로 리렌더링 다수 발생
+- `useReducer`: 단일 `dispatch`로 한 번의 리렌더링
+
+---
+
+## 결론
+
+- 단순한 상태 → `useState`
+- 복잡한 규칙과 다수의 하위 필드, 이전 상태 의존성 → `useReducer`
+
+`useReducer`는 코드의 **일관성, 예측 가능성, 테스트 용이성**을 높여줍니다. 특히 빠르게 변하는 요구사항이 많은 스타트업 환경에서는, 작은 버그 하나가 큰 문제로 이어지기 때문에 더욱 중요한 선택입니다.
+
+---
