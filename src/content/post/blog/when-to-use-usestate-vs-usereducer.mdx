@@ -106,15 +106,19 @@ const handleNumberClick = (num: string) => {
 
 ```tsx
 const handleDelete = () => {
-  if (rawValue.length > 1) {
-    const newRawValue = rawValue.slice(0, -1);
-    setRawValue(newRawValue);
-    setDisplayAmount(formatWithComma(newRawValue));
-    validateAmount(newRawValue);
-  } else {
+  const newRawValue = rawValue.slice(0, -1);
+
+  if (!newRawValue) {
+    // 초기 상태로 리셋
     setRawValue('');
     setDisplayAmount('0');
     setIsFirstInput(true);
+    setIsError(false);
+    setErrorMessage('');
+  } else {
+    // 한 글자 삭제
+    setRawValue(newRawValue);
+    setDisplayAmount(formatWithComma(newRawValue));
     setIsError(false);
     setErrorMessage('');
   }
@@ -178,25 +182,27 @@ const handleQuickAmount = (amount: number) => {
 ```tsx
 // useState로 구현 - 일관성 없는 00 처리
 const handleDoubleZero = () => {
+  // 첫 입력이거나 0일 때 00 방지
   if (isFirstInput || rawValue === '0') {
-    return; // 00 입력 방지
+    return;
   }
 
-  // 빠른 연속 입력 시 상태 동기화 문제
-  if (rawValue.length < 9) {
-    // 임의의 조건
-    const newValue = rawValue + '00';
-    setRawValue(newValue);
-    setDisplayAmount(formatWithComma(newValue));
-    // isError, errorMessage, history 업데이트 누락!
+  // 길이 체크 (임의의 조건)
+  if (rawValue.length >= 9) {
+    return;
   }
+
+  const newValue = rawValue + '00';
+  setRawValue(newValue);
+  setDisplayAmount(formatWithComma(newValue));
+  // ❌ isError, errorMessage, history, isFirstInput 업데이트 누락!
 };
 
-// 다른 핸들러에서는 또 다른 방식으로 처리
+// 다른 핸들러에서는 또 다른 방식으로 처리 - 일관성 없음
 const handleNumberClick = (num: string) => {
+  // 조건이 미묘하게 다름 (rawValue === '' vs isFirstInput)
   if (num === '0' && (isFirstInput || rawValue === '')) {
-    // 여기서는 단일 0도 막아버림 - 일관성 없음
-    return;
+    return; // 단일 0도 막아버림
   }
   // ...
 };
@@ -236,73 +242,47 @@ export const numberPadReducer = (
 ): NumberPadState => {
   switch (action.type) {
     case 'INPUT_NUMBER': {
-      const digit = action.payload;
+      const { rawValue, displayAmount, error } = validateAndFormat(
+        state.isFirstInput ? '' : state.rawValue,
+        action.payload
+      );
 
-      // 1. 입력 제한 검증
-      if (state.rawValue.length >= 10) {
-        return {
-          ...state,
-          isError: true,
-          errorMessage: '더 이상 입력할 수 없어요',
-        };
+      if (error) {
+        return { ...state, isError: true, errorMessage: error };
       }
-
-      // 2. 새로운 값 계산
-      let newRawValue: string;
-      if (state.isFirstInput && digit === '0') return state; // 0으로 시작 방지
-      if (state.isFirstInput || state.rawValue === '0') {
-        newRawValue = digit;
-      } else {
-        newRawValue = state.rawValue + digit;
-      }
-
-      // 3. 유효성 검증
-      const numericValue = parseInt(newRawValue);
-      if (numericValue > MAX_AMOUNT) {
-        return {
-          ...state,
-          isError: true,
-          errorMessage: '최대 10억원까지 가능해요',
-        };
-      }
-
-      // 4. 모든 상태를 한 번에 업데이트
-      const formatted = formatWithComma(newRawValue);
-      return {
-        ...state,
-        rawValue: newRawValue,
-        displayAmount: formatted,
-        isFirstInput: false,
-        isError: false,
-        errorMessage: '',
-        history: [...state.history, formatted],
-      };
-    }
-
-    case 'SET_QUICK_AMOUNT': {
-      // 빠른 금액 버튼 - 현재 금액을 완전히 교체
-      const amount = action.payload;
-      const rawValue = amount.toString();
-      const formatted = formatWithComma(rawValue);
 
       return {
         ...state,
         rawValue,
-        displayAmount: formatted,
+        displayAmount,
         isFirstInput: false,
         isError: false,
         errorMessage: '',
-        history: [...state.history, formatted],
+        history: [...state.history, displayAmount],
+      };
+    }
+
+    case 'SET_QUICK_AMOUNT': {
+      const rawValue = action.payload.toString();
+      const displayAmount = formatWithComma(rawValue);
+
+      return {
+        ...state,
+        rawValue,
+        displayAmount,
+        isFirstInput: false,
+        isError: false,
+        errorMessage: '',
+        history: [...state.history, displayAmount],
       };
     }
 
     case 'DELETE_DIGIT': {
-      if (state.rawValue.length <= 1) {
-        // 마지막 숫자 삭제 시 초기화
+      const newRawValue = state.rawValue.slice(0, -1);
+      if (!newRawValue) {
         return { ...initialState, history: state.history };
       }
 
-      const newRawValue = state.rawValue.slice(0, -1);
       return {
         ...state,
         rawValue: newRawValue,
@@ -332,26 +312,163 @@ const handleNumberClick = (num: string) =>
 const handleClear = () => dispatch({ type: 'CLEAR' });
 ```
 
+### 컴포넌트 코드 비교: useState vs useReducer
+
+실제 컴포넌트에서 사용할 때의 차이를 보면 더욱 명확해집니다.
+
+**useState를 사용한 컴포넌트 - 복잡하고 산만함:**
+
+```tsx
+function NumberPadComponent() {
+  const [displayAmount, setDisplayAmount] = useState('0');
+  const [rawValue, setRawValue] = useState('');
+  const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [history, setHistory] = useState<string[]>([]);
+  const [isFirstInput, setIsFirstInput] = useState(true);
+
+  const handleNumberClick = (num: string) => {
+    // 30줄 이상의 복잡한 로직...
+    let newRawValue;
+    if (isFirstInput) {
+      if (num === '0') return;
+      newRawValue = num;
+      setIsFirstInput(false);
+    } else if (rawValue === '0') {
+      newRawValue = num;
+    } else {
+      if (rawValue.length >= 10) return;
+      newRawValue = rawValue + num;
+    }
+
+    setRawValue(newRawValue);
+    setDisplayAmount(formatWithComma(newRawValue));
+
+    const numValue = parseInt(newRawValue);
+    if (numValue > MAX_AMOUNT) {
+      setIsError(true);
+      setErrorMessage('최대 금액 초과');
+      return;
+    }
+
+    const formatted = formatWithComma(newRawValue);
+    if (history[history.length - 1] !== formatted) {
+      setHistory([...history, formatted]);
+    }
+  };
+
+  const handleQuickAmount = (amount: number) => {
+    // 또 다른 복잡한 로직...
+    setRawValue(amount.toString());
+    setDisplayAmount(formatWithComma(amount.toString()));
+    setIsFirstInput(false);
+    setIsError(false);
+    setErrorMessage('');
+    setHistory([...history, formatWithComma(amount.toString())]);
+  };
+
+  const handleDelete = () => {
+    // 삭제 로직도 복잡...
+    const newRawValue = rawValue.slice(0, -1);
+    if (!newRawValue) {
+      setRawValue('');
+      setDisplayAmount('0');
+      setIsFirstInput(true);
+      setIsError(false);
+      setErrorMessage('');
+    } else {
+      setRawValue(newRawValue);
+      setDisplayAmount(formatWithComma(newRawValue));
+      setIsError(false);
+      setErrorMessage('');
+    }
+  };
+
+  const handleClear = () => {
+    setDisplayAmount('0');
+    setRawValue('');
+    setIsError(false);
+    setErrorMessage('');
+    setIsFirstInput(true);
+  };
+
+  return (
+    <>
+      <Display value={displayAmount} error={isError} message={errorMessage} />
+      <NumberButtons onClick={handleNumberClick} />
+      <QuickAmountButtons onClick={handleQuickAmount} />
+      <ActionButtons onDelete={handleDelete} onClear={handleClear} />
+    </>
+  );
+}
+```
+
+**useReducer를 사용한 컴포넌트 - 깔끔하고 명확함:**
+
+```tsx
+function NumberPadComponent() {
+  const [state, dispatch] = useReducer(numberPadReducer, initialState);
+
+  // 모든 핸들러가 한 줄로 끝!
+  const handleNumberClick = (num: string) =>
+    dispatch({ type: 'INPUT_NUMBER', payload: num });
+
+  const handleQuickAmount = (amount: number) =>
+    dispatch({ type: 'SET_QUICK_AMOUNT', payload: amount });
+
+  const handleDelete = () => dispatch({ type: 'DELETE_DIGIT' });
+
+  const handleClear = () => dispatch({ type: 'CLEAR' });
+
+  return (
+    <>
+      <Display
+        value={state.displayAmount}
+        error={state.isError}
+        message={state.errorMessage}
+      />
+      <NumberButtons onClick={handleNumberClick} />
+      <QuickAmountButtons onClick={handleQuickAmount} />
+      <ActionButtons onDelete={handleDelete} onClear={handleClear} />
+    </>
+  );
+}
+```
+
+**차이점 요약:**
+
+| 항목                   | useState                  | useReducer             |
+| ---------------------- | ------------------------- | ---------------------- |
+| **상태 선언**          | 6개의 개별 상태           | 1개의 통합 상태        |
+| **핸들러 코드**        | 각각 10-30줄              | 모두 1줄               |
+| **비즈니스 로직 위치** | 컴포넌트에 산재           | 리듀서에 집중          |
+| **컴포넌트 크기**      | 100줄 이상                | 30줄 이하              |
+| **가독성**             | 로직과 UI가 섞임          | UI에만 집중 가능       |
+| **테스트 범위**        | 컴포넌트 전체 테스트 필요 | 리듀서만 테스트하면 됨 |
+
+이렇게 `useReducer`를 사용하면 컴포넌트는 **"무엇을 보여줄지"** 에만 집중하고, **"어떻게 상태를 변경할지"** 는 리듀서가 담당하게 됩니다. 이것이 바로 관심사의 분리(Separation of Concerns)입니다.
+
 ### useReducer로 일관성 문제 해결하기
 
 [앞서 언급한 초기화 함수의 일관성 문제](#문제점-2-일관성-없는-상태-관리)를 `useReducer`로 완벽하게 해결할 수 있습니다:
 
 ```tsx
 // 모든 초기화 로직이 리듀서 한 곳에 집중
-case 'DELETE_DIGIT':
-  if (state.rawValue.length <= 1) {
+case 'DELETE_DIGIT': {
+  const newRawValue = state.rawValue.slice(0, -1);
+  if (!newRawValue) {
     // CLEAR와 동일한 방식으로 초기화 - 일관성 보장
     return { ...initialState, history: state.history };
   }
-  const newRawValue = state.rawValue.slice(0, -1);
+
   return {
     ...state,
     rawValue: newRawValue,
     displayAmount: formatWithComma(newRawValue),
-    isFirstInput: false,
     isError: false,
     errorMessage: ''
   };
+}
 
 case 'CLEAR':
   return { ...initialState, history: state.history };
@@ -361,7 +478,7 @@ case 'CLEAR':
 
 ---
 
-## 🎯 useReducer로 얻은 이점
+## useReducer로 얻은 이점
 
 ### 1. 예측 가능한 상태 변경
 
@@ -409,23 +526,20 @@ it('숫자 입력 시 천 단위 콤마 추가', () => {
 it('숫자 입력 시 천 단위 콤마 추가', () => {
   let state = initialState;
 
+  // 1 입력
   state = numberPadReducer(state, {
     type: 'INPUT_NUMBER',
     payload: '1',
   });
   expect(state.displayAmount).toBe('1');
+  expect(state.rawValue).toBe('1');
 
-  state = numberPadReducer(state, {
-    type: 'INPUT_NUMBER',
-    payload: '0',
-  });
-  state = numberPadReducer(state, {
-    type: 'INPUT_NUMBER',
-    payload: '0',
-  });
-  state = numberPadReducer(state, {
-    type: 'INPUT_NUMBER',
-    payload: '0',
+  // 000 입력하여 1,000 만들기
+  ['0', '0', '0'].forEach((digit) => {
+    state = numberPadReducer(state, {
+      type: 'INPUT_NUMBER',
+      payload: digit,
+    });
   });
 
   // 모든 상태가 자동으로 동기화됨
@@ -448,20 +562,51 @@ React 18부터는 이벤트 핸들러 내의 여러 `setState` 호출이 자동�
 
 ```tsx
 // useReducer는 모든 액션을 로깅하기 쉬움
-const loggingReducer = (state: NumberPadState, action: NumberPadAction) => {
-  console.log('Previous State:', state);
-  console.log('Action:', action);
-  const nextState = numberPadReducer(state, action);
-  console.log('Next State:', nextState);
-  return nextState;
+const withLogging = (reducer: typeof numberPadReducer) => {
+  return (state: NumberPadState, action: NumberPadAction) => {
+    console.log('Previous State:', state);
+    console.log('Action:', action);
+    const nextState = reducer(state, action);
+    console.log('Next State:', nextState);
+    return nextState;
+  };
 };
 
-// 타임 트래블 디버깅도 가능
-const [state, dispatch, history] = useReducerWithHistory(
-  numberPadReducer,
+// 사용 예시
+const [state, dispatch] = useReducer(
+  withLogging(numberPadReducer),
   initialState
 );
 ```
+
+**콘솔 출력 예시 - 사용자가 "1"을 입력했을 때:**
+
+```javascript
+Previous State: {
+  displayAmount: '0',
+  rawValue: '',
+  isError: false,
+  errorMessage: '',
+  history: [],
+  isFirstInput: true
+}
+
+Action: {
+  type: 'INPUT_NUMBER',
+  payload: '1'
+}
+
+Next State: {
+  displayAmount: '1',
+  rawValue: '1',
+  isError: false,
+  errorMessage: '',
+  history: ['1'],
+  isFirstInput: false
+}
+```
+
+이렇게 모든 상태 변화가 자동으로 추적되어 디버깅이 매우 쉬워집니다.
 
 - **명확한 액션 흐름**: 어떤 액션이 언제 발생했는지 추적 가능
 - **상태 변경 이력**: 이전 상태로 되돌리기 쉬움
@@ -496,7 +641,7 @@ const [state, dispatch, history] = useReducerWithHistory(
 
 ---
 
-## 📺 더 자세한 설명은 영상으로
+## 더 자세한 설명은 영상으로
 
 이 포스트에서 다룬 내용을 실제 코드와 함께 더 자세히 설명한 영상을 준비했습니다.
 `useState`에서 `useReducer`로 리팩토링하는 과정을 라이브 코딩으로 보여드립니다.
