@@ -1,0 +1,192 @@
+---
+title: 웹 보안의 핵심, Same Origin Policy(동일 출처 정책) 쉽게 이해하기
+date: 2025-09-22
+updatedDate: 2025-09-22
+tags:
+  [
+    Same Origin Policy,
+    SOP,
+    웹 보안,
+    CORS,
+    XSS 방어,
+    HTTP 헤더,
+    브라우저 보안,
+    보안 헤더,
+    웹 취약점,
+    보안 가이드,
+  ]
+category: HTTP
+image: '/images/http-same-origin-policy/thumbnail.png'
+---
+
+# Same Origin Policy(동일 출처 정책)란?
+
+`Same Origin Policy(SOP)`는 **브라우저가 자체적으로 적용하는 핵심 보안 메커니즘**입니다.
+
+![Same Origin Policy](/images/http-same-origin-policy/thumbnail.png)
+
+`CSP(Content Security Policy)`가 서버에서 정책을 설정하고 브라우저가 수행하는 보안 시스템이라면,
+`SOP(Same Origin Policy)`는 **브라우저가 스스로 자원의 출처를 관리하는 정책**입니다.
+
+이 정책의 목적은 악의적인 웹사이트가 사용자 데이터를 무단으로 접근하거나 유출하는 것을 방지하는 것입니다.
+
+예를 들어, `Session Hijacking(세션 하이재킹)`처럼 사용자가 로그인한 세션 쿠키를 다른 사이트로 보내지 못하게 차단합니다.
+
+---
+
+# SOP의 기본 원칙
+
+`SOP(Same Origin Policy)`의 핵심 원칙은 간단합니다:
+
+- **같은 출처의 자원만 접근 가능**: 웹 문서와 같은 출처의 자원만 로드할 수 있음
+- **다른 출처의 자원은 기본적으로 차단**: 교차 출처 자원은 특별한 허가 없이 접근 불가
+
+## 출처(Origin)란 무엇인가?
+
+출처는 다음 세 가지 요소의 조합으로 결정됩니다:
+
+- **프로토콜** (http, https)
+- **호스트** (도메인)
+- **포트** (80, 443, 8080 등)
+
+이 세 가지가 모두 일치해야 **같은 출처**로 간주됩니다.
+
+> **참고 자료**: 동일 출처 정책에 대한 더 자세한 내용은 [MDN Web Docs - Same-origin policy](https://developer.mozilla.org/ko/docs/Web/Security/Same-origin_policy)에서 확인할 수 있습니다.
+
+---
+
+# `Session Hijacking` 공격과 SOP
+
+실제 공격 시나리오를 통해 `SOP(Same Origin Policy)`가 어떻게 보안을 강화하는지 살펴보겠습니다.
+
+![input에 악성 스크립트 주입](/images/http-same-origin-policy/1.png)
+
+위 코드에서 `fetch` 함수는 다른 출처의 사이트로 네트워크 요청을 보내려고 시도합니다.
+
+**하지만 중요한 점은:**
+
+- 네트워크 요청은 전송되지만
+- **응답 데이터는 사용할 수 없음**
+- 브라우저가 오류를 발생시킴
+
+브라우저는 "**동일 출처 정책으로 인해 `hacker.com`에 있는 원격 리소스를 차단했습니다**"라는 오류 메시지를 표시합니다. 이것이 바로 `SOP(Same Origin Policy)`가 동작하는 방식입니다.
+
+---
+
+# SOP가 차단하는 리소스들
+
+`SOP(Same Origin Policy)`는 **AJAX 호출**뿐만 아니라 다양한 리소스에 적용됩니다.
+
+## 웹 폰트 차단 예시
+
+HTML 문서 헤더에 다음과 같은 웹 폰트를 로드하는 코드를 추가해보겠습니다:
+
+```javascript
+res.write(`
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8">
+    <style>
+      input {width: 600px;}
+    </style>
+    <style>
+      @font-face {
+        font-family: 'MyCustomFont';
+        src: url('http://other-origin.com/MyCustomFont.woff2');
+      }
+    </style>
+  </head>
+  <body style="font-family: 'MyCustomFont';">
+    <!-- 페이지 내용 -->
+  </body>
+  </html>
+`);
+```
+
+![교차 출처 웹 폰트 차단 에러](/images/http-same-origin-policy/2.png)
+
+결과는 동일합니다. **교차 출처 요청 차단** 오류가 발생하며,
+브라우저는 "**동일 출처 정책으로 인해 `MyCustomFont`에 있는 원격 리소스를 차단했습니다**"라고 알려줍니다.
+
+## SOP(Same Origin Policy)가 차단하는 주요 자원들
+
+브라우저에서 **반드시 동일 출처에서만 사용해야 하는 자원들**:
+
+- `fetch()` API
+- `XMLHttpRequest`
+- `@font-face` 웹 폰트
+
+---
+
+# 교차 출처가 허용되는 리소스들
+
+모든 리소스가 차단되는 것은 아닙니다.
+웹의 기본적인 동작을 위해 **일부 리소스는 교차 출처 접근이 허용**됩니다:
+
+![교차 출처로 삽입할 수 있는 리소스 예시](/images/http-same-origin-policy/3.png)
+
+### 허용되는 교차 출처 리소스
+
+- **`<script>` 태그**: 다른 출처의 자바스크립트 파일 로드 가능
+- **`<link>` 태그**: 다른 출처의 스타일시트 로드 가능
+- **`<img>`, `<video>`, `<audio>` 태그**: 미디어 리소스 로드 가능
+- **`<object>`, `<embed>` 태그**: 플러그인 콘텐츠 로드 가능
+- **`<iframe>` 태그**: 다른 출처의 페이지 임베드 가능 (단, 내용 접근은 제한됨)
+
+> **참고**: `@font-face`는 브라우저마다 정책이 다릅니다. 일부 브라우저는 교차 출처를 허용하고, 일부는 차단합니다.
+
+---
+
+# CSP와 SOP의 비교
+
+두 정책 모두 `XSS(Cross-Site Scripting)` 공격 방지를 목표로 하지만, 접근 방식이 다릅니다.
+
+## CSP(Content Security Policy)
+
+- **서버-브라우저 협력 정책**: 서버에서 정책을 설정하고 브라우저가 실행
+- **개발자가 직접 설정**: HTTP 응답 헤더를 통해 정책 전달
+- **애플리케이션별 맞춤 설정**: 각 서비스의 요구사항에 맞게 조정 가능
+- **유연한 정책 관리**: Report-Only 모드로 단계적 적용 가능
+
+## SOP(Same Origin Policy)
+
+- **브라우저 기본 정책**: 서버 개입 없이 브라우저가 자체적으로 적용
+- **자동 적용**: 별도 설정 없이 모든 웹페이지에 기본 적용
+- **브라우저별 구현 차이**: 세부 동작이 브라우저마다 약간씩 다름
+- **프로그래밍 영역 밖**: 개발자가 직접 제어할 수 없음
+
+---
+
+# SOP의 한계와 현실적인 문제
+
+`SOP(Same Origin Policy)`는 강력한 보안 메커니즘이지만, 현대 웹 개발에서는 **정당한 교차 출처 요청이 필요한 경우**가 많습니다.
+
+## 실제 개발에서 마주치는 상황들
+
+### 1. **마이크로서비스 아키텍처**
+
+- API 서버가 프론트엔드와 다른 도메인에 위치
+- 각 서비스가 독립적인 도메인으로 운영
+
+### 2. **CDN 활용**
+
+- 정적 리소스를 CDN에서 제공
+- 웹 폰트, 이미지 등을 외부 서버에서 로드
+
+### 3. **서드파티 서비스 통합**
+
+- 결제 서비스, 분석 도구, 소셜 미디어 연동
+- 외부 API와의 통신 필요
+
+이러한 정당한 요구사항들 때문에 `SOP(Same Origin Policy)`를 **안전하게 우회할 수 있는 방법**이 필요합니다.
+
+---
+
+## 마치며
+
+`SOP(Same Origin Policy)`는 웹 보안의 기초이지만, 실제 개발에서는 이를 적절히 다루는 방법을 알아야 합니다. 다음 글에서는 `CORS(Cross-Origin Resource Sharing)`를 통해 SOP를 안전하게 우회하는 방법을 알아보겠습니다.
+
+:::note
+**보안과 편의성은 항상 균형이 필요합니다.** `SOP(Same Origin Policy)`는 보안을 위한 필수 요소이지만, 현대 웹 개발의 요구사항을 충족시키기 위해서는 `CORS(Cross-Origin Resource Sharing)`와 같은 메커니즘을 올바르게 이해하고 활용해야 합니다.
+:::
