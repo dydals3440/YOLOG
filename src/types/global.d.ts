@@ -1,5 +1,13 @@
-interface Window {
-  adsbygoogle: any[];
+interface AdsByGoogleParams {
+  push(params: {
+    google_ad_client?: string;
+    enable_page_level_ads?: boolean;
+    overlays?: { bottom: boolean };
+  }): void;
 }
 
-declare var adsbygoogle: any[];
+interface Window {
+  adsbygoogle: AdsByGoogleParams[];
+}
+
+declare var adsbygoogle: AdsByGoogleParams[];

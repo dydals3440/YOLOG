@@ -1,15 +1,7 @@
 ---
-interface Props {
-  pagination: {
-    currentPage: number
-    totalPages: number
-    hasPrevious: boolean
-    hasNext: boolean
-    previousPage: number | null
-    nextPage: number | null
-  }
-  basePath: string
-}
+import type { PaginationProps } from '@/types/astro'
+
+export interface Props extends PaginationProps {}
 
 const { pagination, basePath } = Astro.props
 
@@ -61,17 +53,15 @@ const pageNumbers = generatePageNumbers()
   )}
 
   <div class="flex gap-1">
-    {pageNumbers.map((pageNum, index) => (
+    {pageNumbers.map((pageNum) => (
       pageNum === '...' ? (
         <span
-          key={`ellipsis-${index}`}
           class="flex items-center px-2 py-2 text-sm text-gray-500"
         >
           …
         </span>
       ) : (
         <a
-          key={pageNum}
           href={getPageUrl(pageNum as number)}
           class={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
             pageNum === pagination.currentPage

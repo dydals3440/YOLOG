@@ -23,7 +23,7 @@ export const changeGiscusTheme = (theme: keyof typeof giscusThemes) => {
   });
 };
 
-export const GiscusComment = (props: React.HTMLAttributes<HTMLElement>) => {
+const GiscusComment = (props: React.HTMLAttributes<HTMLElement>) => {
   useEffect(() => {
     const theme: keyof typeof giscusThemes =
       document.documentElement.classList.contains('dark') ? 'dark' : 'light';
@@ -60,3 +60,5 @@ export const GiscusComment = (props: React.HTMLAttributes<HTMLElement>) => {
     <section {...props} style={{ minHeight: '372px' }} id='giscus'></section>
   );
 };
+
+export default GiscusComment;

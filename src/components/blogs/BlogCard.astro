@@ -1,10 +1,8 @@
 ---
-import type { CollectionEntry } from 'astro:content'
 import { BLOG_CATEGORIES, type BlogCategory } from '@/consts'
+import type { BlogCardProps } from '@/types/astro'
 
-interface Props {
-  post: CollectionEntry<'post'>
-}
+export interface Props extends BlogCardProps {}
 
 const { post } = Astro.props
 const { title, description, date, category } = post.data

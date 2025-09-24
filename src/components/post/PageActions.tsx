@@ -1,8 +1,8 @@
 import { ArrowTopIcon, CommentIcon } from '../ui/icons';
-import { ActionButton } from './ActionButton';
-import { CopyLinkButton } from './CopyLinkButton';
+import ActionButton from './ActionButton';
+import CopyLinkButton from './CopyLinkButton';
 
-export const PageActions = () => {
+const PageActions = () => {
   const handleScrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -32,3 +32,5 @@ export const PageActions = () => {
     </ul>
   );
 };
+
+export default PageActions;

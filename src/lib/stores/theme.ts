@@ -27,8 +27,8 @@ const initThemeStoreSubscribe = () => {
     }
   }
 
-  const handleMediaQuery = (query: { matches: boolean }) => {
-    applyTheme(query.matches ? THEME_MAP.dark : THEME_MAP.light)
+  const handleMediaQuery = (event: MediaQueryListEvent | MediaQueryList) => {
+    applyTheme(event.matches ? THEME_MAP.dark : THEME_MAP.light)
   }
 
   themeStore.subscribe((theme) => {

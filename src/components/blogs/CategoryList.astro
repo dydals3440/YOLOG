@@ -1,15 +1,8 @@
 ---
-import type { BlogCategory } from '@/consts'
 import { cn } from '@/lib/utils'
+import type { CategoryListProps } from '@/types/astro'
 
-interface Props {
-  categories: Array<{
-    id: BlogCategory
-    label: string
-    count: number
-  }>
-  currentPath: string
-}
+export interface Props extends CategoryListProps {}
 
 const { categories, currentPath } = Astro.props
 

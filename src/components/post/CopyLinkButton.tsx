@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 
 import { useToast } from '@/hooks/use-toast'
 
 import { CheckIcon, LinkIcon } from '../ui/icons'
-import { ActionButton } from './ActionButton'
+import ActionButton from './ActionButton'
 
-export const CopyLinkButton = () => {
+const CopyLinkButton = () => {
   const [isCopied, setIsCopied] = useState(false)
   const { toast } = useToast()
 
@@ -18,7 +18,7 @@ export const CopyLinkButton = () => {
     }
   }, [isCopied])
 
-  const handleCopyLink = async () => {
+  const handleCopyLink = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(window.location.href)
       setIsCopied(true)
@@ -31,7 +31,7 @@ export const CopyLinkButton = () => {
         variant: 'destructive',
       })
     }
-  }
+  }, [toast])
 
   return (
     <ActionButton onClick={handleCopyLink}>
@@ -40,3 +40,5 @@ export const CopyLinkButton = () => {
     </ActionButton>
   )
 }
+
+export default CopyLinkButton

@@ -1,0 +1,35 @@
+---
+import { resolveSlug } from '@/lib/mdx'
+import type { PostNavigationProps } from '@/types/astro'
+
+export interface Props extends PostNavigationProps {}
+
+const { prevPost, nextPost } = Astro.props
+---
+
+<nav class="flex items-stretch justify-between gap-1 text-sm" aria-label="게시물 네비게이션">
+  {prevPost && (
+    <a
+      class="group flex flex-col gap-1"
+      href={`/post/${resolveSlug(prevPost.slug)}`}
+      aria-label={`이전 글: ${prevPost.data.title}`}
+    >
+      <div class="text-disabled transition-colors group-hover:text-second">이전 글</div>
+      <span class="-mx-1 rounded px-1 text-second transition-colors group-hover:bg-selection group-hover:text-heading">
+        {prevPost.data.title}
+      </span>
+    </a>
+  )}
+  {nextPost && (
+    <a
+      class="group ml-auto flex flex-col gap-1 text-right text-second hover:text-body"
+      href={`/post/${resolveSlug(nextPost.slug)}`}
+      aria-label={`다음 글: ${nextPost.data.title}`}
+    >
+      <div class="text-disabled transition-colors group-hover:text-second">다음 글</div>
+      <span class="-mx-1 rounded px-1 text-second transition-colors group-hover:bg-selection group-hover:text-heading">
+        {nextPost.data.title}
+      </span>
+    </a>
+  )}
+</nav>

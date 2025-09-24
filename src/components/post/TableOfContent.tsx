@@ -1,5 +1,5 @@
 import { throttle } from 'es-toolkit';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 import type { TOCSectionModel } from '@/lib/mdx';
 import { cn } from '@/lib/utils';
@@ -36,8 +36,10 @@ const TableOfContent = ({
 const useTocScroll = (tableOfContents: TOCSectionModel[]) => {
   const [currentSectionSlug, setCurrentSectionSlug] = useState<string>();
 
+  const hasContent = useMemo(() => tableOfContents.length > 0, [tableOfContents]);
+
   useEffect(() => {
-    if (tableOfContents.length === 0) return;
+    if (!hasContent) return;
 
     let headings: { id: string; top: number }[];
     let pageTop = 0;
@@ -72,7 +74,7 @@ const useTocScroll = (tableOfContents: TOCSectionModel[]) => {
       });
 
       setCurrentSectionSlug(current);
-    }, 10);
+    }, 50);
 
     onResize();
     onScroll();
@@ -83,7 +85,7 @@ const useTocScroll = (tableOfContents: TOCSectionModel[]) => {
       window.removeEventListener('scroll', onScroll, { capture: true });
       window.removeEventListener('resize', onResize, { capture: true });
     };
-  }, [tableOfContents]);
+  }, [hasContent]);
 
   return { currentSectionSlug };
 };

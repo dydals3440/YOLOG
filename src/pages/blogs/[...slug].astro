@@ -44,7 +44,7 @@ export async function getStaticPaths() {
     const filteredPosts = filterPostsByCategory(allPosts, categoryKey)
     const sortedPosts = sortPostsByDate(filteredPosts)
     
-    const categoryPostsPerPage = 3
+    const categoryPostsPerPage = 5
     const totalCategoryPages = Math.ceil(sortedPosts.length / categoryPostsPerPage)
     
     // 카테고리 1페이지
@@ -149,9 +149,3 @@ const totalPosts = totalPostsInCategory || pagination.totalPosts
     )}
   </div>
 </BaseLayout>
-
-<style>
-  .group:hover .group-hover\:scale-100 {
-    transform: scale(1);
-  }
-</style>

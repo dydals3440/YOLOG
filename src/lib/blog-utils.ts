@@ -1,5 +1,6 @@
 import { type CollectionEntry } from 'astro:content';
 import { BLOG_CATEGORIES, type BlogCategory } from '@/consts';
+import dayjs from 'dayjs';
 
 /**
  * 게시글을 날짜 기준으로 내림차순 정렬합니다.
@@ -14,6 +15,19 @@ export function sortPostsByDate(
     const dateB = new Date(b.data.date);
     return dateB.getTime() - dateA.getTime();
   });
+}
+
+/**
+ * 날짜를 포맷팅합니다.
+ * @param date 포맷팅할 날짜
+ * @param format 날짜 형식 (기본값: 'YYYY년 MM월 DD일')
+ * @returns 포맷팅된 날짜 문자열
+ */
+export function formatDate(
+  date: Date | string,
+  format: string = 'YYYY년 MM월 DD일'
+): string {
+  return dayjs(date).format(format);
 }
 
 /**

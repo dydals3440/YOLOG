@@ -11,12 +11,9 @@ import Analytics from '@vercel/analytics/astro'
 import SpeedInsights from "@vercel/speed-insights/astro"
 
 
-import type { SEOModel } from '@/types'
+import type { BaseLayoutProps, SEOProps } from '@/types/astro'
 
-interface Props {
-  seo?: SEOModel
-  class?: string
-}
+export interface Props extends BaseLayoutProps {}
 
 const { seo, class: className } = Astro.props
 ---
@@ -37,6 +34,6 @@ const { seo, class: className } = Astro.props
       </div>
     </main>
     <Footer />
-    <Toaster client:load />
+    <Toaster client:idle />
   </body>
 </html>
