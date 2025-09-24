@@ -288,6 +288,132 @@
 	border-radius: 4px;
 }
 
+/* 형광펜 스타일 - 실제 형광펜처럼 자연스럽게 */
+.mdx mark,
+.mdx .highlight {
+	position: relative;
+	display: inline;
+	padding: 0 1px;
+	margin: 0;
+	color: inherit;
+	background: linear-gradient(
+		to bottom,
+		transparent 25%,
+		rgba(255, 235, 59, 0.4) 25%,
+		rgba(255, 235, 59, 0.4) 100%
+	);
+	background-color: transparent;
+	border: none;
+	font-weight: inherit;
+	border-radius: 0;
+	transition: background 0.2s ease;
+}
+
+/* 다크 모드에서 더 밝고 선명한 형광펜 효과 */
+.dark .mdx mark,
+.dark .mdx .highlight {
+	background: linear-gradient(
+		to bottom,
+		transparent 25%,
+		rgba(255, 235, 59, 0.45) 25%,
+		rgba(255, 235, 59, 0.45) 100%
+	);
+	color: inherit;
+	filter: brightness(1.3) contrast(1.1);
+}
+
+/* 핑크 형광펜 - .pink 클래스 추가 시 */
+.mdx mark.pink,
+.mdx .highlight.pink {
+	background: linear-gradient(
+		to bottom,
+		transparent 25%,
+		rgba(255, 107, 157, 0.4) 25%,
+		rgba(255, 107, 157, 0.4) 100%
+	);
+}
+
+.dark .mdx mark.pink,
+.dark .mdx .highlight.pink {
+	background: linear-gradient(
+		to bottom,
+		transparent 25%,
+		rgba(255, 107, 157, 0.45) 25%,
+		rgba(255, 107, 157, 0.45) 100%
+	);
+	color: inherit;
+	filter: brightness(1.3) contrast(1.1);
+}
+
+/* 블루 형광펜 - .blue 클래스 추가 시 */
+.mdx mark.blue,
+.mdx .highlight.blue {
+	background: linear-gradient(
+		to bottom,
+		transparent 25%,
+		rgba(102, 217, 239, 0.4) 25%,
+		rgba(102, 217, 239, 0.4) 100%
+	);
+}
+
+.dark .mdx mark.blue,
+.dark .mdx .highlight.blue {
+	background: linear-gradient(
+		to bottom,
+		transparent 25%,
+		rgba(102, 217, 239, 0.45) 25%,
+		rgba(102, 217, 239, 0.45) 100%
+	);
+	color: inherit;
+	filter: brightness(1.3) contrast(1.1);
+}
+
+/* 그린 형광펜 - .green 클래스 추가 시 */
+.mdx mark.green,
+.mdx .highlight.green {
+	background: linear-gradient(
+		to bottom,
+		transparent 25%,
+		rgba(166, 226, 46, 0.4) 25%,
+		rgba(166, 226, 46, 0.4) 100%
+	);
+}
+
+.dark .mdx mark.green,
+.dark .mdx .highlight.green {
+	background: linear-gradient(
+		to bottom,
+		transparent 25%,
+		rgba(166, 226, 46, 0.45) 25%,
+		rgba(166, 226, 46, 0.45) 100%
+	);
+	color: inherit;
+	filter: brightness(1.3) contrast(1.1);
+}
+
+/* 오렌지 형광펜 - .orange 클래스 추가 시 */
+.mdx mark.orange,
+.mdx .highlight.orange {
+	background: linear-gradient(
+		to bottom,
+		transparent 25%,
+		rgba(253, 151, 31, 0.4) 25%,
+		rgba(253, 151, 31, 0.4) 100%
+	);
+}
+
+.dark .mdx mark.orange,
+.dark .mdx .highlight.orange {
+	background: linear-gradient(
+		to bottom,
+		transparent 25%,
+		rgba(253, 151, 31, 0.45) 25%,
+		rgba(253, 151, 31, 0.45) 100%
+	);
+	color: inherit;
+	filter: brightness(1.3) contrast(1.1);
+}
+
 pre.astro-code {
 	--astro-code-px: 24px;
 	--astro-code-py: 20px;

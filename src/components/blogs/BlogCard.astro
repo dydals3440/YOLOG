@@ -1,44 +1,71 @@
 ---
-import { BLOG_CATEGORIES, type BlogCategory } from '@/consts'
-import type { BlogCardProps } from '@/types/astro'
+import type { BlogCardProps } from "@/types/astro";
+import CategoryBadge from "./CategoryBadge.astro";
+import PostMeta from "./PostMeta.astro";
+import ReadingTime from "./ReadingTime.astro";
 
 export interface Props extends BlogCardProps {}
 
-const { post } = Astro.props
-const { title, description, date, category } = post.data
-const slug = post.slug.replace('blog/', '')
-
-
+const { post } = Astro.props;
+const { title, description, date, category } = post.data;
+const slug = post.slug.replace("blog/", "");
 ---
 
-<article class="group bg-white rounded-xl border border-gray-200 p-6 transition-all duration-300 hover:shadow-lg hover:border-gray-300 hover:-translate-y-1">
-  <a href={`/post/${slug}`} class="block">
-    <div class="mb-3">
-      <span class="inline-block px-3 py-1 text-xs font-medium text-blue-700 bg-blue-50 rounded-full border border-blue-200">
-        {BLOG_CATEGORIES[category as BlogCategory]}
-      </span>
+<article class="group relative bg-white rounded-2xl border border-gray-100 overflow-hidden transition-all duration-500 hover:shadow-2xl hover:border-gray-200 hover:-translate-y-2 hover:scale-[1.02]">
+  <!-- 그라디언트 오버레이 -->
+  <div class="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-purple-50/0 group-hover:from-blue-50/30 group-hover:to-purple-50/30 transition-all duration-500 pointer-events-none"></div>
+
+  <a href={`/post/${slug}`} class="relative block p-7">
+    <!-- 카테고리 & 메타 정보 -->
+    <div class="flex items-center gap-3 mb-4">
+      <CategoryBadge category={category} className="group-hover:scale-105" />
+      <ReadingTime content={post.body} />
     </div>
-    <h2 class="mb-3 text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
+
+    <!-- 제목 -->
+    <h2 class="mb-3 text-xl font-bold text-gray-900 transition-all duration-300 group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-purple-600 line-clamp-2">
       {title}
     </h2>
+
+    <!-- 설명 -->
     {description && (
-      <p class="mb-4 text-sm text-gray-600 line-clamp-3 leading-relaxed">
+      <p class="mb-5 text-sm text-gray-600 line-clamp-3 leading-relaxed transition-colors duration-300 group-hover:text-gray-700">
         {description}
       </p>
     )}
-    <time datetime={date.toISOString()} class="text-xs text-gray-500 font-medium">
-      {new Date(date).toLocaleDateString('ko-KR', { 
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })}
-    </time>
+
+    <!-- 하단 정보 -->
+    <PostMeta
+      date={date}
+      showArrow={true}
+      className="pt-4 border-t border-gray-50 group-hover:border-gray-100 transition-colors duration-300"
+    />
   </a>
+
+  <!-- 호버 시 나타나는 사이드 라인 -->
+  <div class="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-blue-500 to-purple-500 transform scale-y-0 transition-transform duration-500 group-hover:scale-y-100 origin-top"></div>
 </article>
 
 <style>
-  .group:hover .decoration-2 {
-    text-decoration-thickness: 2px;
-    text-underline-offset: 4px;
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
   }
-</style> 
+
+  .group:hover h2 {
+    background-size: 200% auto;
+    animation: shimmer 3s linear infinite;
+  }
+
+  article {
+    backdrop-filter: blur(10px);
+  }
+
+  article:hover {
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.1);
+  }
+</style>

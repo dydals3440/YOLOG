@@ -44,11 +44,11 @@
     --gray-300: #3f3f46;
     --gray-400: #52525b;
     --gray-500: #71717a;
-    --gray-600: #a1a1aa;
-    --gray-700: #d4d4d8;
-    --gray-800: #e4e4e7;
-    --gray-900: #f4f4f5;
-    --gray-950: #fafafa;
+    --gray-600: #c4c4c8;
+    --gray-700: #dcdcde;
+    --gray-800: #f2f2f3;
+    --gray-900: #fafafa;
+    --gray-950: #fefefe;
 
     --selection: hsla(240, 5%, 84%, 0.12);
     --border: hsla(240, 5%, 84%, 0.12);

@@ -1,0 +1,33 @@
+---
+export interface Props {
+  date: Date
+  showArrow?: boolean
+  className?: string
+}
+
+const { date, showArrow = false, className = '' } = Astro.props
+---
+
+<div class={`flex items-center justify-between ${className}`}>
+  <time datetime={date.toISOString()} class="flex items-center text-xs text-gray-500 font-medium">
+    <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+    </svg>
+    {new Date(date).toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })}
+  </time>
+
+  {showArrow && (
+    <div class="flex items-center text-gray-400 transition-all duration-300 group-hover:text-blue-600 group-hover:translate-x-2">
+      <span class="text-xs font-medium mr-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        자세히 보기
+      </span>
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+      </svg>
+    </div>
+  )}
+</div>

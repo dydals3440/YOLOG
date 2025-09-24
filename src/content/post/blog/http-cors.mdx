@@ -1,5 +1,6 @@
 ---
 title: 악명 높은 CORS(교차 출처 리소스 공유) 쉽게 이해하기
+import Highlight from '@/components/mdx/Highlight'
 date: 2025-09-23
 updatedDate: 2025-09-23
 tags:
@@ -22,11 +23,11 @@ image: '/images/http-cors/thumbnail.png'
 
 # CORS란?
 
-`CORS(Cross-Origin Resource Sharing)`는 **브라우저에서 다른 출처에 있는 리소스를 사용할 수 있는 규칙**입니다.
+<Highlight color="blue">CORS(Cross-Origin Resource Sharing)</Highlight>는 **브라우저에서 다른 출처에 있는 리소스를 사용할 수 있는 규칙**입니다.
 
 ![CORS](/images/http-cors/thumbnail.png)
 
-지난 장에서 살펴본 것처럼 브라우저의 `동일 출처 정책(Same-Origin Policy)`으로 인해 출처가 다른 리소스에 접근할 수 없는 상황에 직면하게 됩니다.
+지난 장에서 살펴본 것처럼 브라우저의 <Highlight color="blue">동일 출처 정책(Same-Origin Policy)</Highlight>으로 인해 출처가 다른 리소스에 접근할 수 없는 상황에 직면하게 됩니다.
 
 이번 장에서는 **CORS의 원리**와 **문제 상황**, 그리고 이를 **해결할 수 있는 방법**을 배워보겠습니다.
 
@@ -43,9 +44,9 @@ URL의 **프로토콜**, **호스트**, **포트** 세 가지를 조합한 것�
 
 다른 출처의 자원을 사용하기 위해 네트워크 요청을 만드는 것을 말합니다.
 
-브라우저는 실행 중인 애플리케이션의 출처와 다른 출처의 자원을 요청하면 이를 **차단**합니다. 앞서 공부한 `동일 출처 정책`이 동작하기 때문입니다.
+브라우저는 실행 중인 애플리케이션의 출처와 다른 출처의 자원을 요청하면 이를 **차단**합니다. 앞서 공부한 <Highlight color="blue">동일 출처 정책</Highlight>이 동작하기 때문입니다.
 
-이를 허용하려면 서버와 특별한 약속을 지켜야 하는데, 그것이 바로 `CORS`입니다.
+이를 허용하려면 서버와 특별한 약속을 지켜야 하는데, 그것이 바로 <Highlight color="blue">CORS</Highlight>입니다.
 
 ---
 
@@ -137,11 +138,11 @@ document.addEventListener('DOMContentLoaded', init);
 
 콘솔을 확인하면 `"교차 출처 요청 차단"`이라는 경고가 표시됩니다. `동일 출처 정책`으로 인해 `8080`번 포트가 아닌 `8081`번 포트를 사용하는 서버의 리소스가 차단된 것입니다.
 
-원인은 `Access-Control-Allow-Origin` CORS 헤더가 없기 때문입니다.
+원인은 <Highlight color="blue">Access-Control-Allow-Origin</Highlight> CORS 헤더가 없기 때문입니다.
 
 브라우저는 다른 출처로 요청을 보낼 때:
 
-1. 응답 헤더 중 `Access-Control-Allow-Origin`을 확인합니다
+1. 응답 헤더 중 <Highlight color="blue">Access-Control-Allow-Origin</Highlight>을 확인합니다
 2. 이 헤더에 **현재 출처가 포함되어 있는지** 검사합니다
 3. 서버가 해당 출처를 **허용했는지** 판단합니다
 
@@ -149,7 +150,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 ## CORS 헤더 설정하기
 
-서버 `8081`이 다른 출처에게 자원을 공유하려면 `Access-Control-Allow-Origin` 헤더를 설정해야 합니다.
+서버 <Highlight>8081</Highlight>이 다른 출처에게 자원을 공유하려면 <Highlight color="blue">Access-Control-Allow-Origin</Highlight> 헤더를 설정해야 합니다.
 
 서버 코드를 수정해보겠습니다:
 
@@ -175,15 +176,15 @@ server.listen(port, () => console.log(`server is running ::${port}`));
 
 이번에는 정상적으로 네트워크 요청이 전송되었습니다. 서버 `8081`로 요청을 보냈고, 응답도 받았으며, 브라우저가 이 응답을 차단하지도 않았습니다.
 
-그 이유는 응답 헤더의 `Access-Control-Allow-Origin`에 현재 애플리케이션이 실행되는 `localhost:8080`이 명시되어 있기 때문입니다.
+그 이유는 응답 헤더의 <Highlight color="blue">Access-Control-Allow-Origin</Highlight>에 현재 애플리케이션이 실행되는 <Highlight>localhost:8080</Highlight>이 명시되어 있기 때문입니다.
 
-브라우저는 "서버가 `8080`번 포트의 출처도 이 자원을 사용할 수 있다고 허락했구나"라고 판단하여 응답 사용을 허용한 것입니다.
+브라우저는 "서버가 <Highlight>8080</Highlight>번 포트의 출처도 이 자원을 사용할 수 있다고 허락했구나"라고 판단하여 응답 사용을 허용한 것입니다.
 
 ---
 
 # 단순 요청(Simple Request)
 
-교차 출처 요청 중에도 특정 조건을 만족하는 요청을 `단순 요청(Simple Request)`이라고 부릅니다.
+교차 출처 요청 중에도 특정 조건을 만족하는 요청을 <Highlight color="green">단순 요청(Simple Request)</Highlight>이라고 부릅니다.
 
 ## 단순 요청의 조건
 
@@ -191,23 +192,23 @@ server.listen(port, () => console.log(`server is running ::${port}`));
 
 ### 1. 허용된 HTTP 메소드 사용
 
-- `GET`
-- `POST`
-- `HEAD`
+- <Highlight color="blue">GET</Highlight>
+- <Highlight color="blue">POST</Highlight>
+- <Highlight color="blue">HEAD</Highlight>
 
 ### 2. 안전한 헤더 사용
 
 교차 출처 요청에서 사용할 수 있는 헤더를 **안전한 헤더**라고 합니다.
 
-방금 우리가 사용한 `GET` 메소드는 단순 요청에 해당합니다. 브라우저는 다른 출처의 자원을 사용하기 위해 HTTP 요청을 만들 때 `Origin` 헤더에 현재 출처를 실어서 보냅니다.
+방금 우리가 사용한 <Highlight color="blue">GET</Highlight> 메소드는 단순 요청에 해당합니다. 브라우저는 다른 출처의 자원을 사용하기 위해 HTTP 요청을 만들 때 <Highlight color="blue">Origin</Highlight> 헤더에 현재 출처를 실어서 보냅니다.
 
 ![요청 헤더의 Origin에 이 애플리케이션을 실행한 URL이 담겨있음을 확인할 수 있는 사진](/images/http-cors/5.png)
 
-요청 헤더의 `Origin`에 현재 애플리케이션이 실행된 URL이 담겨있는 것을 확인할 수 있습니다. 이것이 바로 **현재 출처**입니다.
+요청 헤더의 <Highlight color="blue">Origin</Highlight>에 현재 애플리케이션이 실행된 URL이 담겨있는 것을 확인할 수 있습니다. 이것이 바로 **현재 출처**입니다.
 
 브라우저가 서버에게 "나의 출처는 이곳이니, 당신의 자원을 사용해도 되나요?"라고 묻는 것입니다.
 
-서버는 자원을 제공하겠다는 의미로 응답 헤더에 `Access-Control-Allow-Origin`을 포함시킵니다:
+서버는 자원을 제공하겠다는 의미로 응답 헤더에 <Highlight color="blue">Access-Control-Allow-Origin</Highlight>을 포함시킵니다:
 
 ![Access-Control-Allow-Origin 여기에 내 출처를 실어준다.](/images/http-cors/6.png)
 
@@ -219,11 +220,11 @@ server.listen(port, () => console.log(`server is running ::${port}`));
 
 안전한 헤더 목록:
 
-- `Accept`
-- `Accept-Language`
-- `Content-Language`
-- `Content-Type`
-- `Range`
+- <Highlight color="blue">Accept</Highlight>
+- <Highlight color="blue">Accept-Language</Highlight>
+- <Highlight color="blue">Content-Language</Highlight>
+- <Highlight color="blue">Content-Type</Highlight>
+- <Highlight color="blue">Range</Highlight>
 
 > **참고 자료**: [MDN - CORS 안전한 요청 헤더](https://developer.mozilla.org/ko/docs/Glossary/CORS-safelisted_request_header)
 
@@ -253,11 +254,11 @@ document.addEventListener('DOMContentLoaded', init);
 
 ![커스텀 헤더를 보냈지만, 동일 출처 정책으로 인해 응답을 받을 수 없음](/images/http-cors/8.png)
 
-`동일 출처 정책`으로 인해 원격 리소스가 차단되었습니다. `Access-Control-Allow-Headers`에 헤더 `X-Goguma`가 허용되지 않았다고 표시됩니다.
+<Highlight color="blue">동일 출처 정책</Highlight>으로 인해 원격 리소스가 차단되었습니다. <Highlight color="blue">Access-Control-Allow-Headers</Highlight>에 헤더 <Highlight>X-Goguma</Highlight>가 허용되지 않았다고 표시됩니다.
 
 ### 커스텀 헤더 허용하기
 
-안전하지 않은 헤더를 사용하려면 서버가 `Access-Control-Allow-Headers` 응답 헤더에 허용할 헤더 이름을 명시해야 합니다:
+안전하지 않은 헤더를 사용하려면 서버가 <Highlight color="blue">Access-Control-Allow-Headers</Highlight> 응답 헤더에 허용할 헤더 이름을 명시해야 합니다:
 
 ```js
 const http = require('http');
@@ -280,21 +281,21 @@ server.listen(port, () => console.log(`server is running ::${port}`));
 
 ![제대로 응답을 받을 수 있는 사진](/images/http-cors/9.png)
 
-요청 헤더에 `X-Goguma`가 정상적으로 포함되어 전송된 것을 확인할 수 있습니다.
+요청 헤더에 <Highlight>X-Goguma</Highlight>가 정상적으로 포함되어 전송된 것을 확인할 수 있습니다.
 
 ---
 
 # 사전 요청(Preflight Request)
 
-단순한 요청에 해당하는 `GET`, `POST`, `HEAD` 메소드가 아닌 `PUT`, `PATCH`, `DELETE` 메소드를 사용하는 경우가 있습니다.
+단순한 요청에 해당하는 <Highlight color="blue">GET</Highlight>, <Highlight color="blue">POST</Highlight>, <Highlight color="blue">HEAD</Highlight> 메소드가 아닌 <Highlight color="blue">PUT</Highlight>, <Highlight color="blue">PATCH</Highlight>, <Highlight color="blue">DELETE</Highlight> 메소드를 사용하는 경우가 있습니다.
 
 이런 경우 서버는 "요청을 보낸 측이 브라우저가 아닐 수도 있다"고 판단합니다. 따라서 브라우저와 서버는 서로를 확인하기 위한 **사전 요청**을 먼저 주고받습니다.
 
-이를 `사전 요청(Preflight Request)`이라고 부릅니다.
+이를 <Highlight color="orange">사전 요청(Preflight Request)</Highlight>이라고 부릅니다.
 
 ## PUT 메소드로 사전 요청 테스트
 
-브라우저에서 동작하는 스크립트의 메소드를 `PUT`으로 변경해보겠습니다:
+브라우저에서 동작하는 스크립트의 메소드를 <Highlight color="blue">PUT</Highlight>으로 변경해보겠습니다:
 
 ```ts
 const init = async () => {
@@ -315,7 +316,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 ![동일 출처 정책으로 인해 8080에 있는 리소스를 차단했습니다. Access-Control-Allow-Methods에 PUT 메소드가 없다고 출력한다.](/images/http-cors/10.png)
 
-`동일 출처 정책`으로 인해 리소스가 차단되었으며, `Access-Control-Allow-Methods`에 `PUT` 메소드가 없다고 표시됩니다.
+<Highlight color="blue">동일 출처 정책</Highlight>으로 인해 리소스가 차단되었으며, <Highlight color="blue">Access-Control-Allow-Methods</Highlight>에 <Highlight color="blue">PUT</Highlight> 메소드가 없다고 표시됩니다.
 
 네트워크 탭을 확인하면 더 자세한 정보를 볼 수 있습니다:
 
@@ -325,15 +326,15 @@ document.addEventListener('DOMContentLoaded', init);
 
 사전 요청은 다음과 같은 특징을 가집니다:
 
-- **메소드**: `OPTIONS`를 사용
-- **URL**: 실제 요청과 동일한 주소 (`resource.json`)
-- **요청 헤더**: `Access-Control-Request-Method`에 사용하려는 메소드(`PUT`)를 명시
+- **메소드**: <Highlight color="blue">OPTIONS</Highlight>를 사용
+- **URL**: 실제 요청과 동일한 주소 (<Highlight>resource.json</Highlight>)
+- **요청 헤더**: <Highlight color="blue">Access-Control-Request-Method</Highlight>에 사용하려는 메소드(<Highlight color="blue">PUT</Highlight>)를 명시
 
-브라우저는 "교차 출처로 `PUT` 메소드를 사용해도 되나요?"라고 서버에게 먼저 확인하는 것입니다.
+브라우저는 "교차 출처로 <Highlight color="blue">PUT</Highlight> 메소드를 사용해도 되나요?"라고 서버에게 먼저 확인하는 것입니다.
 
 ## PUT 메소드 허용하기
 
-서버가 다른 출처에서 `PUT` 메소드를 허용하려면 `Access-Control-Allow-Methods` 응답 헤더를 설정해야 합니다:
+서버가 다른 출처에서 <Highlight color="blue">PUT</Highlight> 메소드를 허용하려면 <Highlight color="blue">Access-Control-Allow-Methods</Highlight> 응답 헤더를 설정해야 합니다:
 
 ```js
 const http = require('http');
@@ -361,23 +362,23 @@ server.listen(port, () => console.log(`server is running ::${port}`));
 
 1. **사전 요청(OPTIONS)**:
 
-   - 요청: `Access-Control-Request-Method: PUT`
-   - 응답: `Access-Control-Allow-Methods: PUT`
-   - 서버가 `PUT` 메소드 사용을 허용함을 알림
+   - 요청: <Highlight color="blue">Access-Control-Request-Method: PUT</Highlight>
+   - 응답: <Highlight color="blue">Access-Control-Allow-Methods: PUT</Highlight>
+   - 서버가 <Highlight color="blue">PUT</Highlight> 메소드 사용을 허용함을 알림
 
 2. **실제 요청(PUT)**:
 
 ![실제로 PUT 요청이 보내지고, 응답 본문이 실려옴](/images/http-cors/13.png)
 
-실제 `PUT` 요청이 전송되고, 응답 본문도 정상적으로 수신되었습니다.
+실제 <Highlight color="blue">PUT</Highlight> 요청이 전송되고, 응답 본문도 정상적으로 수신되었습니다.
 
-브라우저는 "서버가 `PUT` 메소드를 허용했구나"라고 판단하여 애플리케이션에서 응답을 사용할 수 있도록 허용한 것입니다.
+브라우저는 "서버가 <Highlight color="blue">PUT</Highlight> 메소드를 허용했구나"라고 판단하여 애플리케이션에서 응답을 사용할 수 있도록 허용한 것입니다.
 
 ## 사전 요청 캐싱
 
-매번 `OPTIONS` 메소드를 사용하는 사전 요청을 보내는 것은 **네트워크 비용이 추가로 발생**합니다.
+매번 <Highlight color="blue">OPTIONS</Highlight> 메소드를 사용하는 사전 요청을 보내는 것은 **네트워크 비용이 추가로 발생**합니다.
 
-이를 최적화하기 위해 브라우저는 사전 요청의 응답을 **캐시**할 수 있습니다. `Access-Control-Max-Age` 헤더를 설정하면 됩니다:
+이를 최적화하기 위해 브라우저는 사전 요청의 응답을 **캐시**할 수 있습니다. <Highlight color="blue">Access-Control-Max-Age</Highlight> 헤더를 설정하면 됩니다:
 
 ```js
 const http = require('http');
@@ -404,13 +405,13 @@ server.listen(port, () => console.log(`server is running ::${port}`));
 
 ![첫 요청은 당연히 캐싱한 데이터가 없으므로 OPTIONS 요청이 날라감](/images/http-cors/14.png)
 
-처음에는 `OPTIONS` 사전 요청이 발생합니다.
+처음에는 <Highlight color="blue">OPTIONS</Highlight> 사전 요청이 발생합니다.
 
 ### 10초 이내 재요청
 
 ![10초 이내의 요청은 당연히 캐싱한 데이터가 있으므로 OPTIONS 요청이 날라가지 않음](/images/http-cors/14.png)
 
-10초 이내에 다시 요청하면 `OPTIONS` 요청이 **생략**됩니다. 캐시된 사전 요청 결과를 사용하기 때문입니다.
+10초 이내에 다시 요청하면 <Highlight color="blue">OPTIONS</Highlight> 요청이 **생략**됩니다. 캐시된 사전 요청 결과를 사용하기 때문입니다.
 
 10초가 지나면 캐시가 만료되어 다시 사전 요청이 발생합니다.
 
@@ -424,11 +425,11 @@ CORS를 사용하는 요청은 특정 API와 리소스에 한정됩니다.
 
 ## 주요 CORS 사용 요청
 
-- `Fetch API`: 우리가 다룬 fetch 함수
-- `XMLHttpRequest(XHR)`: 비동기 HTTP 요청
-- `@font-face`: CSS에서 웹 폰트를 로드할 때
-- `WebGL 텍스처`: 다른 도메인의 이미지를 텍스처로 사용할 때
-- `Canvas drawImage`: 다른 출처의 이미지를 캔버스에 그릴 때
+- <Highlight color="blue">Fetch API</Highlight>: 우리가 다룬 fetch 함수
+- <Highlight color="blue">XMLHttpRequest(XHR)</Highlight>: 비동기 HTTP 요청
+- <Highlight color="blue">@font-face</Highlight>: CSS에서 웹 폰트를 로드할 때
+- <Highlight color="blue">WebGL 텍스처</Highlight>: 다른 도메인의 이미지를 텍스처로 사용할 때
+- <Highlight color="blue">Canvas drawImage</Highlight>: 다른 출처의 이미지를 캔버스에 그릴 때
 
 > **참고 자료**: [MDN - 어떤 요청이 CORS를 사용합니까?](https://developer.mozilla.org/ko/docs/Web/HTTP/Guides/CORS#%EC%96%B4%EB%96%A4_%EC%9A%94%EC%B2%AD%EC%9D%B4_cors%EB%A5%BC_%EC%82%AC%EC%9A%A9%ED%95%A9%EB%8B%88%EA%B9%8C)
 
@@ -455,7 +456,7 @@ CORS를 사용하는 요청은 특정 API와 리소스에 한정됩니다.
 </html>
 ```
 
-실행 결과, `동일 출처 정책`으로 인해 `http://localhost:8081/myfont.otf`가 차단됩니다.
+실행 결과, <Highlight color="blue">동일 출처 정책</Highlight>으로 인해 <Highlight>http://localhost:8081/myfont.otf</Highlight>가 차단됩니다.
 
 웹 폰트도 CORS를 사용하는 자원이므로, 다른 출처에서 폰트를 로드하려면 서버에서 적절한 CORS 헤더를 설정해야 합니다.
 
@@ -465,10 +466,10 @@ CORS는 웹 보안의 핵심 메커니즘으로, 브라우저가 다른 출처�
 
 ### 핵심 포인트 정리
 
-1. `동일 출처 정책`은 기본적으로 다른 출처의 리소스 접근을 차단합니다
-2. `CORS`는 서버가 명시적으로 허용한 출처에서만 리소스를 사용할 수 있게 합니다
-3. `단순 요청`과 `사전 요청`의 차이를 이해하고 적절히 대응해야 합니다
-4. `Access-Control-Max-Age`를 통해 네트워크 비용을 최적화할 수 있습니다
+1. <Highlight color="blue">동일 출처 정책</Highlight>은 기본적으로 다른 출처의 리소스 접근을 차단합니다
+2. <Highlight color="blue">CORS</Highlight>는 서버가 명시적으로 허용한 출처에서만 리소스를 사용할 수 있게 합니다
+3. <Highlight color="green">단순 요청</Highlight>과 <Highlight color="orange">사전 요청</Highlight>의 차이를 이해하고 적절히 대응해야 합니다
+4. <Highlight color="blue">Access-Control-Max-Age</Highlight>를 통해 네트워크 비용을 최적화할 수 있습니다
 
 :::note
 **보안과 편의성의 균형**: CORS는 보안을 위해 필요하지만, 개발 시 불편함을 초래할 수 있습니다. 개발 환경과 프로덕션 환경에서 적절한 CORS 정책을 설정하는 것이 중요합니다.

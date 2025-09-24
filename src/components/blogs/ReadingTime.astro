@@ -1,0 +1,39 @@
+---
+export interface Props {
+  content?: string
+  className?: string
+}
+
+const { content = '', className = '' } = Astro.props
+
+// 읽기 시간 계산 로직
+function calculateReadingTime(text: string): number {
+  // HTML 태그 제거
+  const plainText = text.replace(/<[^>]*>/g, '')
+
+  // 한글과 영어 구분하여 단어 수 계산
+  const koreanCharCount = (plainText.match(/[\u3131-\uD79D]/g) || []).length
+  const englishWordCount = (plainText.match(/[a-zA-Z]+/g) || []).length
+
+  // 읽기 속도 기준
+  const KOREAN_CHARS_PER_MINUTE = 500  // 한글: 분당 500자
+  const ENGLISH_WORDS_PER_MINUTE = 200 // 영어: 분당 200단어
+
+  const koreanMinutes = koreanCharCount / KOREAN_CHARS_PER_MINUTE
+  const englishMinutes = englishWordCount / ENGLISH_WORDS_PER_MINUTE
+
+  const totalMinutes = koreanMinutes + englishMinutes
+
+  // 최소 1분, 반올림
+  return Math.max(1, Math.round(totalMinutes))
+}
+
+const readingTime = calculateReadingTime(content)
+---
+
+<span class={`inline-flex items-center text-xs text-gray-500 ${className}`}>
+  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+  </svg>
+  {readingTime}분 읽기
+</span>

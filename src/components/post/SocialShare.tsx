@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
 	FacebookIcon,
 	LinkedinIcon,
@@ -7,16 +6,24 @@ import {
 	TwitterXIcon,
 } from "@/components/ui/icons";
 import { useToast } from "@/hooks/use-toast";
+import {
+	copyToClipboard,
+	createShareUrls,
+	openShareWindow,
+	type SharePlatform,
+	shareNative,
+} from "@/utils/share";
+import ShareButton from "./ShareButton";
+import ShareContainer, { ShareDivider } from "./ShareContainer";
+import { CheckIcon, ShareIcon } from "./ShareIcons";
 
 interface SocialShareProps {
 	title: string;
 	url: string;
 }
 
-type SharePlatform = "twitter" | "facebook" | "linkedin" | "native";
-
 interface ShareOption {
-	platform: SharePlatform;
+	platform: Exclude<SharePlatform, "native">;
 	icon: React.ReactNode;
 	label: string;
 }
@@ -24,69 +31,33 @@ interface ShareOption {
 const SHARE_OPTIONS: ShareOption[] = [
 	{
 		platform: "twitter",
-		icon: <TwitterXIcon className="w-4 h-4 sm:w-5 sm:h-5" />,
+		icon: <TwitterXIcon className="w-5 h-5" />,
 		label: "Twitter에 공유",
 	},
 	{
 		platform: "facebook",
-		icon: <FacebookIcon className="w-4 h-4 sm:w-5 sm:h-5" />,
+		icon: <FacebookIcon className="w-5 h-5" />,
 		label: "Facebook에 공유",
 	},
 	{
 		platform: "linkedin",
-		icon: <LinkedinIcon className="w-4 h-4 sm:w-5 sm:h-5" />,
+		icon: <LinkedinIcon className="w-5 h-5" />,
 		label: "LinkedIn에 공유",
 	},
 ];
 
-const ShareIcon = () => (
-	<svg
-		className="w-4 h-4 sm:w-5 sm:h-5"
-		fill="none"
-		stroke="currentColor"
-		viewBox="0 0 24 24"
-		role="img"
-		aria-label="공유 아이콘"
-	>
-		<title>공유</title>
-		<path
-			strokeLinecap="round"
-			strokeLinejoin="round"
-			strokeWidth={2}
-			d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-		/>
-	</svg>
-);
-
 const SocialShare = ({ title, url }: SocialShareProps) => {
 	const { toast } = useToast();
 	const [isSharing, setIsSharing] = useState(false);
+	const [isCopied, setIsCopied] = useState(false);
 
-	const shareUrls = useMemo(() => {
-		const encodedTitle = encodeURIComponent(title);
-		const encodedUrl = encodeURIComponent(url);
-
-		return {
-			twitter: `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`,
-			facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedTitle}`,
-			linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}&title=${encodedTitle}`,
-		};
-	}, [title, url]);
-
-	const getShareUrl = useCallback(
-		(platform: Exclude<SharePlatform, "native">) => shareUrls[platform],
-		[shareUrls],
-	);
+	const shareUrls = useMemo(() => createShareUrls(title, url), [title, url]);
 
 	const handleNativeShare = useCallback(async () => {
-		if (!("share" in navigator)) return;
-
 		try {
-			await navigator.share({ title, url });
-		} catch (err) {
-			if ((err as Error).name !== "AbortError") {
-				console.error("Share failed:", err);
-			}
+			await shareNative(title, url);
+		} catch (error) {
+			// 에러는 shareNative 함수 내에서 처리됨
 		}
 	}, [title, url]);
 
@@ -95,24 +66,29 @@ const SocialShare = ({ title, url }: SocialShareProps) => {
 			if (platform === "native") {
 				return handleNativeShare();
 			}
-
-			window.open(getShareUrl(platform), "_blank", "width=600,height=400");
+			openShareWindow(shareUrls[platform]);
 		},
-		[handleNativeShare, getShareUrl],
+		[handleNativeShare, shareUrls],
 	);
 
 	const handleCopyLink = useCallback(async () => {
 		setIsSharing(true);
 		try {
-			await navigator.clipboard.writeText(url);
+			await copyToClipboard(url);
+			setIsCopied(true);
 			toast({
-				title: "링크가 복사되었습니다!",
-				description: "클립보드에 저장되었습니다.",
+				title: "링크가 복사되었습니다",
+				description: "클립보드에 저장되었습니다",
 			});
+
+			// 2초 후 아이콘 복원
+			setTimeout(() => {
+				setIsCopied(false);
+			}, 2000);
 		} catch (err) {
 			toast({
 				title: "복사 실패",
-				description: "링크 복사에 실패했습니다.",
+				description: "링크 복사에 실패했습니다",
 				variant: "destructive",
 			});
 		} finally {
@@ -120,57 +96,52 @@ const SocialShare = ({ title, url }: SocialShareProps) => {
 		}
 	}, [url, toast]);
 
-	const shareButtonClass =
-		"w-8 h-8 sm:w-10 sm:h-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors p-0";
+	const isNativeShareSupported =
+		typeof navigator !== "undefined" && "share" in navigator;
 
 	return (
-		<div className="flex flex-wrap items-center gap-2 sm:gap-4 p-3 sm:p-4 border rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700">
-			<div className="flex items-center gap-1 sm:gap-1.5">
-				{typeof navigator !== "undefined" && "share" in navigator && (
-					<>
-						<Button
-							variant="ghost"
-							size="icon"
-							onClick={() => handleShare("native")}
-							className={`${shareButtonClass} text-xs gap-1`}
-							title="공유하기"
-							aria-label="네이티브 공유"
-						>
-							<ShareIcon />
-						</Button>
-						<div className="h-5 sm:h-6 w-px bg-gray-300 dark:bg-gray-600 mx-0.5 sm:mx-1" />
-					</>
-				)}
+		<ShareContainer>
+			{/* 네이티브 공유 버튼 */}
+			{isNativeShareSupported && (
+				<>
+					<ShareButton
+						onClick={() => handleShare("native")}
+						title="공유하기"
+						ariaLabel="네이티브 공유"
+					>
+						<ShareIcon />
+					</ShareButton>
+					<ShareDivider />
+				</>
+			)}
 
+			{/* SNS 공유 버튼들 */}
+			<div className="flex items-center gap-1 px-0.5">
 				{SHARE_OPTIONS.map(({ platform, icon, label }) => (
-					<Button
+					<ShareButton
 						key={platform}
-						variant="ghost"
-						size="icon"
 						onClick={() => handleShare(platform)}
-						className={shareButtonClass}
 						title={label}
-						aria-label={label}
+						ariaLabel={label}
 					>
 						{icon}
-					</Button>
+					</ShareButton>
 				))}
-
-				<div className="h-5 sm:h-6 w-px bg-gray-300 dark:bg-gray-600 mx-0.5 sm:mx-1" />
-
-				<Button
-					variant="ghost"
-					size="icon"
-					onClick={handleCopyLink}
-					disabled={isSharing}
-					className={shareButtonClass}
-					title="링크 복사"
-					aria-label="링크 복사"
-				>
-					<LinkIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-				</Button>
 			</div>
-		</div>
+
+			<ShareDivider />
+
+			{/* 링크 복사 버튼 */}
+			<ShareButton
+				onClick={handleCopyLink}
+				disabled={isSharing}
+				isActive={isCopied}
+				title={isCopied ? "복사됨!" : "링크 복사"}
+				ariaLabel={isCopied ? "복사됨" : "링크 복사"}
+			>
+				{isCopied ? <CheckIcon /> : <LinkIcon className="w-5 h-5" />}
+			</ShareButton>
+		</ShareContainer>
 	);
 };
 
