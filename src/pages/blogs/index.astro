@@ -17,7 +17,7 @@ const { items: posts, pagination } = paginateArray(sortedPosts, 1, POSTS_PER_PAG
 
 <BaseLayout>
   <div class="bg-gray-50 min-h-screen">
-    <div class="container mx-auto max-w-5xl px-4 py-12">
+    <div class="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-12">
       <div class="text-center mb-16">
         <h1 class="text-4xl font-bold text-gray-900 mb-4">All Posts</h1>
         <p class="text-gray-600 text-lg">
@@ -30,12 +30,12 @@ const { items: posts, pagination } = paginateArray(sortedPosts, 1, POSTS_PER_PAG
       </div>
 
       {posts.length > 0 ? (
-        <div>
+        <div class="w-full">
           <div class="grid gap-6 mb-16">
             {posts.map(post => <BlogCard post={post} />)}
           </div>
-          
-          <div class="flex justify-center">
+
+          <div class="w-full">
             <Pagination pagination={pagination} basePath="/blogs" />
           </div>
         </div>

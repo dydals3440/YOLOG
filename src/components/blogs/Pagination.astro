@@ -83,11 +83,11 @@ const pageNumbers = generatePageNumbers()
       class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-800 hover:border-gray-400 transition-all duration-200"
       aria-label="다음 페이지"
     >
-      다음 →
+      <span class="hidden md:inline">다음</span> →
     </a>
   ) : (
     <span class="flex items-center px-4 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
-      다음 →
+      <span class="hidden">다음</span> →
     </span>
   )}
 </nav>

@@ -1,0 +1,520 @@
+---
+title: Babel로 배우는 현대 JavaScript 호환성
+date: 2025-10-07
+updatedDate: 2025-10-07
+tags:
+  [
+    Babel,
+    JavaScript,
+    TypeScript,
+    빌드,
+    트랜스파일링,
+    웹팩,
+    webpack,
+    Rollup,
+    Vite,
+  ]
+category: DEVELOPMENT
+image: '/images/babel/thumbnail.png'
+---
+
+import Highlight from '@/components/mdx/Highlight';
+
+# Babel로 배우는 현대 JavaScript 호환성
+
+개발을 시작하고 나서 나는 비전공자이기에 주변에서 얻을 인사이트가 많이 부족하여
+정말 많은 개발자들의 글과 경험담을 찾아보았다.
+
+심지어 아직도 매일 러닝할 때
+해외 개발자들의 팟캐스트를 들으며 달리고있다.
+
+요즘은 AI가 문제 해결을 돕는 시대지만,
+결국 핵심은 질문하는 사람의 수준이라는 걸 점점 더 느낀다.
+
+나처럼 이제 2년 차 개발자가 던지는 질문과,
+수많은 프로젝트와 이슈를 겪은 선배 개발자들이 하는 질문은 다를 수밖에 없다.
+
+그 차이는 결국 경험에서 비롯된 통찰이고,
+그 경험을 간접적으로라도 쌓기 위해 과거 기술과 문제 해결 과정을 꾸준히 공부하고 정리하려고 한다.
+
+프론트엔드 개발 영역이 오래되지는 않았지만
+선배 개발자분들이 가장 괴롭다고 느끼는 건 크로스 브라우징 이슈이고,
+그중에서도 한때는 `IE(Internet Explorer)` 였다는 것이다.
+
+물론 나는 IE 호환성의 시대를 직접 피부로 겪진 못했다.
+하지만 최근에 비슷하게 나를 괴롭히는 건 `Safari`다.
+
+앱 개발 중 `Safari`의 예외적인 동작 때문에 애를 먹은 적이 많았고,
+그걸 계기로 이번 추석에는 `Babel`과 `Polyfill`을 집중적으로 공부해보았다.
+
+---
+
+## 바벨탑과 브라우저
+
+고대 히브리 신화에 보면 '바벨탑' 이야기가 있다.
+
+사람들이 하늘 높이 올라가기 위해서 바벨탑을 하나씩 쌓아 올라가고 있었는데, 이것을 본 신이 위기감을 느꼈는지 그들의 언어를 모두 뒤섞어 서로 소통하지 못하게 만들었다.
+
+결국에는 탑을 완성하지 못하게 되었다.
+
+![신이 분노하셨다..!](/images/babel/thumbnail.png)
+
+고대 히브리 신화와 마찬가지로 브라우저의 세계도 매우 유사하다.
+
+`Chrome`, Safari, Edge, Firefox, 그리고 이미 역사 속으로 사라진 IE까지 각 브라우저는 `ECMAScript` 표준을 조금씩 다르게 지원한다.
+
+그 결과, 같은 `JavaScript` 코드가 브라우저마다 다르게 동작하는 문제가 생긴다.
+
+예를 들어, 몇 년 전까지만 해도 `Safari` 최신 버전에서조차 `Promise.prototype.finally()`를 지원하지 않았다.
+
+즉, 다음과 같은 간단한 코드일지라도 `Safari`는 이를 이해하지 못해 `런타임 오류`를 발생시켰다.
+
+특히 이러한 `크로스 브라우징 이슈`는 프론트엔드 개발을 할 때 처음 입문하는 사람에게는 크게 와닿지 않을 수 있지만,
+점차 연차가 쌓여갈수록 개발을 곤란하게 만드는 원인 유발자이다.
+
+```js
+Promise.resolve(1).finally(() => console.log('송편'));
+```
+
+이런 문제를 해결하기 위해 등장한 것이 바로 <Highlight color="blue">Babel</Highlight>이다.
+
+이름처럼, 서로 다른 언어를 사용하는 브라우저들을 이해하게 만드는 통역가의 역할을 한다고 보면 된다.
+
+---
+
+### Babel 이란?
+
+<Highlight color='blue'>Babel</Highlight>은 <mark>총 3개의 단계</mark>를 거쳐 코드를
+변환한다.
+
+1. <mark>Parsing (파싱)</mark>
+
+   코드를 읽어서 토큰(token)으로 분리하고, `AST(Abstract Syntax Tree)` 형태로 구조화한다.
+
+   > **AST란?** 코드를 트리 구조로 표현한 것으로, 브라우저와 빌드 도구가 코드를 이해하고 조작하기 위해 사용하는 중간 표현 형식입니다.
+
+2. <mark>Transforming (변환)</mark>
+
+   AST를 순회하면서 새로운 문법 규칙에 맞게 변경한다.
+
+   예: `const` → `var`, `() => {}` → `function () {}`
+
+3. <mark>Printing (출력)</mark>
+
+   변환된 AST를 다시 문자열 코드로 출력한다.
+
+이 과정을 통해 브라우저가 이해하지 못하는 문법을 과거 버전의 `JavaScript`로 재작성하는 것이다.
+
+---
+
+## Babel 설치 및 기본 동작
+
+이제 실제로 <Highlight color="blue">Babel</Highlight>이 어떻게 동작하는지 살펴보자.
+
+### 1. Babel 설치
+
+```bash
+npm install @babel/core @babel/cli
+```
+
+### 2. 코드 작성
+
+`app.js` 파일을 생성하자
+
+```js
+// const, arrow function 모두 es6
+// es6를 지원하지 않는 브라우저 IE는 인식하지 못함.
+// babel을 통해서 IE를 포함한 모든 브라우저에서 인식할 수 있게끔 변환하는 과정이 필요함.
+const alert = (msg) => window.alert(msg);
+```
+
+### 3. Babel 실행
+
+실행
+
+```bash
+npx babel app.js
+```
+
+실행 결과
+
+```js
+// const, arrow function 모두 es6
+// es6를 지원하지 않는 브라우저 IE는 인식하지 못함.
+// babel을 통해서 IE를 포함한 모든 브라우저에서 인식할 수 있게끔 변환하는 과정이 필요함.
+const alert = (msg) => window.alert(msg);
+```
+
+이 코드를 실행하면, 무언가 변화가 일어나야 하는데 **실제로 아무런 변화가 없다.**
+
+왜냐하면, <Highlight color="blue">Babel</Highlight>은 <mark>"변환을 담당할 플러그인"이 지정되지 않았기</mark> 때문이다.
+
+즉, 지금은 `Parsing`과 `Printing`만 수행하고 실제 마지막 단계인 `Transform` 단계는 비어 있는 상태다.
+
+---
+
+## Babel 플러그인 이해하기
+
+<Highlight color='blue'>Babel</Highlight>은 `플러그인(plugin)`을 통해 실제 변환
+작업을 수행한다.
+
+플러그인은 일종의 미들웨어로, `AST`를 순회하며 특정 노드를 변환한다.
+
+### 직접 만들어 보는 Babel 플러그인
+
+아래와 같이 한번 커스텀할 바벨 플러그인을 만들어보자.
+
+```js
+module.exports = function myBabelPlugin() {
+  return {
+    // 커스텀 플러그인을 만들 때는 visitor라는 객체를 갖고 있는 객체를 반환해야 함.
+    visitor: {
+      // visitor 객체 안에 Identifier라는 키가 있음.
+      // Identifier 노드를 방문할 때 호출되는 함수
+      Identifier(path) {
+        // 바벨이 넣어주는 path를 갖음.
+        const name = path.node.name;
+
+        // 바벨이 만든 AST 노드를 출력
+        console.log('Identifier() name:', name);
+
+        // 변환 작업: 코드 문자열을 역순으로 변환
+        path.node.name = name.split('').reverse().join('');
+      },
+    },
+  };
+};
+```
+
+<Highlight color='blue'>Babel</Highlight>의 help 문서를 통해 어떤 식으로
+plugin을 실행시킬 수 있는지 알 수 있다.
+
+```bash
+npx babel --help
+```
+
+실제로 이를 한번 실행해보자.
+
+```bash
+npx babel app.js --plugins './my-babel-plugin.js'
+```
+
+![Custom Babel 플러그인 실행 결과](/images/babel/1.png)
+
+터미널에는 각 토큰이 출력되며, 변환된 코드가 표시된다.
+
+이제 <Highlight color="blue">Babel</Highlight>이 `AST`를 방문(visit)하며 변환을 수행한다는 것을 눈으로 확인했고, 각각 모든 단어를 우리가 reverse를 해준다고 했기에 `parsing` 되어진 토큰들이 뒤집어진 형태로 `transform` 된 것을 확인할 수 있다.
+
+---
+
+## const → var로 변경하는 플러그인 만들기
+
+이제 실제로 우리는 브라우저 호환성을 유지하기 위해 `ES6` 문법을 `ES5`로 바꿔야 한다.
+
+한번 `const` 키워드를 `var`로 변환하는 플러그인을 만들어보자.
+
+```js
+module.exports = function myBabelPlugin() {
+  return {
+    visitor: {
+      VariableDeclaration(path) {
+        // path.node.kind를 가보면 const가 출력됨.
+        console.log('VariableDeclaration() kind:', path.node.kind); // const
+
+        // const -> var로 변환
+        if (path.node.kind === 'const') {
+          // path.node.kind를 가보면 var가 출력됨.
+          path.node.kind = 'var';
+        }
+      },
+    },
+  };
+};
+```
+
+실제로 한번 실행을 해보자.
+
+```bash
+npx babel app.js --plugins './my-babel-plugin.js'
+```
+
+결과:
+
+```js
+var alertMessage = (msg) => window.alert(msg);
+```
+
+아직 화살표 함수는 변환하지 않았지만, `const`는 `var`로 `ES5` 형태로 변경하는 작업을 했다.
+
+---
+
+## 언제까지 만드냐, 공식 플러그인 사용하기
+
+물론, 정말 미세한 조정이 필요한 경우에는 직접 커스텀한 플러그인을 만들어야 하지만, 필요한 대부분의 변환 기능을 <Highlight color="blue">Babel</Highlight>에서 플러그인 형태로 제공하고 있다.
+
+예를 들어, `@babel/plugin-transform-block-scoping`은 위의 플러그인과 동일하게 동작한다.
+
+```bash
+npm install -D @babel/plugin-transform-block-scoping
+npx babel app.js --plugins @babel/plugin-transform-block-scoping
+```
+
+결과는 당연히 위에서 만든 커스텀 플러그인과 동일하다.
+
+여기에 화살표 함수도 `ES5`까지만 호환하는 브라우저에서는 이해할 수 없기 때문에 이를 변경해주어야 한다.
+
+물론, 이런 플러그인도 만들어져 있다.
+
+```bash
+npm install -D @babel/plugin-transform-arrow-functions
+npx babel app.js --plugins @babel/plugin-transform-block-scoping --plugins @babel/plugin-transform-arrow-functions
+```
+
+출력:
+
+```js
+var alertMessage = function (msg) {
+  return window.alert(msg);
+};
+```
+
+이제 대부분의 브라우저에서 문제없이 실행할 수 있을 것이다.
+
+---
+
+## babel.config.js로 설정 관리하기
+
+그리고 브라우저가 인식 못하는 것은 아니지만, `ECMAScript 5`에서부터 지원하는 `strict mode`를 사용하는 것이 안전하기 때문에 브라우저에서 `use strict` 구문을 추가하는 것이 좋다.
+
+이 또한 바벨에서 플러그인으로 제공해준다.
+
+근데 지금처럼, 여러 플러그인을 매번 CLI로 지정하는 것은 비효율적이다.
+
+무엇이 비효율적인지는 아래 코드를 보자.
+
+우리는 이제 3개의 플러그인을 실행시켜야 한다.
+
+1. const → var로 변환
+2. 화살표 함수 → ES5로 인식할 수 있는 함수 형태로 변환
+3. `strict mode` 추가
+
+```bash
+npx babel app.js \
+--plugins @babel/plugin-transform-block-scoping \
+--plugins @babel/plugin-transform-arrow-functions \
+--plugins @babel/plugin-transform-strict-mode
+```
+
+이렇게 계속 매번 추가해주는 것은 비효율적이다.
+
+당연히 우리가 있는 개발 씬에서는 반복하는 일이 많이 발생하면 이를 해결하는 대부분의 해결책을 제시하고 있다.
+
+```js
+// babel.config.js
+module.exports = {
+  plugins: [
+    '@babel/plugin-transform-block-scoping',
+    '@babel/plugin-transform-arrow-functions',
+    '@babel/plugin-transform-strict-mode',
+  ],
+};
+```
+
+이제 단순히 아래 명령어만 실행하면 된다.
+
+```bash
+npx babel app.js
+```
+
+---
+
+## Preset(프리셋) 이해하기
+
+`ES6` 문법은 플러그인이 매우 많다.
+
+따라서 매번 모든 플러그인을 나열하기보다는 <Highlight color="blue">preset</Highlight>을 사용한다.
+
+프리셋은 <mark>플러그인 세트를 하나의 이름으로 묶은 것</mark>이다.
+
+예를 들어, 우리가 방금 사용한 플러그인 3개를 하나의 프리셋으로 만들어보자.
+
+```js
+// my-babel-preset.js
+module.exports = function myBabelPreset() {
+  return {
+    plugins: [
+      '@babel/plugin-transform-block-scoping',
+      '@babel/plugin-transform-arrow-functions',
+      '@babel/plugin-transform-strict-mode',
+    ],
+  };
+};
+```
+
+그리고 설정 파일을 이렇게 변경한다.
+
+```js
+// babel.config.js
+module.exports = {
+  presets: ['./my-babel-preset'],
+};
+```
+
+결과는 동일하지만, 구조는 훨씬 깔끔하다.
+
+---
+
+## @babel/preset-env — 실무의 핵심 프리셋
+
+그래서 이제 우리는 <Highlight color="blue">preset-env</Highlight>로 해당 프리셋을 사용할 수 있다.
+
+- preset-env
+- preset-flow
+- preset-react
+- preset-typescript
+
+실무에서는 위와 같은 커스텀 preset 대신 <Highlight color="blue">Babel</Highlight>이 공식적으로 제공하는 <mark>@babel/preset-env</mark>를 사용한다.
+
+이 <Highlight color="blue">preset</Highlight>은 `ES2015` 이후 모든 기능을 자동으로 변환해준다.
+
+<Highlight color='blue'>preset-env</Highlight>는 `ECMAScript 2015+`를 변환할 때
+사용한다.
+
+바벨 7 이전 버전에는 연도별로 각 프리셋을 제공했지만(`babel-preset-es2015`, `babel-preset-es2016`, `babel-preset-es2017`, `babel-preset-latest`) 지금은 env 하나로 합쳐졌다. (얼마나 간편한가. 진작 이럴 것이지)
+
+```bash
+npm install -D @babel/preset-env
+```
+
+```js
+// babel.config.js
+module.exports = {
+  presets: ['@babel/preset-env'],
+};
+```
+
+```bash
+npx babel app.js
+```
+
+이제 <Highlight color="blue">Babel</Highlight>이 자동으로 최신 문법을 브라우저 친화적으로 변환한다.
+
+---
+
+## 브라우저 타겟 지정하기
+
+<Highlight color='blue'>preset-env</Highlight>의 강점은
+<Highlight color='blue'>지원할 브라우저 범위를 설정할 수 있다는 것</Highlight>이다.
+
+예를 들어, `Chrome 79` 이상만 지원한다면 다음처럼 설정한다.
+
+```js
+// babel.config.js
+module.exports = {
+  presets: [
+    [
+      '@babel/preset-env',
+      {
+        targets: {
+          chrome: '79',
+        },
+      },
+    ],
+  ],
+};
+```
+
+```js
+'use strict';
+
+// const, arrow function 모두 es6
+// es6를 지원하지 않는 브라우저 IE는 인식하지 못함.
+// babel을 통해서 IE를 포함한 모든 브라우저에서 인식할 수 있게끔 변환하는 과정이 필요함.
+const alert = (msg) => window.alert(msg);
+```
+
+![Can I Use const 호환성 결과](/images/babel/2.png)
+
+이 경우, `Chrome 79` 이상에서 이미 지원하는 문법(`const`, `=>`)은 변환하지 않는다.
+
+즉, <mark>필요한 변환만 적용하여 빌드 성능을 최적화</mark>할 수 있다.
+
+`IE 11`까지 지원하려면 이렇게 추가한다.
+
+```js
+module.exports = {
+  presets: [
+    [
+      '@babel/preset-env',
+      {
+        targets: {
+          chrome: '79',
+          ie: '11',
+        },
+      },
+    ],
+  ],
+};
+```
+
+**출력**
+
+```js
+'use strict';
+
+// const, arrow function 모두 es6
+// es6를 지원하지 않는 브라우저 IE는 인식하지 못함.
+// babel을 통해서 IE를 포함한 모든 브라우저에서 인식할 수 있게끔 변환하는 과정이 필요함.
+var alert = function alert(msg) {
+  return window.alert(msg);
+};
+```
+
+이제 <Highlight color="blue">Babel</Highlight>은 두 브라우저 모두에서 동작 가능한 코드를 생성한다.
+
+---
+
+## Babel과 Webpack의 통합
+
+현대 프론트엔드 빌드 환경에서는 <Highlight color="blue">Babel</Highlight>이 보통 `Webpack`과 함께 사용된다.
+
+`babel-loader`를 통해 빌드 과정에서 자동으로 코드 변환을 수행한다.
+
+```bash
+npm install -D babel-loader
+```
+
+```js
+// webpack.config.js
+module.exports = {
+  module: {
+    rules: [
+      {
+        test: /\.js$/,
+        exclude: /node_modules/,
+        use: 'babel-loader',
+      },
+    ],
+  },
+};
+```
+
+`Webpack`이 JS 파일을 읽을 때마다 <Highlight color="blue">Babel</Highlight>이 자동으로 변환해준다.
+
+## 마무리
+
+오늘날의 프론트엔드 환경에서는 `Webpack`뿐 아니라 `Vite`, `Rollup`, `esbuild`, `tsup` 같은 다양한 빌드 도구가 등장했다.
+
+이들 각각은 번들링과 트랜스파일링을 조금씩 다르게 처리하지만, 근본적으로는 <Highlight color="blue">Babel</Highlight>이 다루는 문제와 같은 지점을 해결하고 있다.
+
+즉, "최신 문법을 사용하되, 실행 환경이 이해할 수 있도록 안전하게 변환하는 일"이다.
+
+`Webpack`이 <Highlight color="blue">Babel</Highlight>과 함께 쓰이는 이유도 여기에 있다.
+
+`Webpack`은 모듈을 하나로 묶는 번들러이고, <Highlight color="blue">Babel</Highlight>은 언어 수준의 호환성을 보장하는 변환기이기 때문이다.
+
+반면 `Vite`나 `esbuild`, `Rollup`도 내부적으로는 <Highlight color="blue">Babel</Highlight>과 유사한 트랜스파일링 파이프라인을 포함하거나, <Highlight color="blue">Babel</Highlight> 플러그인을 그대로 활용할 수 있게 설계되어 있다.
+
+따라서 `Webpack`을 배운다는 것은 단순히 오래된 도구를 배우는 게 아니라, "빌드 시스템이 어떻게 코드를 읽고 변환하는지"를 이해하는 일이다.
+
+이 감각이 잡히면 어떤 빌드 도구를 만나더라도, <Highlight color="blue">Babel</Highlight>이 어디서 어떤 역할을 하는지 자연스럽게 파악할 수 있을 것이다.
