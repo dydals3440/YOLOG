@@ -48,6 +48,9 @@ export const getPostInfoList = async (): Promise<PostInfoModel[]> => {
 
 export const generateDescription = (content: string) => {
   const parsedContent = content
+    // import/export 문 제거
+    .replace(/import\s+.+?\s+from\s+['"].+?['"];?\s*/g, '')
+    .replace(/export\s+.+?;?\s*/g, '')
     .replace(/:{3}.*?:{3}/gs, '')
     // HTML 태그 완전히 제거 (script, style 포함 모든 태그)
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
