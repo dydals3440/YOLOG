@@ -1,0 +1,1658 @@
+---
+title: Component 직접 만들며 생각해보기
+date: 2025-10-08
+updatedDate: 2025-10-08
+tags: [컴포넌트, 프론트엔드, 웹개발, Component, 컴포넌트 설계, 컴포넌트 개발]
+category: DEVELOPMENT
+image: '/images/component/thumbnail.png'
+---
+
+# Component 직접 만들며 생각해보기
+
+필자는 2023년 멋쟁이 사자처럼 11기, UMC 4기를 계기로 웹 개발을 본격적으로 시작했다.
+당시 커리큘럼은 React 없이 HTML, CSS, JavaScript만으로 서비스를 구축하는 방식이었다.
+
+머리가 커서 그랬을까, 커리큘럼에 대한 불만이 많았다.
+당시에 JS강의를 마치고 React 강의를 듣던 시기라, 순수 JS로만 개발하는 과정이 비효율적으로 느껴져 답답했다.
+
+물론, JS만으로 개발하는게 불만족스럽기 보다는,
+내가 배운 JS로 React를 어떤식으로 만드는지 항상 궁금함이 있었는데 이를 해소하지 못해서 그런 것 같다.
+
+---
+
+이제는 상황이 조금 달라졌다.
+
+오히려, 약 2년 간 1,000명의 챌린저 분들을 내가 알려주는 입장이고 조금 더 잘 알려줄 수 있는 방향성에 대해 항상 고민하고있다.
+
+또 회사를 다니며 다른 사람들의 코드를 보고 다른 회사들의 테크 블로그에 더 관심을 갖으면서
+내가 공부하는 방향성도 최근에 많이 달라졌다.
+
+매 기수마다, 워크북을 개선하고자 노력하며 커리큘럼을 어떤 방향성에 맞춰야 할지 고민이 많다.
+
+필자가 고민하는 두 가지 중점은 다음과 같다.
+
+1. 웹 개발의 원론적인 이해
+2. 실제 서비스를 직접 만들어보면서 흥미를 우선적으로 얻기
+
+필자는 2번을 중요하게 생각한다.
+어떠한 일이든 잘 하기 위해서는 흥미를 갖어야 한다고 생각한다.
+눈에 보이는 결과물이 생기면 자연스럽게 동기와 학습 의욕이 붙는다.
+
+반면, 기초만 깊게 파다가 실전에서 주도적 역할을 못 하면 흥미가 떨어지고, 결국 AI에 의존(AI-Driven Development)하거나 개발을 포기하기도 한다.
+
+물론, 1번 과정 역시나 중요하다.
+단, 순서의 차이라고 생각한다.
+
+흥미를 기반으로 성장한 학습자는 결국 이론의 필요성을 절감하게 된다.
+원리는 결코 무시할 수 없으며, 단지 학습의 순서와 접근 방식이 다를 뿐이다.
+
+최근에 더더욱, 1번의 중요성을 많이 느끼면서
+이번 커리큘럼에서도 강의 영상 뿐만 아니라 나 또한 함께 학습하며 키워드 부분에 최대한 개념적인 설명에 초점을 맞추고 있다.
+
+그리고 내가 강의를 듣거나 다양한 블로그나, 자료들을 찾아보면서 학습한 내용을 바탕으로 블로그 글을 작성하며 공유하고자 노력하고 있다.
+
+서론이 길었다.
+
+이번에는 우리가 너무 당연하게 사용하는 React의 컴포넌트 개념을 직접 구현하며,
+그 원리를 근본부터 이해하고자 한다.
+
+---
+
+## 1. 왜 컴포넌트 기반 개발인가?
+
+### 1.1 jQuery 시대의 개발
+
+필자가 처음 개발을 배울 당시, 조금 비싼 가격이었지만 **Vanilla JavaScript** 강의로 시작했다.
+
+> 개발의 시작이 중요하다고 생각하는데, 정말 좋은 강의였다.
+
+요즘은 `useRef`, `useEffect` 같은 React Hooks를 먼저 배우는 경우가 많은 것 같다. 하지만 필자는 `document.querySelector`, `document.getElementById`, `document.getElementsByClassName` 같은 기본기부터 배웠다.
+
+React가 없던 시대에는 **Vanilla JavaScript**로 개발하기에 너무 어려웠기에, 대부분의 개발자들이 `jQuery`를 사용했다. 필자 역시 순수 JavaScript로 개발하면서 어려움을 느껴 jQuery를 사용했다. 사실 깊게 사용해본 건 아니지만, 인터넷을 검색해보니 아래와 같은 장점이 있다고 한다.
+
+**jQuery의 장점**
+
+- DOM 조작이 너무 쉬움 (`$('.button').click(...)`)
+- 크로스 브라우징 문제 자동 해결
+- 간결하고 풍부한 API
+
+하지만 프로젝트가 커질수록 문제가 생겼다.
+
+```javascript
+// jQuery 스타일: DOM을 직접 조작
+$('#addButton').click(function () {
+  $('#todoList').append('<li>새 할일</li>');
+});
+
+// 문제점:
+// 1. 어디서든 DOM을 수정할 수 있어서 코드가 꼬임
+// 2. 데이터와 화면이 따로 놀아서 동기화 어려움
+// 3. 같은 기능을 여러 곳에 복붙하게 됨
+```
+
+---
+
+### 1.2 패러다임의 전환
+
+웹 개발의 패러다임이 바뀌기 시작했다.
+
+**이전 방식 (명령형)**: "이 버튼을 찾아서, 클릭하면, 이 요소를 추가해"
+
+```javascript
+// DOM을 직접 조작
+element.appendChild(newElement);
+```
+
+**현대 방식 (선언형)**: "데이터가 이러면, 화면은 이렇게 보여줘"
+
+```javascript
+// 상태만 변경하면 화면은 자동으로 업데이트
+setState({ todos: [...todos, newTodo] });
+```
+
+---
+
+### 1.3 프레임워크의 등장
+
+이러한 패러다임의 전환을 위해 각종 프레임워크들이 등장했다. 대표적으로 3개의 프로젝트가 있다.
+
+**AngularJS (2010)**: CSR의 시작
+
+- 클라이언트에서 렌더링한다는 개념 도입
+- 양방향 데이터 바인딩 (편하지만 복잡해지면 추적 어려움)
+
+**React (2013)**: 컴포넌트의 시작
+
+- "UI = f(state)" - UI는 상태의 함수다
+- 단방향 데이터 흐름으로 예측 가능한 코드
+- 컴포넌트 재사용
+
+**Vue (2014)**: 실용성의 균형
+
+- React + Angular의 장점 결합
+- 배우기 쉽고 직관적
+
+**결론**: 현대 웹은 **`상태(State)`를 중심으로 돌아간다**
+
+---
+
+## 2. 상태 기반 렌더링
+
+위에서 설명한 것처럼, 이전에는 DOM을 직접 다루는 것이 당연했다.
+
+그러나 프레임워크들의 등장으로 패러다임이 변경되었다. 이제는 **`상태(State)`를 기준으로 DOM을 렌더링하는 시대**가 된 것이다.
+
+즉, `DOM`은 더 이상 직접 조작의 대상이 아니라 **상태의 결과물**로서 존재하게 되었다.
+
+쉽게 말하면, **상태가 변경되지 않으면 DOM도 변하지 않는다.**
+
+이 개념이 정착되면서 프론트엔드 개발자들은 자연스럽게 `Client Side Rendering(CSR)`과 `State Management(상태 관리)`라는 개념을 받아들이게 되었다.
+
+---
+
+### 2.1 상태 기반 렌더링 직접 구현하기
+
+보통 우리가 알고 있는 `useState`의 흐름은 크게 3단계로 나뉜다.
+
+1. `상태(state)` 선언
+2. `상태(state)` 변경 → `setState`
+3. 렌더링
+
+물론 React는 성능 개선을 위해 Batching, Virtual DOM 등의 기술을 사용하지만, 이번 블로그의 목표는 **컴포넌트를 어떻게 구현해야 하는지 생각해보는 것**이기에 너무 상세한 내용은 제외하고 진행하겠다.
+
+일단 실습을 위해 직접 DOM을 조작하여 간단한 `Todo List`를 구현해보자.
+
+```html
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo 앱</title>
+    <style>
+      body {
+        font-family: Arial;
+        max-width: 600px;
+        margin: 50px auto;
+      }
+      .todo-item {
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+      }
+      .todo-item.completed {
+        text-decoration: line-through;
+        color: #999;
+      }
+      input[type='text'] {
+        width: 70%;
+        padding: 8px;
+        font-size: 14px;
+      }
+      button {
+        padding: 8px 16px;
+        margin-left: 5px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <script>
+      const $app = document.querySelector('#app');
+
+      // 📌 1. 상태 정의
+      let state = {
+        todos: [
+          { id: 1, text: '아침 운동하기', completed: false },
+          { id: 2, text: '블로그 글 쓰기', completed: true },
+        ],
+      };
+
+      // 📌 2. 상태 업데이트 함수
+      const setState = (newState) => {
+        state = { ...state, ...newState };
+        render(); // 상태가 바뀌면 화면을 다시 그린다
+      };
+
+      // 📌 3. 할일 추가
+      const addTodo = (text) => {
+        const newTodo = {
+          id: Date.now(),
+          text,
+          completed: false,
+        };
+        setState({ todos: [...state.todos, newTodo] });
+      };
+
+      // 📌 4. 완료 토글
+      const toggleTodo = (id) => {
+        const todos = state.todos.map((todo) =>
+          todo.id === id ? { ...todo, completed: !todo.completed } : todo
+        );
+        setState({ todos });
+      };
+
+      // 📌 5. 할일 삭제
+      const deleteTodo = (id) => {
+        const todos = state.todos.filter((todo) => todo.id !== id);
+        setState({ todos });
+      };
+
+      // 📌 6. 렌더링
+      const render = () => {
+        const { todos } = state;
+
+        $app.innerHTML = `
+                <h1>📝 Todo List</h1>
+                <div>
+                    <input type="text" id="todoInput" placeholder="할 일을 입력하세요" />
+                    <button id="addBtn">추가</button>
+                </div>
+                <div style="margin-top: 20px;">
+                    ${todos
+                      .map(
+                        (todo) => `
+                        <div class="todo-item ${
+                          todo.completed ? 'completed' : ''
+                        }">
+                            <input
+                                type="checkbox"
+                                ${todo.completed ? 'checked' : ''}
+                                data-id="${todo.id}"
+                                class="toggleCheckbox"
+                            />
+                            <span>${todo.text}</span>
+                            <button class="deleteBtn" data-id="${
+                              todo.id
+                            }">삭제</button>
+                        </div>
+                    `
+                      )
+                      .join('')}
+                </div>
+            `;
+
+        // 이벤트 리스너 등록
+        document.querySelector('#addBtn').addEventListener('click', () => {
+          const input = document.querySelector('#todoInput');
+          if (input.value.trim()) {
+            addTodo(input.value);
+            input.value = '';
+          }
+        });
+
+        document.querySelectorAll('.toggleCheckbox').forEach((checkbox) => {
+          checkbox.addEventListener('change', (e) => {
+            toggleTodo(Number(e.target.dataset.id));
+          });
+        });
+
+        document.querySelectorAll('.deleteBtn').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            deleteTodo(Number(e.target.dataset.id));
+          });
+        });
+      };
+
+      // 📌 7. 초기 렌더링
+      render();
+    </script>
+  </body>
+</html>
+```
+
+약간의 스타일링을 더한 `TodoList` 코드이다.
+
+---
+
+## 3. 재사용 가능한 컴포넌트 만들기
+
+이제 DOM을 직접 조작하는 방식을 아래의 규칙을 지켜가며 만들어보자.
+
+1. `상태(state)`가 모든 것의 중심
+2. `setState`로만 상태를 변경
+3. 상태가 변하면 **자동으로 `render()` 실행**
+4. DOM을 직접 조작하지 않음
+
+위에서 만든 `TodoList` 코드를 재사용 가능하게 만들어보자!
+
+---
+
+### 3.1 setState 기반으로 상태 변경 시 자동 렌더링 구현
+
+```html
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo 앱</title>
+    <!-- 스타일 생략 (위의 첫 번째 예제 참고) -->
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <script>
+      const $app = document.querySelector('#app');
+
+      // 📌 1. 상태 정의
+      let state = {
+        todos: [
+          { id: 1, text: '아침 운동하기', completed: false },
+          { id: 2, text: '블로그 글 쓰기', completed: true },
+        ],
+      };
+
+      // 📌 2. setState - 상태 업데이트 후 자동으로 렌더링
+      const setState = (newState) => {
+        state = { ...state, ...newState };
+        render();
+      };
+
+      // 📌 3. 렌더링
+      const render = () => {
+        const { todos } = state;
+
+        $app.innerHTML = `
+                <h1>📝 Todo List</h1>
+                <div>
+                    <input type="text" id="todoInput" placeholder="할 일을 입력하세요" />
+                    <button id="addBtn">추가</button>
+                </div>
+                <div style="margin-top: 20px;">
+                    ${todos
+                      .map(
+                        (todo) => `
+                        <div class="todo-item ${
+                          todo.completed ? 'completed' : ''
+                        }">
+                            <input
+                                type="checkbox"
+                                ${todo.completed ? 'checked' : ''}
+                                data-id="${todo.id}"
+                                class="toggleCheckbox"
+                            />
+                            <span>${todo.text}</span>
+                            <button class="deleteBtn" data-id="${
+                              todo.id
+                            }">삭제</button>
+                        </div>
+                    `
+                      )
+                      .join('')}
+                </div>
+            `;
+
+        // 📌 4. 이벤트 등록
+        // 추가 버튼
+        document.querySelector('#addBtn').addEventListener('click', () => {
+          const input = document.querySelector('#todoInput');
+          if (input.value.trim()) {
+            setState({
+              todos: [
+                ...state.todos,
+                {
+                  id: Date.now(),
+                  text: input.value,
+                  completed: false,
+                },
+              ],
+            });
+            input.value = '';
+          }
+        });
+
+        // 체크박스 토글
+        document.querySelectorAll('.toggleCheckbox').forEach((checkbox) => {
+          checkbox.addEventListener('change', (e) => {
+            const id = Number(e.target.dataset.id);
+            setState({
+              todos: state.todos.map((todo) =>
+                todo.id === id ? { ...todo, completed: !todo.completed } : todo
+              ),
+            });
+          });
+        });
+
+        // 삭제 버튼
+        document.querySelectorAll('.deleteBtn').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            const id = Number(e.target.dataset.id);
+            setState({
+              todos: state.todos.filter((todo) => todo.id !== id),
+            });
+          });
+        });
+      };
+
+      // 📌 5. 초기 렌더링
+      render();
+    </script>
+  </body>
+</html>
+```
+
+**핵심 구조**: `state → setState() → render()`
+
+**변경 사항**:
+
+1. `Component` 클래스 제거
+2. `addTodo`, `toggleTodo`, `deleteTodo` 함수 제거
+3. 이벤트 핸들러에서 직접 `setState()` 호출
+4. `setState()` 호출 시 자동으로 `render()` 실행
+
+모든 상태 변경은 `setState()`를 통해서만 이루어지며, `setState()`가 자동으로 리렌더링을 트리거한다.
+
+---
+
+### 3.2 Component 추상화
+
+매번 컴포넌트를 만들 때마다 이렇게 코드를 작성하는 것은 너무 번거롭다.
+따라서 **컴포넌트를 추상화하여 재사용 가능하게 만들어보자**.
+
+```javascript
+/**
+ * Component 기본 클래스
+ * - 모든 컴포넌트가 상속받을 베이스 클래스
+ */
+class Component {
+  constructor($target, initialState) {
+    this.$target = $target; // 컴포넌트가 렌더링될 DOM 요소
+    this.state = initialState; // 컴포넌트의 상태
+    this.setup(); // 초기 설정
+    this.render(); // 초기 렌더링
+  }
+
+  /**
+   * 초기 설정 메서드
+   * - 하위 클래스에서 오버라이드
+   */
+  setup() {}
+
+  /**
+   * HTML 템플릿 생성
+   * - 하위 클래스에서 반드시 구현
+   */
+  template() {
+    return '';
+  }
+
+  /**
+   * 상태 업데이트
+   * - React의 setState와 동일한 역할
+   */
+  setState(newState) {
+    this.state = { ...this.state, ...newState };
+    this.render();
+  }
+
+  /**
+   * 렌더링
+   */
+  render() {
+    this.$target.innerHTML = this.template();
+    this.setEvent();
+  }
+
+  /**
+   * 이벤트 등록
+   * - 하위 클래스에서 오버라이드
+   */
+  setEvent() {}
+}
+```
+
+이제 이 Class를 활용하여 코드를 리팩토링 할 수 있다.
+
+```html
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo 앱</title>
+    <!-- 스타일 생략 (위의 첫 번째 예제 참고) -->
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <script>
+      /**
+       * Component 기본 클래스
+       */
+      class Component {
+        constructor($target, initialState) {
+          this.$target = $target;
+          this.state = initialState;
+          this.setup();
+          this.render();
+        }
+
+        setup() {}
+        template() {
+          return '';
+        }
+
+        setState(newState) {
+          this.state = { ...this.state, ...newState };
+          this.render();
+        }
+
+        render() {
+          this.$target.innerHTML = this.template();
+          this.setEvent();
+        }
+
+        setEvent() {}
+      }
+
+      /**
+       * TodoApp 컴포넌트
+       */
+      class TodoApp extends Component {
+        // 📌 1. 초기 상태 설정
+        setup() {
+          this.state = {
+            todos: [
+              { id: 1, text: '아침 운동하기', completed: false },
+              { id: 2, text: '블로그 글 쓰기', completed: true },
+            ],
+          };
+        }
+
+        // 📌 2. HTML 템플릿
+        template() {
+          const { todos } = this.state;
+          return `
+                    <h1>📝 Todo List</h1>
+                    <div>
+                        <input type="text" id="todoInput" placeholder="할 일을 입력하세요" />
+                        <button id="addBtn">추가</button>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        ${todos
+                          .map(
+                            (todo) => `
+                            <div class="todo-item ${
+                              todo.completed ? 'completed' : ''
+                            }">
+                                <input
+                                    type="checkbox"
+                                    ${todo.completed ? 'checked' : ''}
+                                    data-id="${todo.id}"
+                                    class="toggleCheckbox"
+                                />
+                                <span>${todo.text}</span>
+                                <button class="deleteBtn" data-id="${
+                                  todo.id
+                                }">삭제</button>
+                            </div>
+                        `
+                          )
+                          .join('')}
+                    </div>
+                `;
+        }
+
+        // 📌 3. 이벤트 등록
+        setEvent() {
+          // 추가 버튼
+          this.$target
+            .querySelector('#addBtn')
+            .addEventListener('click', () => {
+              const input = this.$target.querySelector('#todoInput');
+              if (input.value.trim()) {
+                this.setState({
+                  todos: [
+                    ...this.state.todos,
+                    {
+                      id: Date.now(),
+                      text: input.value,
+                      completed: false,
+                    },
+                  ],
+                });
+                input.value = '';
+              }
+            });
+
+          // 체크박스 토글
+          this.$target
+            .querySelectorAll('.toggleCheckbox')
+            .forEach((checkbox) => {
+              checkbox.addEventListener('change', (e) => {
+                const id = Number(e.target.dataset.id);
+                this.setState({
+                  todos: this.state.todos.map((todo) =>
+                    todo.id === id
+                      ? { ...todo, completed: !todo.completed }
+                      : todo
+                  ),
+                });
+              });
+            });
+
+          // 삭제 버튼
+          this.$target.querySelectorAll('.deleteBtn').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+              const id = Number(e.target.dataset.id);
+              this.setState({
+                todos: this.state.todos.filter((todo) => todo.id !== id),
+              });
+            });
+          });
+        }
+      }
+
+      // 📌 4. 앱 초기화
+      const $app = document.querySelector('#app');
+      new TodoApp($app);
+    </script>
+  </body>
+</html>
+```
+
+**동작 방식**:
+
+1. `new TodoApp($app)` 실행
+2. `Component`의 `constructor`가 `setup() → render()` 호출
+3. `render()`가 `template() → setEvent()` 호출
+4. `setState()` 호출 시 자동으로 `render()` 재실행
+
+---
+
+## 4. 모듈화하여 작성하기
+
+하나의 파일에 모든 코드를 작성하는 것은 번거롭다.
+개발은 많은 사람들과 함께 하는 것이기 때문에, **최대한 모듈화하여 작성하는 것이 서로를 위해 좋다**.
+
+---
+
+### 4.1 폴더 구조
+
+```
+📦todo-app
+ ┣ 📂src
+ ┃ ┣ 📂core
+ ┃ ┃ ┗ 📜Component.js        // 기본 컴포넌트 클래스
+ ┃ ┣ 📂components
+ ┃ ┃ ┗ 📜TodoApp.js          // Todo 앱 컴포넌트
+ ┃ ┗ 📜main.js               // 앱 실행
+ ┣ 📜index.html
+ ┗ 📜package.json
+```
+
+---
+
+### 4.2 파일 분리
+
+#### `src/core/Component.js`
+
+```javascript
+// core/Component.js
+/**
+ * 기본 Component 클래스
+ * - 모든 컴포넌트의 기반
+ * - 상태 관리, 렌더링, 이벤트 처리의 기본 구조 제공
+ */
+export default class Component {
+  constructor($target, initialState) {
+    this.$target = $target; // 컴포넌트가 마운트될 DOM 요소
+    this.state = initialState; // 컴포넌트의 상태
+    this.setup(); // 초기 설정
+    this.render(); // 초기 렌더링
+  }
+
+  setup() {}
+  template() {
+    return '';
+  }
+
+  setState(newState) {
+    this.state = { ...this.state, ...newState };
+    this.render();
+  }
+
+  render() {
+    this.$target.innerHTML = this.template();
+    this.setEvent(); // 렌더링 후 이벤트 재등록
+  }
+
+  setEvent() {}
+}
+```
+
+#### `src/components/TodoApp.js`
+
+```javascript
+// components/TodoApp.js
+import Component from '../core/Component.js';
+
+/**
+ * TodoApp 컴포넌트
+ * - 할일 목록 관리 애플리케이션
+ */
+export default class TodoApp extends Component {
+  setup() {
+    this.state = {
+      todos: [
+        { id: 1, text: '아침 운동하기', completed: false },
+        { id: 2, text: '블로그 글 쓰기', completed: true },
+      ],
+    };
+  }
+
+  template() {
+    const { todos } = this.state;
+    return `
+            <h1>📝 Todo List</h1>
+            <div>
+                <input type="text" class="todoInput" placeholder="할 일을 입력하세요" />
+                <button class="addBtn">추가</button>
+            </div>
+            <div style="margin-top: 20px;">
+                ${todos
+                  .map(
+                    (todo) => `
+                    <div class="todo-item ${todo.completed ? 'completed' : ''}">
+                        <input
+                            type="checkbox"
+                            ${todo.completed ? 'checked' : ''}
+                            data-id="${todo.id}"
+                            class="toggleCheckbox"
+                        />
+                        <span>${todo.text}</span>
+                        <button class="deleteBtn" data-id="${
+                          todo.id
+                        }">삭제</button>
+                    </div>
+                `
+                  )
+                  .join('')}
+            </div>
+        `;
+  }
+
+  setEvent() {
+    // 추가 버튼
+    this.$target.querySelector('.addBtn').addEventListener('click', () => {
+      const input = this.$target.querySelector('.todoInput');
+      if (input.value.trim()) {
+        this.addTodo(input.value);
+        input.value = '';
+      }
+    });
+
+    // 완료 체크박스
+    this.$target.querySelectorAll('.toggleCheckbox').forEach((checkbox) => {
+      checkbox.addEventListener('change', (e) => {
+        this.toggleTodo(Number(e.target.dataset.id));
+      });
+    });
+
+    // 삭제 버튼
+    this.$target.querySelectorAll('.deleteBtn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        this.deleteTodo(Number(e.target.dataset.id));
+      });
+    });
+  }
+
+  addTodo(text) {
+    const newTodo = { id: Date.now(), text, completed: false };
+    this.setState({ todos: [...this.state.todos, newTodo] });
+  }
+
+  toggleTodo(id) {
+    const todos = this.state.todos.map((todo) =>
+      todo.id === id ? { ...todo, completed: !todo.completed } : todo
+    );
+    this.setState({ todos });
+  }
+
+  deleteTodo(id) {
+    const todos = this.state.todos.filter((todo) => todo.id !== id);
+    this.setState({ todos });
+  }
+}
+```
+
+#### `src/main.js`
+
+```javascript
+// main.js
+import TodoApp from './components/TodoApp.js';
+
+// 앱 실행
+new TodoApp(document.querySelector('#app'));
+```
+
+#### `index.html`
+
+```html
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo 앱</title>
+    <!-- 스타일 생략 (위의 첫 번째 예제 참고) -->
+  </head>
+  <body>
+    <div id="app"></div>
+    <!-- ES6 모듈 사용 -->
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
+```
+
+물론 스타일 코드도 분리하면 더 좋겠지만, 이 포스트의 주제는 컴포넌트 개발이기 때문에 생략했다.
+
+훨씬 더 깔끔하게 코드를 작성할 수 있다.
+
+---
+
+## 5. 이벤트를 효율적으로 다루기
+
+위의 코드대로 작성하면 의식하고 보지 않으면 찾기 힘들지만, **문제점이 존재한다**.
+
+---
+
+### 문제: 이벤트가 계속 쌓인다!
+
+현재 코드의 문제점:
+
+```javascript
+render() {
+    this.$target.innerHTML = this.template();
+    this.setEvent();  // 렌더링할 때마다 이벤트 재등록! ❌
+}
+```
+
+**시나리오**:
+
+1. 할일 추가 → render() 실행 → 이벤트 3개 등록
+2. 또 추가 → render() 실행 → 이벤트 6개 등록 (중복!)
+3. 계속 추가 → 이벤트가 계속 쌓임 → 메모리 누수!
+
+---
+
+### 해결: 이벤트 위임 (Event Delegation)
+
+**핵심 아이디어**: 부모에게 한 번만 이벤트를 등록하고, 자식이 누군지 판별하자!
+
+---
+
+### Component.js 수정
+
+```diff
+export default class Component {
+  $target;
+  state;
+
+  constructor($target) {
+    this.$target = $target;
+    this.setup();
++   this.setEvent(); // constructor에서 한 번만 실행
+    this.render();
+  }
+
+  setup() {}
+  template() {
+    return '';
+  }
+
+  render() {
+    this.$target.innerHTML = this.template();
+-   this.setEvent(); // 제거!
+  }
+
+  setEvent() {}
+
+  setState(newState) {
+    this.state = { ...this.state, ...newState };
+    this.render();
+  }
+}
+```
+
+---
+
+### TodoApp.js 수정
+
+```javascript
+export default class TodoApp extends Component {
+  setup() {
+    /* 생략 */
+  }
+  template() {
+    /* 생략 */
+  }
+
+  /**
+   * 이벤트 위임 패턴 사용
+   * - 부모 요소($target)에 한 번만 등록
+   * - 이벤트 버블링을 활용: 자식 요소의 클릭이 부모로 전파됨
+   * - classList.contains()로 실제 클릭된 요소 구분
+   */
+  setEvent() {
+    // 모든 클릭 이벤트를 한 곳에서 처리
+    this.$target.addEventListener('click', (e) => {
+      // 추가 버튼 클릭
+      // e.target.classList.contains()로 클릭된 요소가 addBtn인지 확인
+      if (e.target.classList.contains('addBtn')) {
+        const input = this.$target.querySelector('.todoInput');
+        if (input.value.trim()) {
+          this.addTodo(input.value);
+          input.value = '';
+        }
+      }
+
+      // 삭제 버튼 클릭
+      // 부모에 등록된 이벤트지만, deleteBtn이 클릭되었을 때만 실행
+      if (e.target.classList.contains('deleteBtn')) {
+        this.deleteTodo(Number(e.target.dataset.id));
+      }
+    });
+
+    // 체크박스는 change 이벤트 사용
+    this.$target.addEventListener('change', (e) => {
+      if (e.target.classList.contains('toggleCheckbox')) {
+        this.toggleTodo(Number(e.target.dataset.id));
+      }
+    });
+  }
+
+  addTodo(text) {
+    /* 생략 */
+  }
+  toggleTodo(id) {
+    /* 생략 */
+  }
+  deleteTodo(id) {
+    /* 생략 */
+  }
+}
+```
+
+**장점**:
+
+- ✅ 이벤트가 딱 1번만 등록됨
+- ✅ 할일이 100개여도 이벤트는 2개 (click, change)
+- ✅ 메모리 효율적
+
+---
+
+### 더 나아가기: addEvent 헬퍼 메서드
+
+매번 `if (e.target.classList.contains(...))` 쓰기 귀찮으니 헬퍼를 만들자.
+
+**`classList.contains` vs `closest`의 차이**
+
+```html
+<!-- 버튼 안에 아이콘이 있는 경우 -->
+<button class="deleteBtn">
+  <span class="icon">🗑️</span>
+  삭제
+</button>
+```
+
+- `classList.contains('deleteBtn')`: 정확히 `<button>` 클릭 시에만 동작 ❌
+  - 아이콘(`<span>`)을 클릭하면 `e.target`이 `<span>`이므로 동작 안 함!
+- `closest('.deleteBtn')`: 버튼이나 그 하위 요소 클릭 시 모두 동작 ✅
+  - 아이콘을 클릭해도 조상 요소 중 `deleteBtn`을 찾아서 동작함!
+
+#### Component.js에 addEvent 추가
+
+```javascript
+export default class Component {
+  $target;
+  state;
+
+  constructor($target) {
+    /* 생략 */
+  }
+  setup() {
+    /* 생략 */
+  }
+  template() {
+    /* 생략 */
+  }
+  render() {
+    /* 생략 */
+  }
+  setEvent() {
+    /* 생략 */
+  }
+  setState(newState) {
+    /* 생략 */
+  }
+
+  /**
+   * 이벤트 위임 헬퍼 메서드
+   * @param {string} eventType - 이벤트 타입 (click, change 등)
+   * @param {string} selector - CSS 선택자
+   * @param {function} callback - 콜백 함수
+   */
+  addEvent(eventType, selector, callback) {
+    this.$target.addEventListener(eventType, (event) => {
+      // closest: 클릭된 요소부터 시작해서 조상 요소 중 selector와 일치하는 요소 찾기
+      // 버튼 내부의 아이콘이나 텍스트를 클릭해도 버튼 이벤트로 처리됨
+      if (!event.target.closest(selector)) return;
+      callback(event);
+    });
+  }
+}
+```
+
+#### TodoApp.js에서 사용
+
+```javascript
+export default class TodoApp extends Component {
+  setup() {
+    /* 생략 */
+  }
+  template() {
+    /* 생략 */
+  }
+
+  /**
+   * 훨씬 간결해진 이벤트 등록!
+   */
+  setEvent() {
+    // 추가 버튼
+    this.addEvent('click', '.addBtn', () => {
+      const input = this.$target.querySelector('.todoInput');
+      if (input.value.trim()) {
+        this.addTodo(input.value);
+        input.value = '';
+      }
+    });
+
+    // 삭제 버튼
+    this.addEvent('click', '.deleteBtn', (e) => {
+      this.deleteTodo(Number(e.target.dataset.id));
+    });
+
+    // 체크박스
+    this.addEvent('change', '.toggleCheckbox', (e) => {
+      this.toggleTodo(Number(e.target.dataset.id));
+    });
+  }
+
+  addTodo(text) {
+    /* 생략 */
+  }
+  toggleTodo(id) {
+    /* 생략 */
+  }
+  deleteTodo(id) {
+    /* 생략 */
+  }
+}
+```
+
+**이제 코드가 훨씬 깔끔해졌다!**
+
+---
+
+## 6. 컴포넌트 조합하기
+
+현재 `TodoApp`이 너무 많은 일을 하고 있다:
+
+- 입력 받기
+- 리스트 보여주기
+- 필터링
+- 통계 표시
+
+**컴포넌트의 본질은 재사용이다.** 작게 쪼개자!
+
+---
+
+### 6.1 기능 추가
+
+먼저 필터링과 통계 기능을 추가해보자.
+
+```javascript
+// components/TodoApp.js
+export default class TodoApp extends Component {
+  setup() {
+    this.state = {
+      todos: [
+        { id: 1, text: '아침 운동하기', completed: false },
+        { id: 2, text: '블로그 글 쓰기', completed: true },
+      ],
+      filter: 'all', // 'all' | 'active' | 'completed'
+    };
+  }
+
+  // 필터링된 할일 목록 반환
+  get filteredTodos() {
+    const { todos, filter } = this.state;
+    if (filter === 'active') return todos.filter((t) => !t.completed);
+    if (filter === 'completed') return todos.filter((t) => t.completed);
+    return todos;
+  }
+
+  template() {
+    const { filter } = this.state;
+    const filteredTodos = this.filteredTodos;
+    const activeCount = this.state.todos.filter((t) => !t.completed).length;
+
+    return `
+            <h1>📝 Todo List</h1>
+
+            <!-- 입력 영역 -->
+            <div>
+                <input type="text" class="todoInput" placeholder="할 일을 입력하세요" />
+                <button class="addBtn">추가</button>
+            </div>
+
+            <!-- 할일 목록 -->
+            <div style="margin-top: 20px;">
+                ${filteredTodos
+                  .map(
+                    (todo) => `
+                    <div class="todo-item ${todo.completed ? 'completed' : ''}">
+                        <input
+                            type="checkbox"
+                            ${todo.completed ? 'checked' : ''}
+                            data-id="${todo.id}"
+                            class="toggleCheckbox"
+                        />
+                        <span>${todo.text}</span>
+                        <button class="deleteBtn" data-id="${
+                          todo.id
+                        }">삭제</button>
+                    </div>
+                `
+                  )
+                  .join('')}
+            </div>
+
+            <!-- 필터 버튼 -->
+            <div style="margin-top: 20px;">
+                <button class="filterBtn ${
+                  filter === 'all' ? 'active' : ''
+                }" data-filter="all">
+                    전체
+                </button>
+                <button class="filterBtn ${
+                  filter === 'active' ? 'active' : ''
+                }" data-filter="active">
+                    진행중
+                </button>
+                <button class="filterBtn ${
+                  filter === 'completed' ? 'active' : ''
+                }" data-filter="completed">
+                    완료
+                </button>
+            </div>
+
+            <!-- 통계 -->
+            <div style="margin-top: 10px; color: #666;">
+                남은 할일: ${activeCount}개
+            </div>
+        `;
+  }
+
+  setEvent() {
+    // 추가
+    this.addEvent('click', '.addBtn', () => {
+      const input = this.$target.querySelector('.todoInput');
+      if (input.value.trim()) {
+        this.addTodo(input.value);
+        input.value = '';
+      }
+    });
+
+    // 삭제
+    this.addEvent('click', '.deleteBtn', (e) => {
+      this.deleteTodo(Number(e.target.dataset.id));
+    });
+
+    // 토글
+    this.addEvent('change', '.toggleCheckbox', (e) => {
+      this.toggleTodo(Number(e.target.dataset.id));
+    });
+
+    // 필터
+    this.addEvent('click', '.filterBtn', (e) => {
+      this.setFilter(e.target.dataset.filter);
+    });
+  }
+
+  addTodo(text) {
+    /* 생략 */
+  }
+  toggleTodo(id) {
+    /* 생략 */
+  }
+  deleteTodo(id) {
+    /* 생략 */
+  }
+
+  setFilter(filter) {
+    this.setState({ filter });
+  }
+}
+```
+
+**문제**: 하나의 컴포넌트가 너무 많은 책임을 가짐!
+
+---
+
+### 6.2 컴포넌트 분리 계획
+
+```
+TodoApp (상태 관리)
+ ├─ TodoInput (입력)
+ ├─ TodoList (목록 표시)
+ ├─ TodoFilter (필터 버튼)
+ └─ TodoStats (통계)
+```
+
+---
+
+### 6.3 폴더 구조
+
+```
+📦todo-app
+ ┣ 📂src
+ ┃ ┣ 📂core
+ ┃ ┃ ┗ 📜Component.js
+ ┃ ┣ 📂components
+ ┃ ┃ ┣ 📜TodoInput.js         // 입력 컴포넌트
+ ┃ ┃ ┣ 📜TodoList.js          // 목록 컴포넌트
+ ┃ ┃ ┣ 📜TodoFilter.js        // 필터 컴포넌트
+ ┃ ┃ ┗ 📜TodoStats.js         // 통계 컴포넌트
+ ┃ ┣ 📜App.js                 // 최상위 앱 컴포넌트
+ ┃ ┗ 📜main.js
+ ┣ 📜index.html
+ ┗ 📜package.json
+```
+
+---
+
+### 6.4 Component Core 변경
+
+자식 컴포넌트에게 데이터를 전달하려면 `props`가 필요하다.
+
+```diff
+export default class Component {
+    $target;
++   props;
+    state;
+
+-   constructor($target) {
++   constructor($target, props) {
+        this.$target = $target;
++       this.props = props;  // 부모로부터 받은 props
+        this.setup();
+        this.setEvent();
+        this.render();
+    }
+
+    setup() {}
++   mounted() {}  // render 후 실행되는 라이프사이클
+    template() { return ''; }
+
+    render() {
+        this.$target.innerHTML = this.template();
++       this.mounted();  // 자식 컴포넌트 마운트 시점 (render 후에 실행)
+    }
+
+    setEvent() {}
+    setState(newState) { /* 생략 */ }
+    addEvent(eventType, selector, callback) { /* 생략 */ }
+}
+```
+
+- `props`: 부모 → 자식으로 데이터/함수 전달
+- `mounted`: render 후 자식 컴포넌트를 마운트할 때 사용
+
+---
+
+### 6.5 컴포넌트 구현
+
+#### `src/App.js`
+
+```javascript
+// App.js
+import Component from './core/Component.js';
+import TodoInput from './components/TodoInput.js';
+import TodoList from './components/TodoList.js';
+import TodoFilter from './components/TodoFilter.js';
+import TodoStats from './components/TodoStats.js';
+
+/**
+ * App 컴포넌트
+ * - 전체 상태 관리
+ * - 자식 컴포넌트에게 데이터와 메서드 전달
+ */
+export default class App extends Component {
+  setup() {
+    this.state = {
+      todos: [
+        { id: 1, text: '아침 운동하기', completed: false },
+        { id: 2, text: '블로그 글 쓰기', completed: true },
+      ],
+      filter: 'all',
+    };
+  }
+
+  template() {
+    return `
+            <h1>📝 Todo List</h1>
+            <div data-component="todo-input"></div>
+            <div data-component="todo-list"></div>
+            <div data-component="todo-filter"></div>
+            <div data-component="todo-stats"></div>
+        `;
+  }
+
+  /**
+   * render 후 자식 컴포넌트 마운트
+   */
+  mounted() {
+    const { todos, filter } = this.state;
+
+    // 필터링된 할일
+    const filteredTodos = this.getFilteredTodos();
+
+    // 각 자식 컴포넌트 마운트
+    const $input = this.$target.querySelector('[data-component="todo-input"]');
+    const $list = this.$target.querySelector('[data-component="todo-list"]');
+    const $filter = this.$target.querySelector(
+      '[data-component="todo-filter"]'
+    );
+    const $stats = this.$target.querySelector('[data-component="todo-stats"]');
+
+    new TodoInput($input, {
+      onAddTodo: this.addTodo.bind(this),
+    });
+
+    new TodoList($list, {
+      todos: filteredTodos,
+      onToggleTodo: this.toggleTodo.bind(this),
+      onDeleteTodo: this.deleteTodo.bind(this),
+    });
+
+    new TodoFilter($filter, {
+      currentFilter: filter,
+      onChangeFilter: this.setFilter.bind(this),
+    });
+
+    new TodoStats($stats, {
+      activeCount: todos.filter((t) => !t.completed).length,
+    });
+  }
+
+  getFilteredTodos() {
+    const { todos, filter } = this.state;
+    if (filter === 'active') return todos.filter((t) => !t.completed);
+    if (filter === 'completed') return todos.filter((t) => t.completed);
+    return todos;
+  }
+
+  addTodo(text) {
+    const newTodo = { id: Date.now(), text, completed: false };
+    this.setState({ todos: [...this.state.todos, newTodo] });
+  }
+
+  toggleTodo(id) {
+    const todos = this.state.todos.map((todo) =>
+      todo.id === id ? { ...todo, completed: !todo.completed } : todo
+    );
+    this.setState({ todos });
+  }
+
+  deleteTodo(id) {
+    const todos = this.state.todos.filter((todo) => todo.id !== id);
+    this.setState({ todos });
+  }
+
+  setFilter(filter) {
+    this.setState({ filter });
+  }
+}
+```
+
+#### `src/components/TodoInput.js`
+
+```javascript
+// components/TodoInput.js
+import Component from '../core/Component.js';
+
+/**
+ * TodoInput 컴포넌트
+ * - 할일 입력 담당
+ */
+export default class TodoInput extends Component {
+  template() {
+    return `
+            <div>
+                <input
+                    type="text"
+                    class="todoInput"
+                    placeholder="할 일을 입력하세요"
+                    style="width: 70%; padding: 8px; font-size: 14px;"
+                />
+                <button
+                    class="addBtn"
+                    style="padding: 8px 16px; margin-left: 5px; cursor: pointer;"
+                >
+                    추가
+                </button>
+            </div>
+        `;
+  }
+
+  setEvent() {
+    const { onAddTodo } = this.props;
+
+    this.addEvent('click', '.addBtn', () => {
+      const input = this.$target.querySelector('.todoInput');
+      if (input.value.trim()) {
+        onAddTodo(input.value);
+        input.value = '';
+      }
+    });
+
+    // Enter 키 지원
+    this.addEvent('keypress', '.todoInput', (e) => {
+      if (e.key === 'Enter') {
+        const input = e.target;
+        if (input.value.trim()) {
+          onAddTodo(input.value);
+          input.value = '';
+        }
+      }
+    });
+  }
+}
+```
+
+#### `src/components/TodoList.js`
+
+```javascript
+// components/TodoList.js
+import Component from '../core/Component.js';
+
+/**
+ * TodoList 컴포넌트
+ * - 할일 목록 표시
+ */
+export default class TodoList extends Component {
+  template() {
+    const { todos } = this.props;
+    return `
+            <div style="margin-top: 20px;">
+                ${
+                  todos.length === 0
+                    ? '<p style="color: #999; text-align: center;">할 일이 없습니다.</p>'
+                    : todos
+                        .map(
+                          (todo) => `
+                        <div class="todo-item ${
+                          todo.completed ? 'completed' : ''
+                        }" style="padding: 10px; border-bottom: 1px solid #eee;">
+                            <input
+                                type="checkbox"
+                                ${todo.completed ? 'checked' : ''}
+                                data-id="${todo.id}"
+                                class="toggleCheckbox"
+                            />
+                            <span style="margin: 0 10px;">${todo.text}</span>
+                            <button
+                                class="deleteBtn"
+                                data-id="${todo.id}"
+                                style="padding: 4px 8px; cursor: pointer; background: #f44336; color: white; border: none; border-radius: 4px;"
+                            >
+                                삭제
+                            </button>
+                        </div>
+                    `
+                        )
+                        .join('')
+                }
+            </div>
+        `;
+  }
+
+  setEvent() {
+    const { onToggleTodo, onDeleteTodo } = this.props;
+
+    this.addEvent('change', '.toggleCheckbox', (e) => {
+      onToggleTodo(Number(e.target.dataset.id));
+    });
+
+    this.addEvent('click', '.deleteBtn', (e) => {
+      onDeleteTodo(Number(e.target.dataset.id));
+    });
+  }
+}
+```
+
+#### `src/components/TodoFilter.js`
+
+```javascript
+// components/TodoFilter.js
+import Component from '../core/Component.js';
+
+/**
+ * TodoFilter 컴포넌트
+ * - 필터 버튼 제공
+ */
+export default class TodoFilter extends Component {
+  template() {
+    const { currentFilter } = this.props;
+
+    const buttonStyle = (filter) => `
+            padding: 8px 16px;
+            margin: 5px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: ${currentFilter === filter ? '#2196f3' : 'white'};
+            color: ${currentFilter === filter ? 'white' : '#333'};
+        `;
+
+    return `
+            <div style="margin-top: 20px;">
+                <button class="filterBtn" data-filter="all" style="${buttonStyle(
+                  'all'
+                )}">
+                    전체
+                </button>
+                <button class="filterBtn" data-filter="active" style="${buttonStyle(
+                  'active'
+                )}">
+                    진행중
+                </button>
+                <button class="filterBtn" data-filter="completed" style="${buttonStyle(
+                  'completed'
+                )}">
+                    완료
+                </button>
+            </div>
+        `;
+  }
+
+  setEvent() {
+    const { onChangeFilter } = this.props;
+
+    this.addEvent('click', '.filterBtn', (e) => {
+      onChangeFilter(e.target.dataset.filter);
+    });
+  }
+}
+```
+
+#### `src/components/TodoStats.js`
+
+```javascript
+// components/TodoStats.js
+import Component from '../core/Component.js';
+
+/**
+ * TodoStats 컴포넌트
+ * - 통계 정보 표시
+ */
+export default class TodoStats extends Component {
+  template() {
+    const { activeCount } = this.props;
+    return `
+            <div style="margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 4px;">
+                <span style="color: #666;">남은 할일: <strong>${activeCount}개</strong></span>
+            </div>
+        `;
+  }
+}
+```
+
+#### `src/main.js`
+
+```javascript
+// main.js
+import App from './App.js';
+
+// 앱 실행
+new App(document.querySelector('#app'));
+```
+
+#### `index.html`
+
+```html
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo 앱</title>
+    <!-- 스타일 생략 (위의 첫 번째 예제 참고) -->
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
+```
+
+---
+
+## 마치며
+
+최근 프레임워크의 코어 기능을 직접 구현해보는 이유는 명확합니다. 완벽한 재현이 아닌, 그 근본 원리를 이해하기 위함입니다.
+
+AI 시대에는 라이브러리를 '잘 활용하는 능력'이 중요해졌지만, 견고한 기본기 없이는 복잡한 문제를 유연하게 해결할 수 없습니다. 오히려 AI 시대가 되면서 기본기의 중요성을 더욱 절감하게 되었습니다.
+
+이번 상태 기반 컴포넌트 제작 경험을 통해 프레임워크 뒤에 숨겨진 상태 관리와 렌더링 최적화를 생각해 보는 시간을 갖었습니다. 실무에서는 빠른 구현에 집중하느라 놓치기 쉬운 부분들을 천천히 되짚어보는 시간을 갖었고, 정말 많은 부족함을 느꼈습니다. (물론 매번 느낍니다 ^-^)
+
+그래도, 이번 경험을 통해
+나 리액트 없이 컴포넌트 개발 해봤어 라고 말 할 수 있지 않을까?
+
+이번 기회에 `React` 말고도, 다른 프레임워크에 대해 한번 공부해보고 싶다.
+
+특히, `Angular`에 대해 한번 공부해보고 싶다.
