@@ -2,6 +2,7 @@ import mdx from '@astrojs/mdx';
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 import tailwind from '@astrojs/tailwind';
+import vercel from '@astrojs/vercel';
 import {
   transformerMetaHighlight,
   transformerMetaWordHighlight,
@@ -22,6 +23,10 @@ import { transformerFragment } from './plugins/transformer-fragment';
 import { customCallout } from './src/lib/directives';
 
 export default defineConfig({
+  output: 'static',
+  adapter: vercel({
+    isr: true,
+  }),
   site: 'https://www.yolog.co.kr',
   integrations: [
     mdx({
