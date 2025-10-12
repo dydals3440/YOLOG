@@ -1,0 +1,901 @@
+---
+title: React Query 알고 쓰기
+date: 2025-10-12
+updatedDate: 2025-10-12
+tags:
+  [
+    React Query,
+    서버 상태 관리,
+    Tanstack Query,
+    SWR,
+    비동기 데이터 관리,
+    캐싱,
+    재시도,
+    취소,
+    경쟁 상태,
+    리소스 최적화,
+  ]
+category: DEVELOPMENT
+image: '/images/react-query/thumbnail.png'
+---
+
+# React Query 알고 쓰기
+
+`Tanstack Query` 흔히 `React Query`라고 불리는 서버상태 관리 툴에 대해서 유사하게 직접 구현을 해보며 왜 이런 기술이 개발자에게 편의성을 주는지 이해해보겠다.
+
+![React Query 알고 쓰기](/images/react-query/thumbnail.png)
+
+요즘은 대부분 회사가 `React Query`를 도입하기도 하고, 대부분의 서버 데이터를 불러오는 강의들은 모두 `React Query`를 기반으로 진행하기 때문에 나처럼 늦게 개발을 시작한 사람에게는 `React Query`말고 다른 것을 경험해보기가 쉽지 않다.
+
+`React Query`가 지금처럼 주류의 기술로 떠오르기 이전에는 서비스의 특성과 개발자의 취향에 따라, redux-thunk, redux-saga등 다양한 비동기 미들웨어를 채택하며 사용했고 더 효율적인 업무를 위하여 미들웨어 자체를 직접 커스텀하며 사용했다고 한다.
+
+또 `SWR` 같은 라이브러리를 활용하기도 한다.
+
+---
+
+## useEffect만을 활용하여 서버 데이터 사용하기
+
+`React`에서 서버로부터 데이터를 가져오는 작업은 컴포넌트의 주된 임무인 UI 렌더링과는 별개의 작업 즉, `부수 효과(Side Effect)`로 분류된다.
+
+`React`는 이러한 부수 효과를 처리하기 위해 내장 훅인 `useEffect`를 제공하며, 이를 통해 네트워크 통신과 같은 비동기 작업을 안전하게 수행하도록 한다.
+
+하지만, 실제 서비스를 운영하다 보면 네트워크 요청을 상당히 많이한다.
+
+개발자는 반복하는 것을 극도로 싫어하기 때문에 데이터를 가져오는 로직을 캡슐화하고 재사용성을 높이기 위해 `커스텀 훅(Custom Hook)`을 생성한다.
+
+아래 `useCustomFetch`가 바로 그 기본적인 형태다.
+
+```ts
+import { useEffect, useState } from 'react';
+
+const useCustomFetch = <T>(url: string) => {
+  // 서버에서 가져온 데이터를 저장하는 상태
+  const [data, setData] = useState<T | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      // fetch API를 사용하여 서버에 데이터 요청
+      const response = await fetch(url);
+      // 응답을 JSON 형태로 파싱
+      const data = await response.json();
+      // 파싱된 데이터를 상태에 저장
+      setData(data);
+    };
+
+    fetchData();
+  }, [url]); // url이 변경될 때마다 새로운 데이터 요청
+
+  return { data };
+};
+```
+
+`useCustomFetch` 훅은 **서버 URL**을 인자로 받아, 해당 URL로 비동기 네트워크 요청을 보내고 그 결과를 `컴포넌트의 상태(State)`로 관리하여 반환한다.
+
+물론, `fetch` 같은 경우는 HTTP 에러 상태(4xx, 5xx)가 발생한 경우에도 처리가 가능하도록 추가 로직을 작성해야하나 이는 오늘 전달하고자하는 주제와 다르기에 생략하고 진행하고자 한다.
+
+```ts
+import { useCustomFetch } from '../hooks/useFetchData';
+
+interface WelcomeData {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export const WelcomeData = () => {
+  const { data } = useCustomFetch<WelcomeData>('url');
+  return (
+    <div>
+      <h1>{data?.name}</h1>
+      <p>{data?.email}</p>
+    </div>
+  );
+};
+```
+
+`useCustomFetch` 훅 덕분에, 데이터를 표시해야 하는 `WelcomeData` 컴포넌트는 복잡한 데이터 패칭 로직 대신, 서버 데이터의 **타입**과 **URL**만 명시하여 필요한 데이터를 간결하게 얻어 이를 활용할 수 있다.
+
+---
+
+## 근데, 데이터가 무거우면?
+
+데이터 통신 과정에서 발생하는 지연 시간은 사용자 경험(UX)을 저해하는 주된 요인이다.
+
+사용자들은 단 몇 초의 지연에도 민감하게 반응하며, 서비스 이탈로 이어지기 쉽다.
+
+따라서 서버 응답을 기다리는 동안 **적절한 시각적 피드백**을 제공하여 사용자에게 현재 상황을 명확히 전달하는 것이 매우 중요하다.
+
+이러한 피드백 전략은 단순히 '기다리게' 하는 것이 아니라, 서비스가 정상적으로 작동 중이며 곧 콘텐츠가 제공될 것임을 알려 **불안감을 해소**하고 **체감 속도를 향상**시키는 데 목적이 있다.
+
+프론트엔드 개발에서는 주로 **로딩 스피너**나 `스켈레톤 UI(Skeleton UI)` 등을 활용하여 이 문제를 해결한다.
+
+특히 **스켈레톤 UI**는 콘텐츠의 윤곽을 미리 보여주어 사용자에게 기대감을 형성하고 지루함을 줄여주는 효과적인 방법으로 각광받고 있다.
+
+이를 위해 아까 만든 데이터 요청 로직을 캡슐화한 `커스텀 훅(Custom Hook)`에 로딩 상태를 추가하여 관리해보겠다.
+
+```ts
+import { useEffect, useState } from 'react';
+
+export const useCustomFetch = <T>(url: string) => {
+  // 서버에서 가져온 데이터를 저장하는 상태
+  const [data, setData] = useState<T | null>(null);
+  // 데이터 로딩 중 여부를 나타내는 상태
+  const [isPending, setIsPending] = useState<boolean>(false);
+
+  useEffect(() => {
+    // 데이터 요청 시작 전 로딩 상태 true로 설정
+    setIsPending(true);
+
+    const fetchData = async () => {
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        setData(data);
+      } catch (error) {
+        // 에러 발생 시 로딩 상태 종료
+        setIsPending(false);
+        throw error;
+      } finally {
+        // 성공/실패 여부와 관계없이 로딩 상태 종료
+        setIsPending(false);
+      }
+    };
+
+    fetchData();
+  }, [url]); // url이 변경될 때마다 새로운 데이터 요청
+
+  return { data, isPending };
+};
+```
+
+데이터 패치 로직을 담당하는 `useCustomFetch` 훅에 **로딩 상태**를 관리하는 `isPending` 상태를 추가했다.
+
+이 상태를 통해 데이터 요청 시작부터 완료까지의 과정을 사용자 인터페이스에 반영할 수 있다.
+
+```ts
+import { useCustomFetch } from '../hooks/useFetchData';
+
+interface WelcomeData {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export const WelcomeData = () => {
+  const { data, isPending } = useCustomFetch<WelcomeData>('url');
+
+  if (isPending) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <div>
+      <h1>{data?.name}</h1>
+      <p>{data?.email}</p>
+    </div>
+  );
+};
+```
+
+이제 `useCustomFetch` 훅이 반환하는 `isPending` 상태를 사용하여, 데이터 로딩 중일 때 사용자에게 로딩 피드백을 제공하고, 로딩이 완료된 후에만 실제 콘텐츠를 렌더링하도록 컴포넌트를 구성한다.
+
+---
+
+## 응 요청 실패야.
+
+모든 소프트웨어 개발에서 `요청 실패(Failure)`는 피할 수 없는 현실이다.
+
+개발자의 실수, 인프라 문제(AWS, Google Cloud 등), 혹은 네트워크 불안정 등 다양한 외부 요인으로 인해 서버 요청에 `오류(Error)`가 발생할 수 있다.
+
+이러한 오류 상황에 대해 **적절한 피드백**이 없다면, 사용자들은 텅 빈 화면을 보거나 하염없이 대기해야 하는 최악의 경험을 하게 된다.
+
+이는 충성 고객의 이탈로 이어질 수 있으므로, 개발자는 오류 상태를 명시적으로 관리하고 이에 맞는 UI를 제공해야 한다.
+
+앞서 구현했던 커스텀 훅에 **오류 상태 관리** 로직을 추가하여 사용자에게 명확한 피드백을 제공해보겠다.
+
+```ts
+import { useEffect, useState } from 'react';
+
+export const useCustomFetch = <T>(url: string) => {
+  // 서버에서 가져온 데이터를 저장하는 상태
+  const [data, setData] = useState<T | null>(null);
+  // 데이터 로딩 중 여부를 나타내는 상태
+  const [isPending, setIsPending] = useState<boolean>(false);
+  // 에러 발생 여부를 나타내는 상태
+  const [isError, setIsError] = useState<boolean>(false);
+
+  useEffect(() => {
+    // 데이터 요청 시작
+    setIsPending(true);
+
+    const fetchData = async () => {
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        setData(data);
+      } catch {
+        // 에러 발생 시 로딩 종료 및 에러 상태 설정
+        setIsPending(false);
+        setIsError(true);
+      } finally {
+        // 성공/실패 여부와 관계없이 로딩 상태 종료
+        setIsPending(false);
+      }
+    };
+
+    fetchData();
+  }, [url]); // url이 변경될 때마다 새로운 데이터 요청
+
+  return { data, isPending, isError };
+};
+```
+
+데이터 로딩 상태(`isPending`)와 마찬가지로, 오류 상태를 저장하고 반환하는 `isError` 상태를 추가하여 훅을 확장한다.
+
+```ts
+import { useCustomFetch } from '../hooks/useFetchData';
+
+interface WelcomeData {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export const WelcomeData = () => {
+  const { data, isPending, isError } = useCustomFetch<WelcomeData>('url');
+
+  if (isPending) {
+    return <div>Loading...</div>;
+  }
+
+  if (isError) {
+    return <div>Error Occurred</div>;
+  }
+
+  return (
+    <div>
+      <h1>{data?.name}</h1>
+      <p>{data?.email}</p>
+    </div>
+  );
+};
+```
+
+`useCustomFetch` 훅이 반환하는 `isError` 상태를 사용하여, 오류가 발생했을 때 사용자에게 상황을 알리는 적절한 UI를 제공한다.
+
+**데이터 흐름 및 사용자 경험**
+
+1. **시작:** 컴포넌트 마운트 → `isPending` = `true` → `"Loading..."` 화면 표시
+2. **성공 시:** 로딩 완료 → `isPending` = `false`, `isError` = `false` → **실제 데이터** 렌더링
+3. **실패 시:** 네트워크/서버 오류 발생 → `isPending` = `false`, `isError` = `true` → `"Error Occurred"` 화면 표시
+
+이러한 명시적인 오류 처리는 사용자가 서비스가 멈춘 것이 아니라, **일시적인 문제**가 발생했음을 인지하게 하여 당황을 줄이고, 나아가 **고객 지원 문의** 등 다음 행동을 유도할 수 있는 기반을 마련해 줄 수 있다.
+
+안정적인 서비스 제공을 위해 오류 상황에 대한 피드백은 필수적인 요소다.
+
+---
+
+## 훌륭하다만…
+
+현재 `useCustomFetch` 훅은 **캐싱 기능 부재**로 인해 심각한 비효율성을 안고 있다. 동일한 데이터에 대해 컴포넌트가 재렌더링되거나 여러 번 마운트될 때마다 불필요한 네트워크 요청이 반복적으로 발생하며, 이는 **서버 부하 증가**와 **네트워크 비용 상승**으로 이어진다.
+
+**React Query**가 주류 기술로 자리 잡은 핵심은 바로 이 캐싱 문제를 `staleTime` 등의 개념을 통해 효과적으로 해결한다는 점이다. 이는 곧 우리가 프론트엔드 단에서 직접 캐싱 로직을 구현할 수 있음을 의미한다.
+
+이번에는 `로컬 스토리지(localStorage)`를 활용하여 React Query의 `staleTime` 원칙을 모방한 캐싱 메커니즘을 도입해 보겠다. 로컬 스토리지 기반 캐싱은 브라우저를 닫아도 데이터가 유지되어 캐싱 결과를 더 명확하게 확인할 수 있다.
+
+물론 인메모리 메커니즘으로 구현해도 상관없다. 하지만 눈에 보이는 효율적인 실습을 위해 로컬 스토리지를 사용한다.
+
+`staleTime` 정의
+
+```ts
+const STALE_TIME = 5 * 60 * 1_000; // 5분
+```
+
+로컬스토리지에 저장될 캐시 데이터 구조를 정의한다.
+
+```ts
+interface CacheEntry<T> {
+  data: T;
+  lastFetched: number;
+}
+```
+
+실제로 이를 활용하여 아래와 같이 구현할 수 있다.
+
+```ts
+import { useEffect, useMemo, useState } from 'react';
+
+// 데이터가 오래된(Stale) 상태가 되기까지의 시간 (5분)
+const STALE_TIME = 5 * 60 * 1_000;
+
+// 로컬 스토리지에 저장될 캐시 데이터의 구조
+interface CacheEntry<T> {
+  data: T; // 실제 서버 데이터
+  lastFetched: number; // 마지막으로 데이터를 가져온 시점의 타임스탬프
+}
+
+export const useCustomFetch = <T>(url: string) => {
+  // 서버에서 가져온 데이터를 저장하는 상태
+  const [data, setData] = useState<T | null>(null);
+  // 데이터 로딩 중 여부를 나타내는 상태
+  const [isPending, setIsPending] = useState<boolean>(false);
+  // 에러 발생 여부를 나타내는 상태
+  const [isError, setIsError] = useState<boolean>(false);
+
+  // URL을 localStorage 키로 사용 (useMemo로 불필요한 재계산 방지)
+  const storageKey = useMemo(() => url, [url]);
+
+  useEffect(() => {
+    // 에러 상태 초기화
+    setIsError(false);
+
+    const fetchData = async () => {
+      const currentTime = new Date().getTime();
+      const cachedItem = localStorage.getItem(storageKey);
+
+      // 1. 캐시 데이터 확인 및 신선도 검증
+      if (cachedItem) {
+        try {
+          // 로컬 스토리지에서 가져온 문자열을 객체로 역직렬화
+          const cachedData: CacheEntry<T> = JSON.parse(cachedItem);
+
+          // 캐시가 신선한 경우 (STALE_TIME 이내) 네트워크 요청 생략
+          if (currentTime - cachedData.lastFetched < STALE_TIME) {
+            setData(cachedData.data);
+            setIsPending(false);
+            console.log(`[Cache Hit] Using fresh data for: ${url}`);
+            return; // 네트워크 요청 없이 함수 종료
+          }
+
+          // 캐시가 오래된 경우: 먼저 보여주고 백그라운드에서 새 데이터 가져오기
+          // 이를 통해 사용자에게 즉시 콘텐츠를 보여주며 UX 개선
+          setData(cachedData.data);
+          console.log(`[Cache Stale] Refetching data for: ${url}`);
+        } catch {
+          // JSON 파싱 오류 발생 시 (캐시 데이터 손상)
+          localStorage.removeItem(storageKey);
+          console.warn(
+            `[Cache Error] Corrupted cache for: ${url}. Cache cleared.`
+          );
+        }
+      }
+
+      // 2. 네트워크 요청 (캐시가 없거나, 데이터가 오래된 경우)
+      setIsPending(true);
+
+      try {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          throw new Error(`HTTP Status: ${response.status}`);
+        }
+
+        const newData: T = await response.json();
+
+        // 3. 성공 시 데이터 상태 갱신 및 캐시에 저장
+        setData(newData);
+        const newCacheEntry: CacheEntry<T> = {
+          data: newData,
+          lastFetched: new Date().getTime(), // 현재 시간을 타임스탬프로 저장
+        };
+        // 캐시 항목을 문자열로 직렬화하여 localStorage에 저장
+        localStorage.setItem(storageKey, JSON.stringify(newCacheEntry));
+      } catch (error) {
+        setIsError(true);
+        console.error('Fetch Failed:', error);
+      } finally {
+        setIsPending(false);
+      }
+    };
+
+    fetchData();
+  }, [url, storageKey]); // url이나 storageKey가 변경되면 useEffect 재실행
+
+  return { data, isPending, isError };
+};
+```
+
+업데이트된 `useCustomFetch` 훅은 데이터 요청 전에 `localStorage`를 확인한다. `STALE_TIME`을 기준으로 데이터의 신선도를 판단하여 네트워크 요청 여부를 결정한다.
+
+캐시가 `STALE_TIME` 이내일 경우 네트워크 요청을 완전히 생략한다. 로컬 스토리지의 데이터를 즉시 반환하여 **사용자 체감 속도와 성능을 대폭 향상**시킬 수 있다.
+
+---
+
+## 네트워크 요청 취소
+
+앞서 캐싱을 통해 불필요한 네트워크 요청을 줄이는 **효율성**을 확보했지만, 아직 해결되지 않은 문제가 있다. 바로 `경쟁 상태(Race Condition)`와 **리소스 낭비**다.
+
+**React Query**는 이 문제를 해결하기 위해 웹 표준 API인 `AbortController`를 적극적으로 활용한다.
+
+`AbortController`는 **진행 중인 비동기 요청을 중간에 취소**할 수 있게 해주는 핵심 메커니즘으로, React Query가 백그라운드에서 데이터를 안정적으로 관리하는 기반이 된다.
+
+1. `useCustomFetch`에 Abort Controller 구현
+
+```ts
+export const useCustomFetch = <T>(url: string) => {
+  // 서버에서 가져온 데이터를 저장하는 상태
+  const [data, setData] = useState<T | null>(null);
+  // 데이터 로딩 중 여부를 나타내는 상태
+  const [isPending, setIsPending] = useState<boolean>(false);
+  // 에러 발생 여부를 나타내는 상태
+  const [isError, setIsError] = useState<boolean>(false);
+
+  // URL을 localStorage 키로 사용 (useMemo로 불필요한 재계산 방지)
+  const storageKey = useMemo(() => url, [url]);
+
+  // fetch 요청을 취소하기 위한 AbortController 저장
+  // useRef를 사용하여 리렌더링 시에도 동일한 참조 유지
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    // useEffect가 실행될 때마다 새로운 AbortController 생성
+    abortControllerRef.current = new AbortController();
+    // 에러 상태 초기화
+    setIsError(false);
+
+    const fetchData = async () => {
+      const currentTime = new Date().getTime();
+      const cachedItem = localStorage.getItem(storageKey);
+
+      // 1. 로컬 스토리지에 캐시가 있는지 확인
+      if (cachedItem) {
+        try {
+          const cachedData: CacheEntry<T> = JSON.parse(cachedItem);
+
+          // 캐시가 신선한 경우 (STALE_TIME 이내) 네트워크 요청 생략
+          if (currentTime - cachedData.lastFetched < STALE_TIME) {
+            setData(cachedData.data);
+            setIsPending(false);
+            console.log(`[Cache Hit] Using fresh data for: ${url}`);
+            return; // 네트워크 요청 없이 함수 종료
+          }
+
+          // 캐시가 오래된 경우 먼저 보여주고 백그라운드에서 새 데이터 가져오기
+          setData(cachedData.data);
+          console.log(`[Cache Stale] Refetching data for: ${url}`);
+        } catch {
+          // JSON 파싱 실패 시 손상된 캐시 제거
+          localStorage.removeItem(storageKey);
+        }
+      }
+
+      // 2. 네트워크 요청 시작
+      setIsPending(true);
+
+      try {
+        // AbortController의 signal을 fetch에 전달하여 취소 가능하게 만듦
+        const response = await fetch(url, {
+          signal: abortControllerRef.current?.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP Status: ${response.status}`);
+        }
+
+        const newData: T = await response.json();
+        setData(newData);
+
+        // 3. 성공 시 새 데이터를 캐시에 저장
+        const newCacheEntry: CacheEntry<T> = {
+          data: newData,
+          lastFetched: new Date().getTime(),
+        };
+        localStorage.setItem(storageKey, JSON.stringify(newCacheEntry));
+      } catch (error) {
+        // 요청이 취소된 경우는 정상 동작이므로 에러로 처리하지 않음
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log(`[Fetch Cancelled] Request for ${url} was cancelled.`);
+          return;
+        }
+
+        // 실제 네트워크 에러인 경우 에러 상태 설정
+        setIsError(true);
+        console.error('Fetch Failed:', error);
+      } finally {
+        setIsPending(false);
+      }
+    };
+
+    fetchData();
+
+    // cleanup 함수: 컴포넌트 언마운트 또는 URL 변경 시 실행
+    return () => {
+      // 진행 중인 fetch 요청을 취소하여 불필요한 네트워크 활동 중단
+      // 이를 통해 경쟁 상태(Race Condition)를 방지하고 리소스 낭비 방지
+      abortControllerRef.current?.abort();
+    };
+  }, [url, storageKey]); // url이나 storageKey가 변경되면 useEffect 재실행
+
+  return { data, isPending, isError };
+};
+```
+
+`Abort Controller` 구현의 핵심 목적은 아래와 같다.
+
+1. `경쟁 상태(Race Condition)` 방지
+
+- `url` 값이 빠르게 변경되어 여러 개의 요청이 순차적으로 발생했을 때, `useEffect`의 **cleanup 함수**는 이전 요청을 즉시 `abort()` 시킨다. 이로 인해 응답이 늦게 도착한 **오래된 요청의 결과**가 상태를 덮어쓰는 문제를 원천적으로 차단할 수 있다.
+
+2. 리소스 최적화
+
+- 컴포넌트가 데이터를 불러오는 도중에 언마운트(화면에서 제거)되면, cleanup 함수가 불필요한 네트워크 요청을 중단시켜 서버 자원 및 클라이언트 메모리 낭비를 방지한다.
+
+이런식으로 간단하게 구현할 수 있을 것이다.
+
+```ts
+import { useState } from 'react';
+import { useCustomFetch } from '../hooks/useFetchData';
+
+interface WelcomeData {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export const WelcomeData = () => {
+  const [userId, setUserId] = useState<number>(1);
+  const [isVisible, setIsVisible] = useState<boolean>(true);
+
+  const handleChangeUser = () => {
+    const randomId = Math.floor(Math.random() * 10) + 1;
+    setUserId(randomId);
+  };
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+        <button onClick={handleChangeUser}>
+          다른 사용자 불러오기 (AbortController 테스트)
+        </button>
+        <button onClick={() => setIsVisible(!isVisible)}>
+          컴포넌트 토글 (언마운트 테스트)
+        </button>
+      </div>
+
+      {isVisible && <UserDataDisplay userId={userId} />}
+    </div>
+  );
+};
+
+const UserDataDisplay = ({ userId }: { userId: number }) => {
+  const { data, isPending, isError } = useCustomFetch<WelcomeData>(
+    `https://jsonplaceholder.typicode.com/users/${userId}`
+  );
+
+  if (isPending) {
+    return <div>Loading... (User ID: {userId})</div>;
+  }
+
+  if (isError) {
+    return <div>Error Occurred</div>;
+  }
+
+  return (
+    <div>
+      <h1>{data?.name}</h1>
+      <p>{data?.email}</p>
+      <p style={{ fontSize: '12px', color: '#666' }}>User ID: {data?.id}</p>
+    </div>
+  );
+};
+```
+
+간단하게 테스트를 해볼 수 있다.
+
+1. **URL 변경 테스트**
+
+- `"다른 사용자 불러오기"` 버튼을 빠르게 연달아 클릭한다. 콘솔에서 `[Fetch Cancelled]` 메시지가 출력되는지 확인해보자. 이는 마지막 요청을 제외한 모든 중간 요청이 `abort()` 호출로 인해 중단되었음을 의미한다.
+
+2. **언마운트 테스트**
+
+- 데이터가 로딩 중일 때 `"컴포넌트 토글"` 버튼을 클릭하여 `UserDataDisplay` 컴포넌트를 강제 언마운트한다. 이 경우에도 콘솔에서 취소 메시지를 확인할 수 있다. 불필요한 네트워크 활동이 즉시 멈춘다.
+
+이로써 `useCustomFetch` 훅은 **캐싱**을 통한 효율성 확보와 `Abort Controller`를 통한 **안정성**까지 갖추게 되었다.
+
+---
+
+## 나에게 기회를 줘..
+
+데이터 요청 과정에서 발생하는 네트워크 불안정이나 일시적인 서버 장애는 흔한 일이다.
+
+비록 오류 화면을 통해 사용자에게 피드백을 줄 수 있지만, **단순히 몇 초 후에 해결될 일시적인 에러**로 인해 사용자에게 실패 화면을 보여주는 것은 최적의 경험이 아니다.
+
+만약 일시적 오류 발생 시 자동으로 `요청을 재시도(Retry)`한다면 어떨까? 사용자에게는 오류 없이 한 번에 성공한 것처럼 보이게 되어 서비스의 복원력과 신뢰도가 크게 향상된다. 이는 React Query가 기본적으로 제공하는 중요한 기능 중 하나다.
+
+우리는 `useCustomFetch` 훅에 **최대 재시도 횟수**와 `지수 백오프(Exponential Backoff)` 전략을 적용하여 유사하게 재시도 기능을 구현해보겠다.
+
+---
+
+### 자동 재시도 로직이 적용된 `useCustomFetch`
+
+`MAX_RETRIES`와 `INITIAL_RETRY_DELAY` 상수를 정의하고, `fetchData` 함수에 재귀 호출을 통해 오류 시 자동으로 재시도하는 로직을 추가했다.
+
+```ts
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+// 최대 재시도 횟수
+const MAX_RETRIES = 3;
+// 초기 재시도 지연 시간 (밀리초)
+const INITIAL_RETRY_DELAY = 1000;
+
+export const useCustomFetch = <T>(url: string) => {
+  // 서버에서 가져온 데이터를 저장하는 상태
+  const [data, setData] = useState<T | null>(null);
+  // 데이터 로딩 중 여부를 나타내는 상태
+  const [isPending, setIsPending] = useState<boolean>(false);
+  // 에러 발생 여부를 나타내는 상태
+  const [isError, setIsError] = useState<boolean>(false);
+
+  // URL을 localStorage 키로 사용
+  const storageKey = useMemo(() => url, [url]);
+
+  // fetch 요청을 취소하기 위한 AbortController 저장
+  const abortControllerRef = useRef<AbortController | null>(null);
+  // 재시도 타이머 ID를 저장 (cleanup 시 타이머 취소에 사용)
+  const retryTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    // 새로운 요청을 위한 AbortController 생성
+    abortControllerRef.current = new AbortController();
+    setIsError(false);
+
+    // currentRetry: 현재까지 재시도한 횟수 (기본값 0)
+    const fetchData = async (currentRetry = 0) => {
+      const currentTime = new Date().getTime();
+      const cachedItem = localStorage.getItem(storageKey);
+
+      // 1. 캐시 확인 로직
+      if (cachedItem) {
+        try {
+          const cachedData: CacheEntry<T> = JSON.parse(cachedItem);
+
+          // 캐시가 신선한 경우 네트워크 요청 생략
+          if (currentTime - cachedData.lastFetched < STALE_TIME) {
+            setData(cachedData.data);
+            setIsPending(false);
+            return;
+          }
+
+          // 캐시가 오래된 경우 먼저 보여주고 백그라운드에서 새 데이터 가져오기
+          setData(cachedData.data);
+        } catch {
+          // 손상된 캐시 제거
+          localStorage.removeItem(storageKey);
+        }
+      }
+
+      // 2. 네트워크 요청
+      setIsPending(true);
+
+      try {
+        // signal을 전달하여 요청 취소 가능하게 설정
+        const response = await fetch(url, {
+          signal: abortControllerRef.current?.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP Status: ${response.status}`);
+        }
+
+        const newData: T = await response.json();
+        setData(newData);
+
+        // 캐시에 새 데이터 저장
+        const newCacheEntry: CacheEntry<T> = {
+          data: newData,
+          lastFetched: new Date().getTime(),
+        };
+        localStorage.setItem(storageKey, JSON.stringify(newCacheEntry));
+        setIsPending(false);
+      } catch (error) {
+        // 요청이 취소된 경우는 정상 동작이므로 에러로 처리하지 않음
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('[Fetch Cancelled] Request cancelled.');
+          return;
+        }
+
+        // 3. 재시도 로직
+        if (currentRetry < MAX_RETRIES) {
+          // 지수 백오프: 1초 → 2초 → 4초 → 8초...
+          const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, currentRetry);
+          console.log(
+            `[Retry ${
+              currentRetry + 1
+            }/${MAX_RETRIES}] Retrying in ${retryDelay}ms...`
+          );
+
+          // 지연 후 재귀적으로 fetchData 호출 (재시도 횟수 증가)
+          retryTimeoutRef.current = window.setTimeout(() => {
+            fetchData(currentRetry + 1);
+          }, retryDelay);
+        } else {
+          // 최대 재시도 횟수 초과 시 최종 에러 처리
+          setIsError(true);
+          setIsPending(false);
+          console.error(
+            `[Fetch Failed] Maximum retries (${MAX_RETRIES}) exceeded:`,
+            error
+          );
+        }
+      }
+    };
+
+    fetchData();
+
+    // cleanup 함수: 컴포넌트 언마운트 또는 의존성 변경 시 실행
+    return () => {
+      // 진행 중인 fetch 요청 취소
+      abortControllerRef.current?.abort();
+
+      // 예약된 재시도 타이머 취소
+      // 이를 통해 컴포넌트가 사라진 후에도 불필요한 재시도가 실행되는 것을 방지
+      if (retryTimeoutRef.current !== null) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+    };
+  }, [url, storageKey]);
+
+  return { data, isPending, isError };
+};
+```
+
+### 재시도 로직의 핵심 원리
+
+1. `지수 백오프(Exponential Backoff)`: 재시도 간의 간격을 2n (1초, 2초, 4초...) 형태로 늘려 연속적인 서버 부하를 줄이고 서버가 복구될 시간을 벌어준다.
+2. **안전한 취소**: `retryTimeoutRef`에 `setTimeout` ID를 저장하고 `useEffect`의 **cleanup 함수**에서 이를 `clearTimeout`하여, 컴포넌트가 언마운트되거나 URL이 변경될 때 **불필요한 재시도**가 계속 실행되는 것을 방지한다.
+
+---
+
+### 재시도 기능 테스트 컴포넌트
+
+새로 추가된 `"재시도 테스트 (404 에러)"` 버튼을 통해 의도적으로 오류를 발생시키고 자동 재시도 과정을 확인할 수 있다.
+
+```ts
+import { useState } from 'react';
+import { useCustomFetch } from '../hooks/useFetchData';
+
+interface WelcomeData {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export const WelcomeData = () => {
+  const [userId, setUserId] = useState<number>(1);
+  const [isVisible, setIsVisible] = useState<boolean>(true);
+
+  const handleChangeUser = () => {
+    const randomId = Math.floor(Math.random() * 10) + 1;
+    setUserId(randomId);
+  };
+
+  const handleTestRetry = () => {
+    setUserId(999999);
+  };
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <div
+        style={{
+          marginBottom: '20px',
+          display: 'flex',
+          gap: '10px',
+          flexWrap: 'wrap',
+        }}
+      >
+        <button onClick={handleChangeUser}>다른 사용자 불러오기</button>
+        <button onClick={() => setIsVisible(!isVisible)}>
+          컴포넌트 토글 (언마운트 테스트)
+        </button>
+        <button
+          onClick={handleTestRetry}
+          style={{ background: '#ff9800', color: 'white' }}
+        >
+          재시도 테스트 (404 에러)
+        </button>
+      </div>
+
+      {isVisible && <UserDataDisplay userId={userId} />}
+    </div>
+  );
+};
+
+const UserDataDisplay = ({ userId }: { userId: number }) => {
+  const { data, isPending, isError } = useCustomFetch<WelcomeData>(
+    `https://jsonplaceholder.typicode.com/users/${userId}`
+  );
+
+  if (isPending) {
+    return <div>Loading... (User ID: {userId})</div>;
+  }
+
+  if (isError) {
+    return <div>Error Occurred</div>;
+  }
+
+  return (
+    <div>
+      <h1>{data?.name}</h1>
+      <p>{data?.email}</p>
+      <p style={{ fontSize: '12px', color: '#666' }}>User ID: {data?.id}</p>
+    </div>
+  );
+};
+```
+
+### 테스트 결과 확인
+
+1. `"재시도 테스트"` 버튼을 클릭한다.
+2. **콘솔(Console)** 탭을 관찰한다
+   - 요청 실패 후 `[Retry 1/3] Retrying in 1000ms...`와 같은 메시지가 **최대 3회** 출력되는지 확인한다.
+   - 3회 재시도 후에도 실패하면 최종적으로 `[Fetch Failed] Maximum retries (3) exceeded` 메시지가 출력되고 화면에 `"Error Occurred"`가 표시된다.
+
+이로써 `useCustomFetch` 훅은 **캐싱**, **요청 취소**, 그리고 **자동 재시도**라는 React Query의 핵심 기능을 모두 갖추게 되어, 높은 성능과 안정성을 확보한 서버 상태 관리 훅으로 React Query와 유사하게 개선해보았다.
+
+---
+
+## 응 수고했어 그냥 리액트 쿼리 써.
+
+우리가 100줄이 넘는 코드로 구현해야 했던 복잡한 로직들(캐시 타임스탬프 관리, `setTimeout`/`clearTimeout` 처리, `AbortController` 연결 및 에러 분기 처리 등)은 React Query를 사용하면 **단 하나의 훅**과 **선언적인 설정**으로 대체된다.
+
+React Query는 이 모든 상태 관리와 네트워크 최적화를 개발자가 직접 구현할 필요 없이 **자동으로 처리**해주는 강력한 라이브러리다.
+
+React Query를 사용한 `useCustomFetch` 구현
+
+다음 코드는 우리가 수동으로 구현했던 모든 기능을 포함하여, 오히려 **더 안정적인** 서버 상태 관리 기능을 제공한다.
+
+```ts
+import { useQuery } from '@tanstack/react-query';
+
+export const useCustomFetch = <T>(url: string) => {
+  return useQuery({
+    // 쿼리 키: 데이터를 식별하고 캐싱하는 고유 키
+    // url이 같으면 같은 캐시를 공유하고, url이 다르면 별도로 관리
+    queryKey: [url],
+
+    // 쿼리 함수: 실제로 데이터를 가져오는 비동기 함수
+    // React Query가 자동으로 signal을 제공하여 요청 취소 지원
+    queryFn: async ({ signal }) => {
+      const response = await fetch(url, { signal });
+
+      if (!response.ok) {
+        throw new Error(`HTTP Status: ${response.status}`);
+      }
+
+      return response.json() as Promise<T>;
+    },
+
+    // 재시도 설정: 실패 시 최대 3회 자동 재시도
+    retry: 3,
+
+    // 재시도 지연 시간: 지수 백오프 전략
+    // 0회차: 1초, 1회차: 2초, 2회차: 4초 (최대 30초 제한)
+    retryDelay: (attemptIndex) =>
+      Math.min(1000 * Math.pow(2, attemptIndex), 30000),
+
+    // 데이터 신선도 관리: 5분 동안은 네트워크 요청 없이 캐시 사용
+    staleTime: 5 * 60 * 1000,
+
+    // 가비지 컬렉션: 쿼리가 사용되지 않은 채로 10분이 지나면 캐시에서 제거
+    gcTime: 10 * 60 * 1000,
+  });
+};
+```
+
+이처럼 React Query는 서버 상태 관리에 필요한 모든 복잡한 **절차적** 로직을 추상화하고 **선언적**인 API를 제공함으로써, 개발자가 비즈니스 로직에만 집중할 수 있도록 돕는 현대 React 개발의 표준이라고 할 수 있다.
+
+---
+
+## 마무리
+
+서비스 개발을 통해 고객에게 기쁨을 주는 경험은 내가 개발을 좋아하는 가장 큰 이유다. 직접 서버와 프론트엔드를 구현하며 프로젝트를 배포하여 이것들을 누군가 좋아해주는 과정에서 큰 보람을 느꼈다.
+
+최근 Vue.js와 Vite를 만든 **Evan You**와 같은 개발자들을 보며, 개발자들에게 편리함을 제공하는 **프레임워크, 라이브러리, 번들러**를 만드는 일 역시 사용자에게 직접적인 가치를 전달하는 것만큼이나 **가치 있는 일**이라고 생각하게 되었다.
+
+아직 실력이 부족하지만, 개발의 방향을 **도구의 창조자**로 확장하고자 한다.
+
+1. **기술의 원리 분석:** 현재 사용하고 있는 라이브러리와 프레임워크들을 **분해하고 분석**하는 과정을 통해, 그들이 해결하고자 했던 **근본적인 문제**와 **설계 의도**를 깊이 이해하는 데 집중하고자 한다.
+2. **생태계 기여:** 오픈 소스 프로젝트에 기여하며 경험을 쌓고, 궁극적으로 개발 커뮤니티에 **유용하고 혁신적인 번들러나 라이브러리를 직접 만들어 제공**할 수 있는 실력을 갖추고자 한다.
+
+많이 힘들겠지만, **서비스 개발의 보람**과 **개발 환경 개선의 가치**를 모두 추구하며, 기술 생태계에 긍정적인 영향을 미치는 개발자로 성장해 보고 싶다.

@@ -1,3 +1,11 @@
 User-agent: *
 Allow: /
+
+# Disallow crawling of Vercel deployment previews
+User-agent: *
+Disallow: /_next/
+Disallow: /api/
+
+# Main sitemap
 Sitemap: https://www.yolog.co.kr/sitemap.xml
+Sitemap: https://www.yolog.co.kr/sitemap-index.xml

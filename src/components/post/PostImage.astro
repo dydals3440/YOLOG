@@ -1,6 +1,6 @@
 ---
 import fs from 'node:fs/promises'
-
+import { Image } from 'astro:assets'
 import { getPlaiceholder } from 'plaiceholder'
 
 type Props = {
@@ -39,16 +39,20 @@ const {
 <figure>
   <div class="relative block overflow-hidden">
     <div style={css} class="absolute inset-0 -z-10 blur-2xl filter"></div>
-    <img {src} {alt} {width} {height} />
+    <Image
+      src={src}
+      alt={alt}
+      width={width}
+      height={height}
+      format="webp"
+      quality={80}
+    />
   </div>
   {isValidCaption && <figcaption class="w-full text-center">{alt}</figcaption>}
 </figure>
 
 <style>
   figure {
-    animation: fadeIn 0.2s ease-out;
-  }
-  img.loaded {
     animation: fadeIn 0.2s ease-out;
   }
 
@@ -61,15 +65,3 @@ const {
     }
   }
 </style>
-
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const imgList = document.querySelectorAll('.mdx figure img')
-
-    imgList.forEach((img) => {
-      img.addEventListener('load', () => {
-        img.classList.add('loaded')
-      })
-    })
-  })
-</script>
