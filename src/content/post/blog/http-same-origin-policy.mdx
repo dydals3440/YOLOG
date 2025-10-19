@@ -16,7 +16,7 @@ tags:
     보안 가이드,
   ]
 category: HTTP
-image: '/images/http-same-origin-policy/thumbnail.png'
+image: '/images/http-same-origin-policy/thumbnail.webp'
 ---
 
 import Highlight from '@/components/mdx/Highlight'
@@ -25,7 +25,7 @@ import Highlight from '@/components/mdx/Highlight'
 
 `Same Origin Policy(SOP)`는 **브라우저가 자체적으로 적용하는 핵심 보안 메커니즘**입니다.
 
-![Same Origin Policy](/images/http-same-origin-policy/thumbnail.png)
+![Same Origin Policy](/images/http-same-origin-policy/thumbnail.webp)
 
 `CSP(Content Security Policy)`가 서버에서 정책을 설정하고 브라우저가 수행하는 보안 시스템이라면,
 `SOP(Same Origin Policy)`는 **브라우저가 스스로 자원의 출처를 관리하는 정책**입니다.
@@ -61,7 +61,7 @@ import Highlight from '@/components/mdx/Highlight'
 
 실제 공격 시나리오를 통해 `SOP(Same Origin Policy)`가 어떻게 보안을 강화하는지 살펴보겠습니다.
 
-![input에 악성 스크립트 주입](/images/http-same-origin-policy/1.png)
+![input에 악성 스크립트 주입](/images/http-same-origin-policy/1.webp)
 
 위 코드에서 `fetch` 함수는 다른 출처의 사이트로 네트워크 요청을 보내려고 시도합니다.
 
@@ -106,7 +106,7 @@ res.write(`
 `);
 ```
 
-![교차 출처 웹 폰트 차단 에러](/images/http-same-origin-policy/2.png)
+![교차 출처 웹 폰트 차단 에러](/images/http-same-origin-policy/2.webp)
 
 결과는 동일합니다. **교차 출처 요청 차단** 오류가 발생하며,
 브라우저는 "**동일 출처 정책으로 인해 `MyCustomFont`에 있는 원격 리소스를 차단했습니다**"라고 알려줍니다.
@@ -126,7 +126,7 @@ res.write(`
 모든 리소스가 차단되는 것은 아닙니다.
 웹의 기본적인 동작을 위해 **일부 리소스는 교차 출처 접근이 허용**됩니다:
 
-![교차 출처로 삽입할 수 있는 리소스 예시](/images/http-same-origin-policy/3.png)
+![교차 출처로 삽입할 수 있는 리소스 예시](/images/http-same-origin-policy/3.webp)
 
 ### 허용되는 교차 출처 리소스
 

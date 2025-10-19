@@ -4,7 +4,7 @@ date: 2025-08-27
 updatedDate: 2025-08-27
 tags: [WebSocket, HTTP, 실시간통신, 채팅구현, WebSocket핸드셰이크, 양방향통신]
 category: HTTP
-image: '/images/http-websocket/thumbnail.png'
+image: '/images/http-websocket/thumbnail.webp'
 ---
 
 import Highlight from '@/components/mdx/Highlight'
@@ -17,7 +17,7 @@ HTTP는 클라이언트가 요청하면 서버가 응답하는 단방향 통신�
 
 이번 포스트에서는 HTTP의 한계를 극복하고 진정한 실시간 양방향 통신을 가능하게 하는 WebSocket 프로토콜을 깊이 있게 살펴보겠습니다.
 
-![고구마 매출을 올릴려면 웹소켓도 필요해](/images/http-websocket/thumbnail.png)
+![고구마 매출을 올릴려면 웹소켓도 필요해](/images/http-websocket/thumbnail.webp)
 
 ## 1. WebSocket이 필요한 이유
 
@@ -117,7 +117,7 @@ Connection: Upgrade                    # 연결 업그레이드 확인
 Sec-WebSocket-Accept: [해시값]         # 클라이언트 키의 검증 값
 ```
 
-![netcat 명령어를 활용한 응답 확인](/images/http-websocket/1.png)
+![netcat 명령어를 활용한 응답 확인](/images/http-websocket/1.webp)
 
 **핵심 포인트:**
 
@@ -161,19 +161,19 @@ ws.onerror = (error) => {
 };
 ```
 
-![브라우저 console에서 웹소켓 연결 요청](/images/http-websocket/2.png)
+![브라우저 console에서 웹소켓 연결 요청](/images/http-websocket/2.webp)
 
 ### Network 탭에서 WebSocket 통신 확인
 
 개발자 도구의 Network 탭에서 WebSocket 연결을 아래와 같이 확인할 수 있습니다.
 
-![브라우저 network 탭에서 웹소켓 연결 확인](/images/http-websocket/3.png)
+![브라우저 network 탭에서 웹소켓 연결 확인](/images/http-websocket/3.webp)
 
 - **Status**: 101 Switching Protocols 확인 가능
 - **Headers**: Upgrade: websocket, Sec-WebSocket-Key, Sec-WebSocket-Version 등 확인
 - **Messages**: 실시간으로 주고받는 메시지 확인 가능
 
-![브라우저 Messages 에서 주고받은 메시지 확인](/images/http-websocket/4.png)
+![브라우저 Messages 에서 주고받은 메시지 확인](/images/http-websocket/4.webp)
 
 ---
 
@@ -493,15 +493,15 @@ document.addEventListener('DOMContentLoaded', init);
 
 채팅 애플리케이션을 실행하면 다음과 같은 화면을 볼 수 있습니다:
 
-![만든 웹 사이트로, 연결된 것을 확인](/images/http-websocket/5.png)
+![만든 웹 사이트로, 연결된 것을 확인](/images/http-websocket/5.webp)
 
 여러 브라우저 탭이나 창을 열어서 실시간 채팅을 테스트할 수 있습니다:
 
-![고구마를 좋아하는지 여부를 채팅으로 나누는 이야기 확인](/images/http-websocket/6.png)
+![고구마를 좋아하는지 여부를 채팅으로 나누는 이야기 확인](/images/http-websocket/6.webp)
 
 개발자 도구의 Network 탭 > WS(WebSocket) 필터를 선택하면 실시간으로 주고받는 메시지를 확인할 수 있습니다:
 
-![Messages 탭에서 메시지들을 확인할 수 있다.](/images/http-websocket/7.png)
+![Messages 탭에서 메시지들을 확인할 수 있다.](/images/http-websocket/7.webp)
 
 ---
 

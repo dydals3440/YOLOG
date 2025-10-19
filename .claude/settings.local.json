@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(cat:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(for dir in */)",
+      "Bash(do echo \"=== $dir ===\")",
+      "Bash(ls \"$dir\")",
+      "Bash(done)",
+      "Bash(while read png)",
+      "Bash(do base=\"$png%.png\")",
+      "Bash(if [ -f \"$base.webp\" ])",
+      "Bash(then echo \"$png\")",
+      "Bash(fi)"
     ],
     "deny": [],
     "ask": []

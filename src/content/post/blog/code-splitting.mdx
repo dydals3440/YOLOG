@@ -4,7 +4,7 @@ date: 2025-02-27
 updatedDate: 2025-02-27
 tags: [리액트, 성능 최적화]
 category: DEVELOPMENT
-image: '/images/code-splitting/vite-bundle.png'
+image: '/images/code-splitting/vite-bundle.webp'
 ---
 
 import Highlight from '@/components/mdx/Highlight'
@@ -27,7 +27,7 @@ import Highlight from '@/components/mdx/Highlight'
 pnpm run build
 ```
 
-![매우 큰 빌드 사이즈](/images/code-splitting/vite-bundle.png)
+![매우 큰 빌드 사이즈](/images/code-splitting/vite-bundle.webp)
 
 이렇게, 빌드를하게 되면 위의 이미지 처럼 기존에 하나의 자바스크립트 파일에, 내가 만든 모든, 리액트 파일이 담긴 것을 알 수 있다.
 
@@ -153,13 +153,13 @@ function App() {
 
 `Before`
 
-![이전 빌드 결과](/images/code-splitting/splitting-result.png)
-![이전 빌드 결과](/images/code-splitting/before.png)
+![이전 빌드 결과](/images/code-splitting/splitting-result.webp)
+![이전 빌드 결과](/images/code-splitting/before.webp)
 
 `After`
 
-![코드 스플리팅 이후 빌드 결과](/images/code-splitting/build-file.png)
-![코드 스플리팅 이후 빌드 결과](/images/code-splitting/after.png)
+![코드 스플리팅 이후 빌드 결과](/images/code-splitting/build-file.webp)
+![코드 스플리팅 이후 빌드 결과](/images/code-splitting/after.webp)
 
 ---
 
@@ -169,7 +169,7 @@ function App() {
 
 ### → 라이브러리 전체 중, 일부만 사용한다면, 부분 설치를 하자.
 
-![lodash의 엄청난 크기](/images/code-splitting/before-install.png)
+![lodash의 엄청난 크기](/images/code-splitting/before-install.webp)
 
 `lodash`는, 자바스크립트의 정말, 인기있는 라이브러리 중 하나입니다. 배열이나, 컬렉션, 날짜 등 데이터의 필수적인 구조를 쉽게 다룰 수 있게끔 하는데 사용됩니다.
 
@@ -252,6 +252,6 @@ pnpm run build
 
 빌드 이후에, 바로 아래와 같은 사진이 나오게 됩니다.
 
-![rollup-plugin-visualizer 설치 후 빌드 결과](/images/code-splitting/after-install.png)
+![rollup-plugin-visualizer 설치 후 빌드 결과](/images/code-splitting/after-install.webp)
 
 라이브러리의 번들 크기가, 너무 크고 혹시라도 대체제가 있다면, 다른 대체 라이브러리를 설치하는 것으로, 웹 애플리케이션의 빌드 시간을 개선할 수 도 있고, 위에서 설명드린, 다양한 기법들로도 이를 개선할 수 있습니다.

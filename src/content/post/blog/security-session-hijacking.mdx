@@ -13,7 +13,7 @@ tags:
     웹취약점,
   ]
 category: HTTP
-image: '/images/security-session-hijacking/thumbnail.png'
+image: '/images/security-session-hijacking/thumbnail.webp'
 ---
 
 import Highlight from '@/components/mdx/Highlight'
@@ -26,7 +26,7 @@ import Highlight from '@/components/mdx/Highlight'
 
 이번 포스트에서는 `Node.js`로 직접 **취약한 인증 시스템**을 구현하고, **실제 공격**을 시연한 후, **방어 방법**까지 단계별로 알아보겠습니다.
 
-![세션 하이재킹 공격 시나리오](/images/security-session-hijacking/thumbnail.png)
+![세션 하이재킹 공격 시나리오](/images/security-session-hijacking/thumbnail.webp)
 
 ## 1. 세션과 쿠키: 웹 인증의 기본 이해하기
 
@@ -203,16 +203,16 @@ node vulnerable-app.js
 ```
 
 **1. 초기 화면 (로그인 전)**
-![루트 경로의 화면](/images/security-session-hijacking/1.png)
+![루트 경로의 화면](/images/security-session-hijacking/1.webp)
 
 **2. 로그인 후 화면**
-![로그인 후 유저 정보가 보이는 화면](/images/security-session-hijacking/2.png)
+![로그인 후 유저 정보가 보이는 화면](/images/security-session-hijacking/2.webp)
 
 `/login` 경로 접속 시 세션이 생성되고, 사용자 정보가 표시됩니다.
 
 **3. 로그아웃 후 화면**
 
-![로그아웃 후 유저 정보가 보이지 않는 화면](/images/security-session-hijacking/3.png)
+![로그아웃 후 유저 정보가 보이지 않는 화면](/images/security-session-hijacking/3.webp)
 
 로그아웃 시 `Max-Age=-1`로 쿠키가 즉시 만료되어 다시 손님 상태로 돌아갑니다.
 
@@ -275,7 +275,7 @@ sudo vi /private/etc/hosts
 127.0.0.1   hacker.com
 ```
 
-![로컬 DNS 설정](/images/security-session-hijacking/4.png)
+![로컬 DNS 설정](/images/security-session-hijacking/4.webp)
 
 **matthew.com**: 정상 서비스 도메인 (포트 8080)
 **hacker.com**: 공격자 서버 도메인 (포트 8081)
@@ -342,7 +342,7 @@ node attacker-server.js
 </script>
 ```
 
-![악성 스크립트 주입](/images/security-session-hijacking/5.png)
+![악성 스크립트 주입](/images/security-session-hijacking/5.webp)
 
 이 스크립트는:
 
@@ -354,11 +354,11 @@ node attacker-server.js
 
 브라우저 개발자 도구의 네트워크 탭을 확인하면:
 
-![쿠키가 쿼리 문자열에 담겨 전달](/images/security-session-hijacking/6.png)
+![쿠키가 쿼리 문자열에 담겨 전달](/images/security-session-hijacking/6.webp)
 
 공격자 서버의 로그를 확인하면:
 
-![해커 서버에 세션 정보가 로깅됨](/images/security-session-hijacking/7.png)
+![해커 서버에 세션 정보가 로깅됨](/images/security-session-hijacking/7.webp)
 
 :::warning
 
@@ -376,7 +376,7 @@ curl http://matthew.com:8080 -H "Cookie: sid=session-id-1756852495508"
 
 응답 결과:
 
-![세션 정보를 활용한 무단 접근](/images/security-session-hijacking/8.png)
+![세션 정보를 활용한 무단 접근](/images/security-session-hijacking/8.webp)
 
 **공격자가 Matthew의 계정에 완전히 접근했습니다!** 😱
 
@@ -456,13 +456,13 @@ const login = (req, res) => {
 
 동일한 악성 스크립트를 주입해도:
 
-![HttpOnly 적용 후 쿠키 접근 차단](/images/security-session-hijacking/9.png)
+![HttpOnly 적용 후 쿠키 접근 차단](/images/security-session-hijacking/9.webp)
 
 네트워크 요청은 발생하지만 **쿠키 값이 비어있습니다**.
 
 공격자 서버 로그:
 
-![공격자 서버에 쿠키값이 전달되지 않음](/images/security-session-hijacking/10.png)
+![공격자 서버에 쿠키값이 전달되지 않음](/images/security-session-hijacking/10.webp)
 
 **쿼리스트링에 쿠키값이 비어있다는 것을 확인할 수 있습니다.**
 

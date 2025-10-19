@@ -13,7 +13,7 @@ tags:
     보안헤더,
   ]
 category: HTTP
-image: '/images/security-csrf/thumbnail.png'
+image: '/images/security-csrf/thumbnail.webp'
 ---
 
 import Highlight from '@/components/mdx/Highlight'
@@ -26,7 +26,7 @@ import Highlight from '@/components/mdx/Highlight'
 
 이번 포스트에서는 직접 **공격 서버**를 구축하고, **실제 공격**을 시연한 후, **SameSite 쿠키**와 **CSRF 토큰**으로 방어하는 방법까지 단계별로 실습해보겠습니다.
 
-![CSRF 공격](/images/security-csrf/thumbnail.png)
+![CSRF 공격](/images/security-csrf/thumbnail.webp)
 
 ## 1. CSRF 공격이란? 피해자 모르게 실행되는 위험한 요청
 
@@ -114,7 +114,7 @@ server.listen(8082, () => {
 
 기본적으로 브라우저가 조치해주는 보안 기능을 끈 것입니다.
 
-![Firefox 브라우저 보안 설정 해제](/images/security-csrf/1.png)
+![Firefox 브라우저 보안 설정 해제](/images/security-csrf/1.webp)
 
 :::info
 
@@ -135,7 +135,7 @@ server.listen(8082, () => {
 
 먼저 `matthew.com`에 정상적으로 로그인합니다:
 
-![matthew.com 로그인 및 세션 쿠키 발급](/images/security-csrf/2.png)
+![matthew.com 로그인 및 세션 쿠키 발급](/images/security-csrf/2.webp)
 
 - `http://matthew.com:8080/login` 접속
 - 세션 ID가 쿠키로 저장됨
@@ -145,7 +145,7 @@ server.listen(8082, () => {
 
 이제 다른 탭에서 공격자 사이트를 방문해보겠습니다:
 
-![hacker.com:8082 접속 화면](/images/security-csrf/3.png)
+![hacker.com:8082 접속 화면](/images/security-csrf/3.webp)
 
 ### 공격 메커니즘 분석
 
@@ -156,7 +156,7 @@ server.listen(8082, () => {
 3. **자동 요청**: 이것이 바로 `matthew.com:8080`으로 요청을 보내는 것
 4. **쿠키 자동 전송**: 이때 중요한 것은 쿠키 값도 똑같이 보낸다는 것입니다! 🚨
 
-![CSRF 공격: 인증 쿠키가 자동으로 전송됨](/images/security-csrf/4.png)
+![CSRF 공격: 인증 쿠키가 자동으로 전송됨](/images/security-csrf/4.webp)
 
 ### 공격 성공! 무슨 일이 일어났나?
 
@@ -231,7 +231,7 @@ const login = (req, res) => {
 };
 ```
 
-![SameSite=Strict 쿠키 설정 확인](/images/security-csrf/5.png)
+![SameSite=Strict 쿠키 설정 확인](/images/security-csrf/5.webp)
 
 ### 공격 재시도
 
@@ -239,7 +239,7 @@ const login = (req, res) => {
 
 다시 `hacker.com:8082`로 들어가서 요청을 보내보겠습니다:
 
-![SameSite 적용 후: 쿠키가 전송되지 않음](/images/security-csrf/6.png)
+![SameSite 적용 후: 쿠키가 전송되지 않음](/images/security-csrf/6.webp)
 
 이미지 태그를 발견하고 `matthew.com` 쪽으로 요청을 보내는데, 이때 쿠키 값을 보면 SID 쿠키가 없습니다.
 
@@ -269,7 +269,7 @@ Cookie: (비어있음)  ← 쿠키가 전송되지 않음! ✅
 
 이 `SameSite` 쿠키는 MDN 문서에서 한 번 자세하게 읽어보는 것이 좋습니다.
 
-![MDN: SameSite 쿠키 문서](/images/security-csrf/7.png)
+![MDN: SameSite 쿠키 문서](/images/security-csrf/7.webp)
 
 이런 식으로, 아직 실험 중인 기법입니다.
 아직은 여전히 실험 중이면서 모든 브라우저에 제공되지 않고 있다고 합니다.
@@ -280,7 +280,7 @@ Cookie: (비어있음)  ← 쿠키가 전송되지 않음! ✅
 - `Chrome` 80부터 기본값이 `Lax`로 변경됨
 - Safari는 일부 버그가 있을 수 있음
 
-![Can I Use: SameSite 브라우저 지원 현황](/images/security-csrf/8.png)
+![Can I Use: SameSite 브라우저 지원 현황](/images/security-csrf/8.webp)
 
 ---
 
@@ -415,7 +415,7 @@ const validateCSRFToken = (req) => {
 
 구글의 reCAPTCHA 같은 서비스를 통해 자동화된 공격을 차단할 수 있습니다:
 
-![Google reCAPTCHA 예시 - CAPTCHA는 이런 것을 의미해요](/images/security-csrf/9.png)
+![Google reCAPTCHA 예시 - CAPTCHA는 이런 것을 의미해요](/images/security-csrf/9.webp)
 
 사용하는 방법은 아래와 같습니다. 매우 간단한 예제로 직접 만들어보겠습니다:
 

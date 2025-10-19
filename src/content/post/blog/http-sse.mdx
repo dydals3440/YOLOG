@@ -4,14 +4,14 @@ date: 2025-08-26
 updatedDate: 2025-08-26
 tags: [HTTP, SSE, Server-Sent Events, 실시간 통신, EventSource]
 category: HTTP
-image: '/images/http-sse/thumbnail.png'
+image: '/images/http-sse/thumbnail.webp'
 ---
 
 import Highlight from '@/components/mdx/Highlight'
 
 # HTTP 통신 기법: SSE(Server-Sent Events) 이해와 구현
 
-![SSE](/images/http-sse/thumbnail.png)
+![SSE](/images/http-sse/thumbnail.webp)
 
 ## SSE란?
 
@@ -282,9 +282,9 @@ const init = () => {
 document.addEventListener('DOMContentLoaded', init);
 ```
 
-![SSE 연결 성공](/images/http-sse/1.png)
+![SSE 연결 성공](/images/http-sse/1.webp)
 
-![실제로 메시지를 받고도 계속해서 SSE 연결이 유지 됨](/images/http-sse/2.png)
+![실제로 메시지를 받고도 계속해서 SSE 연결이 유지 됨](/images/http-sse/2.webp)
 
 브라우저에서는 서버로부터 새로운 알림이 도착했고, 네트워크 요청도 끊어지지 않고 계속 유지되고 있습니다.
 
@@ -308,7 +308,7 @@ curl http://localhost:8080/update \
 {"text":"고구마 아이스크림","timestamp":1756036021866}
 ```
 
-![두번째 메시지도 정상 수신됨을 확인할 수 있음](/images/http-sse/3.png)
+![두번째 메시지도 정상 수신됨을 확인할 수 있음](/images/http-sse/3.webp)
 
 [폴링](https://www.yolog.co.kr/post/http-polling)이나 [롱폴링](https://www.yolog.co.kr/post/http-long-polling)과 비교했을 때, Server-Sent Events는 더 간단하게 구현할 수 있습니다. 한번 연결하면 계속 메시지를 받을 수 있죠.
 
@@ -328,12 +328,12 @@ fetch를 사용할 때는 클라이언트의 요청으로 시작해서, 서버�
 
 서버와 연결된 상태에서 서버를 종료시켜보겠습니다.
 
-![서버 종료 후 자동 재연결 시도](/images/http-sse/4.png)
+![서버 종료 후 자동 재연결 시도](/images/http-sse/4.webp)
 
 > 서버를 종료하면 브라우저는 기존 연결이 끊긴 것을 감지하고, 자동으로 새로운 요청을 생성합니다.
 > 서버가 꺼져있으니 실패하지만, 브라우저는 포기하지 않고 계속 재연결을 시도합니다.
 
-![서버 재실행 시 자동으로 연결 복구](/images/http-sse/5.png)
+![서버 재실행 시 자동으로 연결 복구](/images/http-sse/5.webp)
 
 > 서버를 다시 실행하면 대기 중이던 요청이 성공하며 연결이 자동 복구됩니다.
 
@@ -396,7 +396,7 @@ const subscribe = (req, res) => {
 2. **서버 종료 후 재시작**
 3. **브라우저 재연결 시도**:
 
-![Last-Event-ID 헤더 전송](/images/http-sse/6.png)
+![Last-Event-ID 헤더 전송](/images/http-sse/6.webp)
 
 > 브라우저가 재연결할 때 Request Headers에 `Last-Event-ID: 1756036714406`를 포함시킵니다.
 > 이는 마지막으로 받은 이벤트의 ID로, 서버가 놓친 메시지를 파악하는 기준이 됩니다.

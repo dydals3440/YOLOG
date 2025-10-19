@@ -1,0 +1,400 @@
+---
+title: HTTP 캐싱 이해하기 — Last-Modified, ETag, Cache-Control로 웹 성능 최적화
+date: 2025-10-19
+updatedDate: 2025-10-19
+tags:
+  [
+    HTTP,
+    Caching,
+    Cache-Control,
+    ETag,
+    Last-Modified,
+    Expires,
+    Vary,
+    브라우저 캐시,
+    프록시 캐시,
+    CDN,
+    성능 최적화,
+  ]
+category: HTTP
+image: '/images/http-cache/thumbnail.webp'
+---
+
+## 캐싱
+
+웹사이트를 방문할 때마다 같은 이미지와 스크립트를 반복해서 다운로드한다면 얼마나 비효율적일까? [Cache](https://developer.mozilla.org/ko/docs/Web/HTTP/Caching)는 이런 낭비를 막기 위해 한 번 받은 데이터를 임시 저장소에 보관하는 기술이다.
+
+마치 집 근처 편의점에서 물건을 사는 것과 도매시장까지 가는 것의 차이와 같다. 서울에서 미국 서버까지 왕복하는 시간은 약 200ms 정도 걸린다. 하지만 브라우저 캐시에서 꺼내면 단 몇ms만에 완료된다. 네트워크 요청 하나를 줄이는 것만으로도 페이지 로딩 속도가 크게 빨라지고, 서버 비용도 절감할 수 있다.
+
+[HTTP 캐싱](https://developer.mozilla.org/ko/docs/Web/HTTP/Caching)은 브라우저와 서버가 협력하는 메커니즘이다. 서버가 "이 파일은 1년간 캐시해도 돼"라고 정책을 정하면, 브라우저는 그 기간 동안 서버에 재요청하지 않고 저장된 파일을 사용한다. 이 정책은 [HTTP 헤더](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers)를 통해 전달된다.
+
+HTTP 캐싱은 크게 두 가지 방식으로 신선도를 검증한다:
+
+1. **시간 기반 캐싱**: 파일의 수정 시각을 기준으로 판단
+2. **내용 기반 캐싱**: 파일 내용의 해시값을 기준으로 판단
+
+브라우저가 캐시를 사용할지 말지는 간단한 질문으로 결정된다. "이 파일이 아직 신선한가?" 신선하다면 캐시를 그대로 사용하고, 오래되었다면 서버에서 새로운 파일을 받아온다. 그럼 각 방식이 어떻게 이 신선도를 판단하는지 살펴보자.
+
+---
+
+## 시간 기반 캐싱
+
+시간 기반 캐싱의 핵심은 "파일이 언제 마지막으로 수정되었는가?"다. 파일의 수정 시각이 변하지 않았다면 내용도 바뀌지 않았을 가능성이 높다는 가정에서 출발한다.
+
+마치 우유 유통기한을 확인하는 것과 비슷하다. 제조일자가 같다면 아마 똑같은 우유일 것이다. 시간 기반 캐싱도 이와 같은 원리로 동작한다.
+
+Node.js로 간단한 정적 파일 서버를 만들면서 시간 기반 캐싱이 어떻게 동작하는지 살펴보자.
+
+```js
+fs.stat(filepath, (err, stat) => {
+  // 파일의 메타데이터를 가져온다
+  const modified = stat.mtime;
+
+  // Last-Modified 헤더에 수정 시간을 담아 응답한다
+  res.setHeader('Last-Modified', modified.toUTCString());
+
+  // 파일 내용을 읽어서 응답한다
+  fs.readFile(filepath, (err, data) => {
+    res.write(data);
+    res.end();
+  });
+});
+```
+
+[fs.stat](https://nodejs.org/api/fs.html#fsstatpath-options-callback)을 활용해서 파일의 메타데이터를 가져올 수 있다. 여기서 핵심은 [`Last-Modified`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Last-Modified) 헤더에 파일의 마지막 수정 시간을 담아서 보내는 것이다.
+
+브라우저는 이 응답을 받으면 파일과 함께 `Last-Modified` 값을 캐시에 저장한다.
+
+![응답 헤더 Last-Modified](/images/http-cache/1.webp)
+
+위 이미지를 보면 서버가 응답 헤더에 `Last-Modified` 값을 담아 보낸 것을 확인할 수 있다.
+
+이제 사용자가 새로고침을 누르면 어떻게 될까? 브라우저는 "이 파일이 아직 신선한가?"라고 서버에 물어본다. 이때 [`If-Modified-Since`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/If-Modified-Since) 헤더에 이전에 받았던 수정 시간을 담아서 요청을 보낸다.
+
+![요청 헤더 If-Modified-Since](/images/http-cache/2.webp)
+
+위 이미지에서 브라우저가 요청 헤더의 `If-Modified-Since`에 날짜를 실어 보낸 것을 확인할 수 있다. "이 시간 이후로 수정된 게 있나요?"라고 서버에 묻는 것이다.
+
+서버는 이 요청을 받으면 두 가지 중 하나를 선택한다:
+
+1. **파일이 수정되었다면**: 새로운 파일과 함께 [`200 OK`](https://developer.mozilla.org/ko/docs/Web/HTTP/Status/200)를 응답한다
+2. **파일이 수정되지 않았다면**: 본문 없이 [`304 Not Modified`](https://developer.mozilla.org/ko/docs/Web/HTTP/Status/304)만 응답한다
+
+304 응답은 "캐시에 있는 파일 그대로 써도 돼"라는 의미다. 브라우저는 이 응답을 받으면 네트워크를 통해 파일을 다시 받지 않고 캐시에 있는 파일을 사용한다.
+
+이 로직을 코드로 구현해보자.
+
+```js
+fs.stat(filepath, (err, stat) => {
+  const modified = stat.mtime;
+
+  // If-Modified-Since 헤더가 있다면 신선도를 검증한다
+  if (req.headers['if-modified-since']) {
+    const modifiedSince = new Date(req.headers['if-modified-since']);
+    const isFresh = modifiedSince.getTime() >= modified.getTime();
+
+    // 신선하다면 304 Not Modified를 응답한다
+    if (isFresh) {
+      res.statusCode = 304;
+      res.end();
+      return;
+    }
+  }
+
+  // 신선하지 않거나 첫 요청이라면 파일과 Last-Modified를 응답한다
+  res.setHeader('Last-Modified', modified.toUTCString());
+  fs.readFile(filepath, (err, data) => {
+    res.write(data);
+    res.end();
+  });
+});
+```
+
+`If-Modified-Since` 헤더를 확인해서 캐시 신선도를 판단하는 로직이 추가되었다. 파일이 변경되지 않았다면 본문 없이 304 상태 코드만 응답한다.
+
+실제로 어떻게 동작하는지 확인해보자. 먼저 캐시를 비활성화하고 요청을 보내면:
+
+![캐시를 사용하지 않고 요청을 하면 응답 헤더에 Last-Modified가 있음](/images/http-cache/3.webp)
+
+응답 헤더에 `Last-Modified`가 포함되어 있다. 브라우저는 이 값을 캐시와 함께 저장한다.
+
+이제 다시 새로고침을 해보면:
+
+![캐시를 사용하고 요청을 바로 보내면, If-Modified-Since에 날짜가 있음](/images/http-cache/4.webp)
+
+요청 헤더의 `If-Modified-Since`에 이전에 받았던 수정 시간이 담겨 있다. 서버는 이 값과 실제 파일의 수정 시간을 비교해서 변경 여부를 판단한다. 파일이 변경되지 않았다면 304를 응답하고, 브라우저는 캐시에 있는 파일을 그대로 사용한다.
+
+이런 일련의 과정으로 브라우저와 서버는 시간 기반 캐싱 시스템을 구동한다. 매번 파일 전체를 다운로드하지 않고도 최신 상태를 유지할 수 있다.
+
+---
+
+## 내용 기반 캐싱
+
+시간 기반 캐싱에는 한계가 있다. 파일을 아무것도 수정하지 않고 저장만 해도 수정일은 바뀐다. 또한 `Last-Modified`는 초 단위이기 때문에 1초 이내에 여러 번 수정이 일어나면 감지하지 못한다.
+
+더 정확한 방법이 필요하다. 바로 **파일 내용 자체**를 비교하는 것이다.
+
+[`ETag`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/ETag)는 `Entity Tag`의 약자로, 파일 내용의 고유한 지문(fingerprint) 같은 역할을 한다. 파일 내용이나 메타데이터를 해시 함수에 넣어 생성한 고유한 문자열이다.
+
+해시 함수는 입력받은 데이터를 고정된 길이의 값으로 변환하는 함수다. 입력값이 조금이라도 다르면 해시값이 완전히 달라지는 특징이 있어서 파일의 변경을 감지하는 데 적합하다.
+
+마치 사람의 지문처럼, 파일 내용이 조금이라도 바뀌면 `ETag` 값도 완전히 달라진다. 이제 서버가 `ETag` 값을 계산해서 응답 헤더에 실어 보내는 방법을 살펴보자.
+
+```js
+fs.stat(filepath, (err, stat) => {
+  // 파일 수정 시간과 크기를 조합해서 ETag 생성
+  const etag = `${stat.mtime.getTime().toString(16)}-${stat.size.toString(16)}`;
+
+  res.setHeader('ETag', etag);
+  res.setHeader('Last-Modified', stat.mtime.toUTCString());
+
+  fs.readFile(filepath, (err, data) => {
+    res.write(data);
+    res.end();
+  });
+});
+```
+
+파일의 수정 시간과 크기를 조합해서 `ETag` 값을 만들었다. 실제로는 더 복잡한 해시 알고리즘을 사용할 수 있지만, 여기서는 간단한 예시로 구현했다.
+
+캐시를 비활성화하고 요청을 보내보자.
+
+![캐시를 사용하지 않고 요청을 하면 응답 헤더에 ETag가 있음](/images/http-cache/5.webp)
+
+응답 헤더에 우리가 만든 `ETag` 값이 포함되어 있다.
+
+브라우저는 이 `ETag` 값을 파일과 함께 캐시에 저장한다. 이제 다시 요청을 보내면 어떻게 될까?
+
+![캐시를 사용하고 요청을 바로 보내면, If-None-Match에 ETag가 있음](/images/http-cache/6.webp)
+
+브라우저가 요청 헤더의 [`If-None-Match`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/If-None-Match)에 이전에 받았던 `ETag` 값을 담아 보낸다. "이 `ETag`와 일치하지 않는 파일 있나요?"라고 서버에 묻는 것이다.
+
+서버는 이 요청을 받으면 두 가지 중 하나를 선택한다:
+
+1. **ETag 값이 다르다면**: 파일이 변경되었으므로 새로운 파일과 함께 200 OK를 응답한다
+2. **ETag 값이 같다면**: 파일이 변경되지 않았으므로 304 Not Modified를 응답한다
+
+```js
+fs.stat(filepath, (err, stat) => {
+  const etag = `${stat.mtime.getTime().toString(16)}-${stat.size.toString(16)}`;
+
+  // If-None-Match 헤더가 있다면 ETag를 비교한다
+  const ifNoneMatch = req.headers['if-none-match'];
+  if (ifNoneMatch && ifNoneMatch === etag) {
+    // ETag가 같다면 304 Not Modified를 응답한다
+    res.statusCode = 304;
+    res.end();
+    return;
+  }
+
+  // ETag가 다르거나 첫 요청이라면 파일과 ETag를 응답한다
+  res.setHeader('ETag', etag);
+  fs.readFile(filepath, (err, data) => {
+    res.write(data);
+    res.end();
+  });
+});
+```
+
+`If-None-Match` 헤더를 확인해서 `ETag`를 비교하는 로직이 추가되었다. `ETag` 값이 같으면 파일이 변경되지 않았으므로 304만 응답한다.
+
+이제 내용 기반 캐싱이 완성되었다. 시간 기반 캐싱과 달리 파일 내용이 실제로 변경되었을 때만 새로 다운로드하므로 더 정확하다.
+
+실제로 파일을 수정해서 크기를 변경하면 어떻게 될까? `ETag` 값이 달라지므로 서버는 200 OK와 함께 새로운 파일을 응답한다. 브라우저는 기존 캐시를 새로운 파일과 `ETag`로 교체한다.
+
+이런 일련의 과정으로 브라우저와 서버는 내용 기반 캐싱 시스템을 구동한다. 파일 수정 시간에 의존하지 않고 실제 내용 변경만을 감지하므로 더 정확한 캐시 관리가 가능하다.
+
+---
+
+## 캐시 제어
+
+지금까지 살펴본 `Last-Modified`와 `ETag`는 브라우저가 매번 서버에 접속해서 신선도를 확인해야 한다. 304 응답을 받더라도 네트워크 왕복 시간(RTT)은 여전히 발생한다.
+
+더 빠를 수는 없을까? 서버에 아예 접속하지 않고 브라우저 캐시만 사용한다면 성능을 극대화할 수 있을 것이다.
+
+[`Cache-Control`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Cache-Control)은 캐싱 정책을 세밀하게 제어할 수 있는 HTTP 헤더다. HTTP 1.1에서 정의되었으며, 이 헤더를 사용하면 브라우저의 캐싱 동작을 정교하게 조절할 수 있다.
+
+`Cache-Control`의 주요 디렉티브(directive) 세 가지를 살펴보자.
+
+### 1. max-age
+
+`max-age`는 캐시의 유효 기간을 초 단위로 지정한다.
+
+```http
+Cache-Control: max-age=31536000
+```
+
+위처럼 설정하면 브라우저는 1년(31536000초) 동안 서버에 전혀 접속하지 않고 캐시만 사용한다. 마치 냉장고에 보관한 음식의 유통기한과 같다. 유통기한 전이라면 매번 신선도를 확인할 필요 없이 바로 먹을 수 있다.
+
+`max-age=0`으로 설정하면 유효기간이 없다는 의미이므로 브라우저는 매번 서버에 접속해야 한다.
+
+### 2. no-cache
+
+`no-cache`는 캐시를 저장하되, 사용하기 전에 항상 서버에 확인하라는 의미다.
+
+```http
+Cache-Control: no-cache
+```
+
+이름이 "캐시하지 마라"처럼 보이지만 실제로는 "캐시는 하되 매번 검증하라"는 뜻이다. 브라우저는 파일을 캐시에 저장하지만, 사용하기 전에 `If-Modified-Since`나 `If-None-Match`를 서버에 보내서 신선도를 확인한다.
+
+### 3. no-store
+
+`no-store`는 아예 캐시를 저장하지 말라는 의미다.
+
+```http
+Cache-Control: no-store
+```
+
+개인정보나 민감한 금융 정보처럼 절대 캐시해서는 안 되는 데이터에 사용한다. 브라우저는 이 응답을 받으면 캐시에 저장하지 않으며, 다음 요청 시 캐시 관련 헤더를 아예 보내지 않는다.
+
+---
+
+## 기타 캐싱 헤더
+
+### Expires
+
+[`Expires`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Expires)는 캐시의 만료 시점을 절대 시간으로 지정하는 헤더다. HTTP 1.0에서 정의되었다.
+
+```http
+Expires: Tue, 31 Dec 2025 15:00:00 GMT
+```
+
+이 날짜까지는 캐시를 사용하고, 그 이후에는 서버에 새로 요청하라는 의미다. `Cache-Control: max-age`와 비슷하지만 몇 가지 차이가 있다:
+
+- `Expires`: 절대 시간 지정 (예: 2025년 12월 31일)
+- `max-age`: 상대 시간 지정 (예: 1년)
+
+만약 `Cache-Control`과 `Expires`가 동시에 있다면 `Cache-Control`이 우선순위가 높다. 요즘은 대부분 `Cache-Control`을 사용하며, `Expires`는 하위 호환성을 위해 함께 보내는 경우가 많다.
+
+### Vary
+
+[`Vary`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Vary)는 캐시를 구분하는 기준을 지정하는 헤더다. 같은 URL이라도 요청 헤더에 따라 다른 응답을 돌려줄 수 있는데, 이때 어떤 헤더를 기준으로 캐시를 구분할지 알려준다.
+
+예를 들어, 같은 페이지를 요청해도 브라우저 언어 설정에 따라 한글 버전과 영어 버전이 다르게 제공된다고 해보자.
+
+```http
+GET /api/article/1
+Accept-Language: ko
+```
+
+위 요청에는 한글 문서를 응답하고, 브라우저는 이를 캐시에 저장한다. 그런데 사용자가 언어를 영어로 바꾸고 다시 요청하면 어떻게 될까? 브라우저는 같은 URL이므로 캐시에 있는 한글 문서를 보여줄 것이다. 영어로 보여야 하는데 한글로 보이는 문제가 발생한다.
+
+이때 `Vary` 헤더를 사용한다.
+
+```http
+Vary: Accept-Language
+```
+
+이렇게 응답하면 브라우저는 URL뿐만 아니라 `Accept-Language`도 함께 캐시 키로 사용한다.
+
+```
+캐시 키: (URL, Accept-Language: ko) → 한글 문서
+캐시 키: (URL, Accept-Language: en) → 영어 문서
+```
+
+이제 언어를 바꾸면 다른 캐시 키로 인식되므로 올바른 문서를 제공할 수 있다.
+
+`Vary`는 [`Accept-Encoding`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Accept-Encoding)(압축 방식), [`User-Agent`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/User-Agent)(브라우저 종류) 등 다양한 요청 헤더를 기준으로 사용할 수 있다. 콘텐츠 협상(Content Negotiation)이 필요한 경우 필수적인 헤더다.
+
+---
+
+## 캐싱 활용 전략
+
+이제 실제 웹 애플리케이션에서 캐싱을 어떻게 활용하면 좋을지 살펴보자.
+
+### 정적 자원은 길게 캐시하기
+
+캐싱 성능을 극대화하려면 브라우저가 네트워크 요청을 아예 하지 않는 것이 가장 좋다. 애플리케이션 로딩 시간의 대부분은 네트워크 통신에서 발생하기 때문이다.
+
+JavaScript, CSS, 이미지 같은 정적 자원은 한 번 배포하면 거의 바뀌지 않는다. 따라서 `Cache-Control: max-age`를 최대한 길게 설정하는 것이 유리하다.
+
+[RFC 문서](https://www.rfc-editor.org/rfc/rfc7234#section-5.3)에서는 1년(31536000초) 정도의 캐시를 권장한다.
+
+```js
+if (ext === '.js' || ext === '.css') {
+  res.setHeader('Cache-Control', 'max-age=31536000');
+}
+```
+
+이렇게 설정하면 JavaScript와 CSS 파일은 1년 동안 캐시된다.
+
+### 파일명 해싱으로 캐시 무효화하기
+
+그런데 문제가 있다. 1년 동안 캐시된다면 코드를 수정해서 배포해도 사용자는 여전히 오래된 파일을 보게 된다.
+
+해결책은 간단하다. **URL 자체를 바꾸는 것이다.** 브라우저는 URL을 캐시 키로 사용하므로, URL이 바뀌면 새로운 파일로 인식한다.
+
+Webpack 같은 번들러는 파일 내용이 바뀔 때마다 파일명에 해시를 포함시킬 수 있다.
+
+```js
+// webpack.config.js
+module.exports = {
+  output: {
+    filename: '[name].[contenthash].js',
+  },
+};
+```
+
+이렇게 설정하면 파일 내용이 바뀔 때마다 다른 파일명이 생성된다.
+
+```html
+<!-- 배포 전 -->
+<script src="/app.abc123.js"></script>
+
+<!-- 배포 후 (코드 수정 시) -->
+<script src="/app.def456.js"></script>
+```
+
+파일명이 바뀌었으므로 브라우저는 기존 캐시를 사용하지 않고 새 파일을 다운로드한다. 이를 **캐시 버스팅(Cache Busting)**이라고 한다.
+
+### HTML은 짧게 캐시하기
+
+그런데 HTML 파일은 어떻게 해야 할까? HTML은 JavaScript 파일의 경로를 담고 있으므로 이름이 고정되어야 한다. `index.html`이 배포할 때마다 `index.abc123.html`로 바뀌면 브라우저가 어떤 파일을 요청해야 할지 알 수 없다.
+
+따라서 HTML은 항상 최신 버전을 제공해야 한다. `no-cache`로 설정해서 매번 서버에 확인하도록 하는 것이 좋다.
+
+```js
+if (ext === '.js' || ext === '.css') {
+  res.setHeader('Cache-Control', 'max-age=31536000');
+} else if (ext === '.html') {
+  res.setHeader('Cache-Control', 'no-cache');
+}
+```
+
+`no-cache`를 설정하면 브라우저는 HTML 파일을 캐시에 저장하되, 사용하기 전에 매번 서버에 신선도를 확인한다. 서버는 `If-None-Match`나 `If-Modified-Since`를 확인해서 304를 응답하거나 새로운 HTML을 보낸다.
+
+### 캐싱 전략 정리
+
+정리하면 다음과 같은 전략을 사용하면 된다:
+
+1. **정적 자원 (JS, CSS, 이미지)**: `Cache-Control: max-age=31536000` + 파일명 해싱
+
+   - 장점: 서버 접속 없이 즉시 로딩
+   - 배포: 파일명이 바뀌므로 자동으로 갱신됨
+
+2. **HTML**: `Cache-Control: no-cache`
+
+   - 장점: 항상 최신 JavaScript 경로 제공
+   - 단점: 매번 서버 확인 필요 (하지만 304 응답은 빠름)
+
+3. **API 응답**: 상황에 따라 다름
+   - 자주 바뀌는 데이터: `Cache-Control: no-cache` 또는 `max-age=60` (짧은 시간)
+   - 거의 안 바뀌는 데이터: `max-age=3600` (1시간) 등
+
+이런 전략을 사용하면 성능과 최신성을 모두 만족할 수 있다.
+
+---
+
+:::note
+**핵심 정리**
+
+- **시간 기반 캐싱**: `Last-Modified`와 `If-Modified-Since` 헤더를 활용하여 파일의 수정 시간을 기준으로 캐시 신선도를 판단한다
+- **내용 기반 캐싱**: `ETag`와 `If-None-Match` 헤더를 활용하여 파일의 해시값을 기준으로 캐시 신선도를 판단한다
+- **캐시 제어**: `Cache-Control` 헤더로 캐싱 정책을 세밀하게 제어할 수 있다
+  - `max-age`: 일정 기간 동안 서버에 접속하지 않고 캐시 사용
+  - `no-cache`: 매번 서버에 캐시 신선도 확인
+  - `no-store`: 캐시를 저장하지 않음
+- **캐싱 전략**: 정적 자원(JS, CSS)은 긴 캐시 기간 설정, HTML은 `no-cache`로 설정하여 최신 버전 제공
+- **파일 버전 관리**: 번들링 시 파일명에 해시값을 포함하여 배포 시마다 캐시 갱신
+  :::

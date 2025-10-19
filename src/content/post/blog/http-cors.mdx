@@ -17,7 +17,7 @@ tags:
     프론트엔드 보안,
   ]
 category: HTTP
-image: '/images/http-cors/thumbnail.png'
+image: '/images/http-cors/thumbnail.webp'
 ---
 
 import Highlight from '@/components/mdx/Highlight'
@@ -26,7 +26,7 @@ import Highlight from '@/components/mdx/Highlight'
 
 <Highlight color="blue">CORS(Cross-Origin Resource Sharing)</Highlight>는 **브라우저에서 다른 출처에 있는 리소스를 사용할 수 있는 규칙**입니다.
 
-![CORS](/images/http-cors/thumbnail.png)
+![CORS](/images/http-cors/thumbnail.webp)
 
 지난 장에서 살펴본 것처럼 브라우저의 <Highlight color="blue">동일 출처 정책(Same-Origin Policy)</Highlight>으로 인해 출처가 다른 리소스에 접근할 수 없는 상황에 직면하게 됩니다.
 
@@ -82,7 +82,7 @@ const server = http.createServer(handler);
 server.listen(8080, () => console.log('server is running ::8080'));
 ```
 
-![제대로 데이터를 받아오는 사진](/images/http-cors/1.png)
+![제대로 데이터를 받아오는 사진](/images/http-cors/1.webp)
 
 실제로 서버를 실행하고 `localhost:8080`으로 접속하면 **`GET`** `http://localhost:8080/resource.json`이라는 네트워크 요청을 만들고, 응답값인 JSON 문자열을 화면에 출력합니다.
 
@@ -129,11 +129,11 @@ document.addEventListener('DOMContentLoaded', init);
 
 이제 `localhost:8080`에 접속해보겠습니다.
 
-![요청은 보냈고, 응답도 받았지만, 스크립트에는 응답 본문을 사용할 수 없음이라고 표기](/images/http-cors/2.png)
+![요청은 보냈고, 응답도 받았지만, 스크립트에는 응답 본문을 사용할 수 없음이라고 표기](/images/http-cors/2.webp)
 
 `8081`번 포트로 요청을 보내고 응답도 받았지만, **스크립트에서 응답 본문을 사용할 수 없다**는 메시지가 표시됩니다.
 
-![콘솔에서도 교차 출처 요청 차단이라는 경고 문구 표시](/images/http-cors/3.png)
+![콘솔에서도 교차 출처 요청 차단이라는 경고 문구 표시](/images/http-cors/3.webp)
 
 ### CORS 에러 분석
 
@@ -173,7 +173,7 @@ server.listen(port, () => console.log(`server is running ::${port}`));
 
 다시 서버를 두 개 실행해봅시다:
 
-![정상적으로 데이터를 서버로부터 받아오는 사진](/images/http-cors/4.png)
+![정상적으로 데이터를 서버로부터 받아오는 사진](/images/http-cors/4.webp)
 
 이번에는 정상적으로 네트워크 요청이 전송되었습니다. 서버 `8081`로 요청을 보냈고, 응답도 받았으며, 브라우저가 이 응답을 차단하지도 않았습니다.
 
@@ -203,7 +203,7 @@ server.listen(port, () => console.log(`server is running ::${port}`));
 
 방금 우리가 사용한 <Highlight color="blue">GET</Highlight> 메소드는 단순 요청에 해당합니다. 브라우저는 다른 출처의 자원을 사용하기 위해 HTTP 요청을 만들 때 <Highlight color="blue">Origin</Highlight> 헤더에 현재 출처를 실어서 보냅니다.
 
-![요청 헤더의 Origin에 이 애플리케이션을 실행한 URL이 담겨있음을 확인할 수 있는 사진](/images/http-cors/5.png)
+![요청 헤더의 Origin에 이 애플리케이션을 실행한 URL이 담겨있음을 확인할 수 있는 사진](/images/http-cors/5.webp)
 
 요청 헤더의 <Highlight color="blue">Origin</Highlight>에 현재 애플리케이션이 실행된 URL이 담겨있는 것을 확인할 수 있습니다. 이것이 바로 **현재 출처**입니다.
 
@@ -211,13 +211,13 @@ server.listen(port, () => console.log(`server is running ::${port}`));
 
 서버는 자원을 제공하겠다는 의미로 응답 헤더에 <Highlight color="blue">Access-Control-Allow-Origin</Highlight>을 포함시킵니다:
 
-![Access-Control-Allow-Origin 여기에 내 출처를 실어준다.](/images/http-cors/6.png)
+![Access-Control-Allow-Origin 여기에 내 출처를 실어준다.](/images/http-cors/6.webp)
 
 응답을 받은 브라우저는 이 헤더에 **자신의 출처가 포함되어 있는지** 확인합니다. 포함되어 있다면 "서버가 자원 사용을 허락했다"고 판단하여 응답을 사용합니다.
 
 ## 안전한 헤더 목록
 
-![CORS 허용 목록에 있는 요청 헤더](/images/http-cors/7.png)
+![CORS 허용 목록에 있는 요청 헤더](/images/http-cors/7.webp)
 
 안전한 헤더 목록:
 
@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 브라우저를 새로고침하면 다음과 같은 에러가 발생합니다:
 
-![커스텀 헤더를 보냈지만, 동일 출처 정책으로 인해 응답을 받을 수 없음](/images/http-cors/8.png)
+![커스텀 헤더를 보냈지만, 동일 출처 정책으로 인해 응답을 받을 수 없음](/images/http-cors/8.webp)
 
 <Highlight color="blue">동일 출처 정책</Highlight>으로 인해 원격 리소스가 차단되었습니다. <Highlight color="blue">Access-Control-Allow-Headers</Highlight>에 헤더 <Highlight>X-Goguma</Highlight>가 허용되지 않았다고 표시됩니다.
 
@@ -280,7 +280,7 @@ server.listen(port, () => console.log(`server is running ::${port}`));
 
 서버를 재시작하면 이제 정상적으로 요청이 처리됩니다:
 
-![제대로 응답을 받을 수 있는 사진](/images/http-cors/9.png)
+![제대로 응답을 받을 수 있는 사진](/images/http-cors/9.webp)
 
 요청 헤더에 <Highlight>X-Goguma</Highlight>가 정상적으로 포함되어 전송된 것을 확인할 수 있습니다.
 
@@ -315,13 +315,13 @@ document.addEventListener('DOMContentLoaded', init);
 
 브라우저에서 다음과 같은 오류가 발생합니다:
 
-![동일 출처 정책으로 인해 8080에 있는 리소스를 차단했습니다. Access-Control-Allow-Methods에 PUT 메소드가 없다고 출력한다.](/images/http-cors/10.png)
+![동일 출처 정책으로 인해 8080에 있는 리소스를 차단했습니다. Access-Control-Allow-Methods에 PUT 메소드가 없다고 출력한다.](/images/http-cors/10.webp)
 
 <Highlight color="blue">동일 출처 정책</Highlight>으로 인해 리소스가 차단되었으며, <Highlight color="blue">Access-Control-Allow-Methods</Highlight>에 <Highlight color="blue">PUT</Highlight> 메소드가 없다고 표시됩니다.
 
 네트워크 탭을 확인하면 더 자세한 정보를 볼 수 있습니다:
 
-![네트워크 탭에도 오류가 발생함](/images/http-cors/11.png)
+![네트워크 탭에도 오류가 발생함](/images/http-cors/11.webp)
 
 ### Preflight 요청 분석
 
@@ -357,7 +357,7 @@ server.listen(port, () => console.log(`server is running ::${port}`));
 
 서버를 재시작하면 정상적으로 동작합니다:
 
-![PUT 요청 응답을 브라우저에서 허용해줌](/images/http-cors/12.png)
+![PUT 요청 응답을 브라우저에서 허용해줌](/images/http-cors/12.webp)
 
 ### 사전 요청과 실제 요청의 흐름
 
@@ -369,7 +369,7 @@ server.listen(port, () => console.log(`server is running ::${port}`));
 
 2. **실제 요청(PUT)**:
 
-![실제로 PUT 요청이 보내지고, 응답 본문이 실려옴](/images/http-cors/13.png)
+![실제로 PUT 요청이 보내지고, 응답 본문이 실려옴](/images/http-cors/13.webp)
 
 실제 <Highlight color="blue">PUT</Highlight> 요청이 전송되고, 응답 본문도 정상적으로 수신되었습니다.
 
@@ -404,13 +404,13 @@ server.listen(port, () => console.log(`server is running ::${port}`));
 
 ### 첫 번째 요청
 
-![첫 요청은 당연히 캐싱한 데이터가 없으므로 OPTIONS 요청이 날라감](/images/http-cors/14.png)
+![첫 요청은 당연히 캐싱한 데이터가 없으므로 OPTIONS 요청이 날라감](/images/http-cors/14.webp)
 
 처음에는 <Highlight color="blue">OPTIONS</Highlight> 사전 요청이 발생합니다.
 
 ### 10초 이내 재요청
 
-![10초 이내의 요청은 당연히 캐싱한 데이터가 있으므로 OPTIONS 요청이 날라가지 않음](/images/http-cors/14.png)
+![10초 이내의 요청은 당연히 캐싱한 데이터가 있으므로 OPTIONS 요청이 날라가지 않음](/images/http-cors/14.webp)
 
 10초 이내에 다시 요청하면 <Highlight color="blue">OPTIONS</Highlight> 요청이 **생략**됩니다. 캐시된 사전 요청 결과를 사용하기 때문입니다.
 
@@ -422,7 +422,7 @@ server.listen(port, () => console.log(`server is running ::${port}`));
 
 CORS를 사용하는 요청은 특정 API와 리소스에 한정됩니다.
 
-![CORS를 사용하는 요청](/images/http-cors/15.png)
+![CORS를 사용하는 요청](/images/http-cors/15.webp)
 
 ## 주요 CORS 사용 요청
 
