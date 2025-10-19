@@ -19,7 +19,7 @@ import Highlight from '@/components/mdx/Highlight'
 
 ## CURL이란?
 
-`CURL(Client for URL)`은 개발을 하면서, 상당히 많이 듣고 활용도 자주 했지만 실제로 약자에 대해서는 이번에 처음 알게 되었다.
+`CURL(Client for URL)`은 개발을 하면서 상당히 많이 듣고 활용도 자주 했지만, 실제로 약자에 대해서는 이번에 처음 알게 되었다.
 
 맥북 같은 경우는 감사하게도 자체적으로 curl이 내장 기능으로 탑재되어 있다.
 
@@ -32,10 +32,10 @@ curl https://dummyjson.com/comments/1
 # {"id":1,"body":"This is some awesome thinking!","postId":242,"likes":3,"user":{"id":105,"username":"emmac","fullName":"Emma Wilson"}}%
 ```
 
-실제로, 이런식으로 **CURL**을 활용해서 서버에 요청을 보내서 응답을 출력할 수 있다.
-윈도우 같은 경우에는 https://curl.se/windows/ 이 쪽에서 설치를 해야 하는 것으로 알고 있다.
+실제로 이런 식으로 **CURL**을 활용해서 서버에 요청을 보내서 응답을 출력할 수 있다.
+윈도우 같은 경우에는 https://curl.se/windows/ 이 쪽에서 설치를 해야 한다.
 
-조금 더 요청에 대한 자세한 정보를 보고싶으면 아래와 같이 하면된다.
+조금 더 요청에 대한 자세한 정보를 보고 싶으면 아래와 같이 하면 된다.
 
 ```bash
 # mac
@@ -46,11 +46,13 @@ curl https://dummyjson.com/comments/1 --verbose
 
 실제로 보면, 엄청 자세한 정보들이 담겨서 오게 된다.
 
-다양한 정보들이 보이지만, 오늘은 요청과 응답에 대해 알아보는 것이 목표이므로 아래를 중점으로 다루어볼려고 한다.
+마치 택배 상자를 열어서 송장부터 포장 방식, 내용물까지 하나하나 확인하는 것과 같다. `--verbose` 옵션은 HTTP 통신의 모든 과정을 낱낱이 보여준다.
+
+다양한 정보들이 보이지만, 오늘은 요청과 응답에 대해 알아보는 것이 목표이므로 아래를 중점으로 다루어본다.
 
 ---
 
-## **> : 클라이언트 → 서버로 보내는 요청 헤더**
+## > : 클라이언트 → 서버로 보내는 요청 헤더
 
 ```bash
 > GET /comments/1 HTTP/2
@@ -61,14 +63,14 @@ curl https://dummyjson.com/comments/1 --verbose
 
 | 항목                     | 설명                                                                                                                                                    |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /comments/1 HTTP/2` | 클라이언트가 `/comments/1` 경로에 대해 **GET 메서드**로 요청을 보냄. HTTP/2는 클라이언트가 지원하는 HTTP 버전 (curl이 제안한 ALPN 중 서버가 선택한 것). |
-| `Host: dummyjson.com`    | **가상 호스팅** 서버를 위해 요청하는 대상 도메인을 명시.                                                                                                |
-| `User-Agent: curl/8.7.1` | 요청을 보낸 클라이언트의 정보. 여기서는 curl이라는 HTTP 클라이언트 도구의 버전.                                                                         |
-| `Accept: */*`            | 어떤 타입의 응답도 받아들일 수 있다는 의미. (`*/*` = all media types)                                                                                   |
+| `GET /comments/1 HTTP/2` | 클라이언트가 `/comments/1` 경로에 대해 **[`GET`](https://developer.mozilla.org/ko/docs/Web/HTTP/Methods/GET) 메서드**로 요청을 보냄. HTTP/2는 클라이언트가 지원하는 HTTP 버전 (curl이 제안한 ALPN 중 서버가 선택한 것). |
+| [`Host`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Host)`: dummyjson.com`    | **가상 호스팅** 서버를 위해 요청하는 대상 도메인을 명시.                                                                                                |
+| [`User-Agent`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/User-Agent)`: curl/8.7.1` | 요청을 보낸 클라이언트의 정보. 여기서는 curl이라는 HTTP 클라이언트 도구의 버전.                                                                         |
+| [`Accept`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Accept)`: */*`            | 어떤 타입의 응답도 받아들일 수 있다는 의미. (`*/*` = all media types)                                                                                   |
 
 ---
 
-## **< : 서버 → 클라이언트로 보낸 응답 헤더**
+## < : 서버 → 클라이언트로 보낸 응답 헤더
 
 ```bash
 < HTTP/2 200
@@ -95,24 +97,24 @@ curl https://dummyjson.com/comments/1 --verbose
 
 | 항목                                            | 설명                                                                               |
 | ----------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `HTTP/2 200`                                    | 응답 상태줄. 서버가 **HTTP/2**로 요청에 성공적으로 응답했고, 상태 코드는 `200 OK`. |
-| `access-control-allow-origin: *`                | **CORS 정책** 허용. 모든 출처에서의 접근 허용.                                     |
-| `content-type: application/json; charset=utf-8` | 응답 본문이 **JSON 형식**이고, UTF-8 문자 인코딩 사용.                             |
-| `date`                                          | 서버가 응답을 생성한 시간 (RFC 1123 포맷).                                         |
-| `etag`                                          | 응답 본문의 고유한 식별자. 캐싱이나 변경 감지에 사용.                              |
+| [`HTTP/2 200`](https://developer.mozilla.org/ko/docs/Web/HTTP/Status/200)                                    | 응답 상태줄. 서버가 **HTTP/2**로 요청에 성공적으로 응답했고, 상태 코드는 `200 OK`. |
+| [`access-control-allow-origin`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Access-Control-Allow-Origin)`: *`                | **CORS 정책** 허용. 모든 출처에서의 접근 허용.                                     |
+| [`content-type`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Type)`: application/json; charset=utf-8` | 응답 본문이 **JSON 형식**이고, UTF-8 문자 인코딩 사용.                             |
+| [`date`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Date)                                          | 서버가 응답을 생성한 시간 (RFC 1123 포맷).                                         |
+| [`etag`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/ETag)                                          | 응답 본문의 고유한 식별자. 캐싱이나 변경 감지에 사용.                              |
 | `server`                                        | 서버 소프트웨어 정보 (`railway-edge`).                                             |
-| `strict-transport-security`                     | HTTPS 연결을 강제하는 보안 정책.                                                   |
-| `vary: Accept-Encoding`                         | 클라이언트의 `Accept-Encoding`에 따라 응답이 달라질 수 있음을 나타냄.              |
-| `x-content-type-options: nosniff`               | 브라우저가 MIME 타입을 추측하지 못하게 방지 (보안).                                |
+| [`strict-transport-security`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Strict-Transport-Security)                     | HTTPS 연결을 강제하는 보안 정책.                                                   |
+| [`vary`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Vary)`: Accept-Encoding`                         | 클라이언트의 `Accept-Encoding`에 따라 응답이 달라질 수 있음을 나타냄.              |
+| [`x-content-type-options`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/X-Content-Type-Options)`: nosniff`               | 브라우저가 MIME 타입을 추측하지 못하게 방지 (보안).                                |
 | `x-dns-prefetch-control: off`                   | 브라우저의 DNS prefetching 비활성화.                                               |
 | `x-download-options: noopen`                    | 파일 다운로드 시 자동 실행 방지 (IE용).                                            |
-| `x-frame-options: SAMEORIGIN`                   | [XSS](https://www.yolog.co.kr/post/security-xss) 공격을 막기 위해 iframe 삽입 제한.                                             |
+| [`x-frame-options`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/X-Frame-Options)`: SAMEORIGIN`                   | [XSS](https://www.yolog.co.kr/post/security-xss) 공격을 막기 위해 iframe 삽입 제한.                                             |
 | `x-powered-by: Cats on Keyboards`               | 서버가 장난스럽게 자신을 소개. 실질적 의미 없음.                                   |
 | `x-railway-*`                                   | Railway(호스팅 서비스)에서 붙이는 정보. 엣지 위치 및 요청 ID.                      |
 | `x-ratelimit-*`                                 | API 호출 제한 관련 정보. (예: 100개 중 아직 99개 남음)                             |
-| `content-length: 133`                           | 응답 본문의 **바이트 수**.                                                         |
+| [`content-length`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Length)`: 133`                           | 응답 본문의 **바이트 수**.                                                         |
 
-### **✅ 응답 본문 (Body)**
+### 응답 본문 (Body)
 
 응답 헤더가 끝나고 한 줄 비운 뒤에 실제 데이터(JSON)가 내려온다:
 
@@ -125,3 +127,21 @@ curl https://dummyjson.com/comments/1 --verbose
   "user": { "id": 105, "username": "emmac", "fullName": "Emma Wilson" }
 }
 ```
+
+---
+
+## 마치며
+
+CURL은 단순히 API를 테스트하는 도구가 아니라, HTTP 통신의 모든 과정을 이해할 수 있게 해주는 강력한 학습 도구다.
+
+:::note
+**핵심 정리**
+
+- **CURL이란**: URL을 받아 서버로 요청을 보내고 응답을 출력하는 CLI 도구
+- **--verbose 옵션**: 요청 헤더(`>`), 응답 헤더(`<`) 등 HTTP 통신의 모든 과정을 상세히 표시
+- **요청 헤더**: `GET`, `Host`, `User-Agent`, `Accept` 등 클라이언트가 서버에게 보내는 정보
+- **응답 헤더**: `Content-Type`, `ETag`, `Access-Control-Allow-Origin` 등 서버가 클라이언트에게 보내는 메타데이터
+- **활용**: API 디버깅, HTTP 통신 학습, 서버 응답 분석 등에 유용
+
+**CURL의 `--verbose` 옵션은 HTTP 통신을 배우는 가장 좋은 방법 중 하나다.**
+:::

@@ -7,9 +7,7 @@ category: HTTP
 image: '/images/http-network-request/thumbnail.webp'
 ---
 
-import Highlight from '@/components/mdx/Highlight'
-
-이번 포스트에서는 사용자가 URL을 입력한 순간부터 HTML 문서가 렌더링되는 과정, 그리고 HTML 안에서 발생하는 다양한 리소스 요청과 Form 요청까지를 예시와 함께 살펴보겠습니다.
+이번 포스트에서는 사용자가 URL을 입력한 순간부터 HTML 문서가 렌더링되는 과정, 그리고 HTML 안에서 발생하는 다양한 리소스 요청과 Form 요청까지를 예시와 함께 살펴보겠다.
 
 ![HTML 렌더링과 리소스 요청 과정](/images/http-network-request/thumbnail.webp)
 
@@ -17,12 +15,14 @@ import Highlight from '@/components/mdx/Highlight'
 
 ## 1. HTML 문서 요청과 렌더링 과정
 
-1. 사용자가 브라우저 주소창에 `https://example.com`을 입력합니다.
-2. 브라우저는 해당 서버로 HTTP 요청을 보냅니다.
-3. 서버는 요청을 처리하고 HTML 문서를 응답합니다.
-4. 브라우저는 받은 HTML을 파싱하고 렌더링합니다.
+1. 사용자가 브라우저 주소창에 `https://example.com`을 입력한다.
+2. 브라우저는 해당 서버로 HTTP 요청을 보낸다.
+3. 서버는 요청을 처리하고 HTML 문서를 응답한다.
+4. 브라우저는 받은 HTML을 파싱하고 렌더링한다.
 
-이때 **브라우저는 HTML 문서만 처리하는 것이 아니라**, 문서 안에 포함된 다양한 리소스(CSS, JS, 이미지, 글꼴 등)를 해석하면서 추가 HTTP 요청을 발생시킵니다.
+이때 **브라우저는 HTML 문서만 처리하는 것이 아니라**, 문서 안에 포함된 다양한 리소스(CSS, JS, 이미지, 글꼴 등)를 해석하면서 추가 HTTP 요청을 발생시킨다.
+
+마치 요리할 때 레시피를 보며 필요한 재료들을 하나씩 가져오는 것과 같다. HTML은 레시피이고, CSS, JS, 이미지는 재료다.
 
 ---
 
@@ -37,7 +37,7 @@ import Highlight from '@/components/mdx/Highlight'
 </head>
 ```
 
-브라우저는 **`style.css`**를 가져오기 위해 **`Accept: text/css`** 헤더를 포함한 새로운 HTTP 요청을 보냅니다.
+브라우저는 **`style.css`**를 가져오기 위해 **[`Accept: text/css`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Accept)** 헤더를 포함한 새로운 HTTP 요청을 보낸다.
 
 **2-2. 글꼴 요청**
 
@@ -50,7 +50,7 @@ import Highlight from '@/components/mdx/Highlight'
 </head>
 ```
 
-구글 폰트 CSS 파일을 불러오기 위해 또 다른 HTTP 요청이 만들어집니다. 이 CSS 안에는 실제 폰트 파일 요청도 추가로 포함될 수 있습니다.
+구글 폰트 CSS 파일을 불러오기 위해 또 다른 HTTP 요청이 만들어진다. 이 CSS 안에는 실제 폰트 파일 요청도 추가로 포함될 수 있다.
 
 **2-3. 자바스크립트 요청**
 
@@ -60,7 +60,7 @@ import Highlight from '@/components/mdx/Highlight'
 </head>
 ```
 
-브라우저는 `script.js`를 다운로드하고 실행합니다.
+브라우저는 `script.js`를 다운로드하고 실행한다.
 
 ---
 
@@ -72,15 +72,17 @@ import Highlight from '@/components/mdx/Highlight'
 </body>
 ```
 
-이미지 태그를 만나면 브라우저는 `Accept: image/*` 헤더를 포함한 요청을 보냅니다.
+이미지 태그를 만나면 브라우저는 `Accept: image/*` 헤더를 포함한 요청을 보낸다.
 
-흥미로운 점은 이 이미지 요청이 **`광고 추적 픽셀(Tracking Pixel)`**에도 활용된다는 것입니다. 마케팅 업체들은 사용자 정보를 수집하기 위해 1px짜리(매우 작은) 투명 이미지를 `<img>` 태그로 삽입합니다.
+흥미로운 점은 이 이미지 요청이 **`광고 추적 픽셀(Tracking Pixel)`**에도 활용된다는 것이다. 마케팅 업체들은 사용자 정보를 수집하기 위해 1px짜리(매우 작은) 투명 이미지를 `<img>` 태그로 삽입한다.
 
-사용자는 이를 눈치채지 못하지만, 서버는 해당 요청을 통해 **IP, User-Agent, Referer** 등의 정보를 얻을 수 있습니다.
+사용자는 이를 눈치채지 못하지만, 서버는 해당 요청을 통해 **IP, User-Agent, Referer** 등의 정보를 얻을 수 있다.
+
+마치 매장에서 고객이 어디를 보는지 카메라로 추적하는 것과 같다. 눈에 보이지 않지만 모든 행동이 기록된다.
 
 **추적 픽셀 예제 (클라이언트)**
 
-```javascript
+```js
 const insertTrackingPixel = () => {
   const img = document.createElement('img');
   img.src = '/tracking-pixel.gif';
@@ -98,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 **서버에서의 로깅**
 
-```javascript
+```js
 const http = require('http');
 const path = require('path');
 const static = require('../shared/serve-static');
@@ -136,7 +138,7 @@ http.createServer(handler).listen(8080, () => {
 
 ## **4. Form 요청**
 
-HTML Form은 사용자가 특정 시점에 데이터를 서버로 전송할 때 사용합니다. 로그인 화면이 대표적인 예입니다.
+HTML Form은 사용자가 특정 시점에 데이터를 서버로 전송할 때 사용한다. 로그인 화면이 대표적인 예다.
 
 **GET 방식**
 
@@ -154,7 +156,7 @@ HTML Form은 사용자가 특정 시점에 데이터를 서버로 전송할 때 
 GET /login?email=matthew&password=secret
 ```
 
-GET 방식은 데이터가 URL의 쿼리 문자열에 노출되므로 **민감한 정보에는 적합하지 않습니다**.
+GET 방식은 데이터가 URL의 쿼리 문자열에 노출되므로 **민감한 정보에는 적합하지 않다**.
 
 **POST 방식**
 
@@ -166,13 +168,13 @@ GET 방식은 데이터가 URL의 쿼리 문자열에 노출되므로 **민감�
 </form>
 ```
 
-데이터가 요청 본문(Body)에 담기므로 보안과 데이터 크기 면에서 유리합니다.
+데이터가 요청 본문(Body)에 담기므로 보안과 데이터 크기 면에서 유리하다.
 
 ---
 
 **서버 처리 예시**
 
-```javascript
+```js
 const postLogin = (req, res) => {
   let body = '';
   req.on('data', (chunk) => {
@@ -191,7 +193,7 @@ const postLogin = (req, res) => {
 
 ## 5. Form 전송 방식
 
-HTML Form 데이터를 전송하는 방식은 크게 두 가지입니다.
+HTML Form 데이터를 전송하는 방식은 크게 두 가지다.
 
 ### 1) application/x-www-form-urlencoded
 
@@ -212,6 +214,8 @@ HTML Form 데이터를 전송하는 방식은 크게 두 가지입니다.
 - `application/x-www-form-urlencoded` → 단순 텍스트/데이터 전송에 적합
 - `multipart/form-data` → 파일이나 다양한 데이터를 함께 전송할 때 사용
 
+마치 편지 봉투(form-urlencoded)와 택배 상자(multipart)의 차이와 같다. 편지는 간단한 문서만, 택배는 다양한 물건을 담을 수 있다.
+
 ---
 
 ### 예시: multipart/form-data 전송
@@ -225,7 +229,7 @@ HTML Form 데이터를 전송하는 방식은 크게 두 가지입니다.
 </form>
 ```
 
-이 폼을 전송하면 실제 요청 본문(raw body)은 다음과 같이 구성됩니다.
+이 폼을 전송하면 실제 요청 본문(raw body)은 다음과 같이 구성된다.
 
 ```
 ------WebKitFormBoundary8kr9mWV4YwnI6YUl
@@ -237,7 +241,7 @@ Content-Disposition: form-data; name="password"
 
 secret
 ------WebKitFormBoundary8kr9mWV4YwnI6YUl
-Content-Disposition: form-data; name="profile-image"; filename="스크린샷.webp"
+Content-Disposition: form-data; name="profile-image"; filename="스크린샷.webp"
 Content-Type: image/png
 
 [바이너리 이미지 데이터]
@@ -248,12 +252,40 @@ Content-Type: image/png
 
 ### Boundary(WebKitFormBoundary)란?
 
-- **Boundary**는 요청 본문을 파트별로 구분하기 위한 문자열입니다.
-- 예제의 `-----WebKitFormBoundary8kr9mWV4YwnI6YUl` 부분이 바로 그것으로, **같은 요청 내에서 각 필드(email, password, 파일 등)를 나누는 기준선** 역할을 합니다.
-- `WebKitFormBoundary`는 WebKit 기반 브라우저(크롬, 사파리 등)가 자동으로 붙이는 접두어이며, 뒤의 랜덤 문자열은 요청마다 달라집니다.
-- 서버는 요청 헤더의 `Content-Type`을 참고해 이 Boundary 값을 얻고, 이를 기준으로 본문을 파싱합니다.
+- **Boundary**는 요청 본문을 파트별로 구분하기 위한 문자열이다.
+- 예제의 `-----WebKitFormBoundary8kr9mWV4YwnI6YUl` 부분이 바로 그것으로, **같은 요청 내에서 각 필드(email, password, 파일 등)를 나누는 기준선** 역할을 한다.
+- `WebKitFormBoundary`는 WebKit 기반 브라우저(크롬, 사파리 등)가 자동으로 붙이는 접두어이며, 뒤의 랜덤 문자열은 요청마다 달라진다.
+- 서버는 요청 헤더의 [`Content-Type`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Type)을 참고해 이 Boundary 값을 얻고, 이를 기준으로 본문을 파싱한다.
 
-각 파트는 다시 이렇게 구성됩니다:
+각 파트는 다시 이렇게 구성된다:
 
-1. **헤더** (예: `Content-Disposition`, `Content-Type`) → 데이터의 메타정보
+1. **헤더** (예: [`Content-Disposition`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Disposition), [`Content-Type`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Type)) → 데이터의 메타정보
 2. **본문** (예: `matthew`, `secret`, 실제 이미지 바이트 데이터) → 실제 값
+
+---
+
+## 마치며
+
+HTML 렌더링 과정에서 발생하는 다양한 HTTP 요청들을 살펴보았다. 단순히 HTML 문서 하나를 요청하는 것처럼 보이지만, 실제로는 CSS, JS, 이미지, 폰트 등 수많은 리소스 요청이 동시다발적으로 일어난다.
+
+또한 Form 전송 방식의 차이와 multipart/form-data의 구조를 이해하면, 파일 업로드나 복잡한 데이터 전송을 더 효율적으로 처리할 수 있다.
+
+:::note
+**핵심 정리**
+
+- **HTML 렌더링**: HTML 파싱 과정에서 CSS, JS, 이미지 등 추가 리소스에 대한 HTTP 요청 자동 발생
+- **리소스 요청 종류**:
+  - 스타일시트: `Accept: text/css` 헤더
+  - 이미지: `Accept: image/*` 헤더
+  - 자바스크립트: script 태그 파싱 시 요청
+- **추적 픽셀**: 1px 투명 이미지로 사용자 정보 수집 (IP, User-Agent, Referer)
+- **Form 전송 방식**:
+  - GET: 데이터가 URL에 노출, 민감 정보 부적합
+  - POST: 데이터가 본문에 포함, 보안에 유리
+- **인코딩 방식**:
+  - `application/x-www-form-urlencoded`: 기본값, 단순 텍스트 전송
+  - `multipart/form-data`: 파일 업로드 가능, boundary로 파트 구분
+- **Boundary**: multipart 요청에서 각 필드를 구분하는 문자열
+
+**HTML 렌더링은 레시피를 보며 재료를 하나씩 가져오는 것과 같다. 브라우저는 HTML을 해석하며 필요한 리소스를 자동으로 요청한다.**
+:::

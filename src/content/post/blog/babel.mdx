@@ -18,8 +18,6 @@ category: DEVELOPMENT
 image: '/images/babel/thumbnail.webp'
 ---
 
-import Highlight from '@/components/mdx/Highlight';
-
 # Babel로 배우는 현대 JavaScript 호환성
 
 개발을 시작하고 나서 나는 비전공자이기에 주변에서 얻을 인사이트가 많이 부족하여
@@ -499,22 +497,71 @@ module.exports = {
 };
 ```
 
-`Webpack`이 JS 파일을 읽을 때마다 <Highlight color="blue">Babel</Highlight>이 자동으로 변환해준다.
+`Webpack`이 JS 파일을 읽을 때마다 `Babel`이 자동으로 변환해준다.
 
 ## 마무리
 
 오늘날의 프론트엔드 환경에서는 `Webpack`뿐 아니라 `Vite`, `Rollup`, `esbuild`, `tsup` 같은 다양한 빌드 도구가 등장했다.
 
-이들 각각은 번들링과 트랜스파일링을 조금씩 다르게 처리하지만, 근본적으로는 <Highlight color="blue">Babel</Highlight>이 다루는 문제와 같은 지점을 해결하고 있다.
+이들 각각은 번들링과 트랜스파일링을 조금씩 다르게 처리하지만 근본적으로는 `Babel`이 다루는 문제와 같은 지점을 해결하고 있다.
 
-즉, "최신 문법을 사용하되, 실행 환경이 이해할 수 있도록 안전하게 변환하는 일"이다.
+즉 "최신 문법을 사용하되 실행 환경이 이해할 수 있도록 안전하게 변환하는 일"이다.
 
-`Webpack`이 <Highlight color="blue">Babel</Highlight>과 함께 쓰이는 이유도 여기에 있다.
+`Webpack`이 `Babel`과 함께 쓰이는 이유도 여기에 있다.
 
-`Webpack`은 모듈을 하나로 묶는 번들러이고, <Highlight color="blue">Babel</Highlight>은 언어 수준의 호환성을 보장하는 변환기이기 때문이다.
+`Webpack`은 모듈을 하나로 묶는 번들러이고 `Babel`은 언어 수준의 호환성을 보장하는 변환기이기 때문이다.
 
-반면 `Vite`나 `esbuild`, `Rollup`도 내부적으로는 <Highlight color="blue">Babel</Highlight>과 유사한 트랜스파일링 파이프라인을 포함하거나, <Highlight color="blue">Babel</Highlight> 플러그인을 그대로 활용할 수 있게 설계되어 있다.
+반면 `Vite`나 `esbuild`, `Rollup`도 내부적으로는 `Babel`과 유사한 트랜스파일링 파이프라인을 포함하거나 `Babel` 플러그인을 그대로 활용할 수 있게 설계되어 있다.
 
-따라서 `Webpack`을 배운다는 것은 단순히 오래된 도구를 배우는 게 아니라, "빌드 시스템이 어떻게 코드를 읽고 변환하는지"를 이해하는 일이다.
+따라서 `Webpack`을 배운다는 것은 단순히 오래된 도구를 배우는 게 아니라 "빌드 시스템이 어떻게 코드를 읽고 변환하는지"를 이해하는 일이다.
 
-이 감각이 잡히면 어떤 빌드 도구를 만나더라도, <Highlight color="blue">Babel</Highlight>이 어디서 어떤 역할을 하는지 자연스럽게 파악할 수 있을 것이다.
+이 감각이 잡히면 어떤 빌드 도구를 만나더라도 `Babel`이 어디서 어떤 역할을 하는지 자연스럽게 파악할 수 있을 것이다.
+
+---
+
+:::note
+**핵심 정리**
+
+- **Babel의 역할**:
+  - 최신 JavaScript를 구형 브라우저가 이해할 수 있는 코드로 변환
+  - ES6+ 문법 → ES5 문법 트랜스파일
+  - 브라우저 호환성 문제 해결
+- **트랜스파일링 vs 컴파일**:
+  - 트랜스파일: 같은 수준의 언어로 변환 (ES6 → ES5)
+  - 컴파일: 다른 수준의 언어로 변환 (TypeScript → JavaScript)
+- **Babel 동작 원리**:
+  1. Parsing: 코드를 AST(Abstract Syntax Tree)로 변환
+  2. Transform: AST를 플러그인으로 수정
+  3. Generate: 수정된 AST를 코드로 재생성
+- **Polyfill**:
+  - 문법은 Babel로 변환, 기능은 Polyfill로 추가
+  - `Promise`, `Array.from` 같은 새 API 구현
+  - core-js + regenerator-runtime 조합
+  - 필요한 Polyfill만 선택적으로 로드
+- **@babel/preset-env**:
+  - 타겟 브라우저 설정 (browserslist)
+  - 필요한 변환만 자동 선택
+  - 번들 크기 최적화
+  - `useBuiltIns: 'usage'`로 필요한 Polyfill만 포함
+- **Webpack + Babel**:
+  - Webpack: 모듈 번들러
+  - Babel: 언어 변환기
+  - babel-loader로 연동
+  - JS 파일을 읽을 때마다 Babel이 자동 변환
+- **현대 빌드 도구**:
+  - Vite: esbuild (개발) + Rollup (프로덕션)
+  - Rollup: 라이브러리 번들링에 특화
+  - esbuild: Go로 작성된 초고속 빌드 도구
+  - 모두 Babel과 유사한 트랜스파일링 포함
+- **크로스 브라우징**:
+  - IE 시대: 가장 큰 호환성 문제
+  - 현재: Safari의 예외적 동작
+  - Babel로 문법 호환, Polyfill로 기능 보완
+- **실무 권장 설정**:
+  - @babel/preset-env 사용
+  - browserslist로 타겟 지정
+  - useBuiltIns: 'usage' (자동 Polyfill)
+  - corejs: 3 (최신 Polyfill)
+
+**Babel은 통역사와 같다. 최신 언어(ES6+)를 구형 브라우저가 이해할 수 있는 언어(ES5)로 통역해준다. Polyfill은 번역기에 없는 단어를 사전에 추가하는 것과 같다. 새로운 단어(Promise, Array.from)를 구형 브라우저도 이해할 수 있도록 정의를 추가한다.**
+:::

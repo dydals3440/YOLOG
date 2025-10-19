@@ -16,15 +16,13 @@ category: HTTP
 image: '/images/security-session-hijacking/thumbnail.webp'
 ---
 
-import Highlight from '@/components/mdx/Highlight'
-
 # 세션 하이재킹(Session Hijacking) 완벽 가이드: 실습으로 이해하는 쿠키 탈취 공격
 
 "로그인된 사용자의 세션을 훔쳐서 그 사람인 것처럼 행동할 수 있다면?"
 
-웹 개발자라면 한 번쯤 이런 질문을 받아보셨을 겁니다. 바로 `세션 하이재킹(Session Hijacking)`이라는 공격 기법입니다.
+웹 개발자라면 한 번쯤 이런 질문을 받아보셨을 것이다. 바로 `세션 하이재킹(Session Hijacking)`이라는 공격 기법이다.
 
-이번 포스트에서는 `Node.js`로 직접 **취약한 인증 시스템**을 구현하고, **실제 공격**을 시연한 후, **방어 방법**까지 단계별로 알아보겠습니다.
+이번 포스트에서는 `Node.js`로 직접 취약한 인증 시스템을 구현하고 실제 공격을 시연한 후 방어 방법까지 단계별로 알아보겠다.
 
 ![세션 하이재킹 공격 시나리오](/images/security-session-hijacking/thumbnail.webp)
 
@@ -648,16 +646,63 @@ cookieOptions += '; Max-Age=1800';
 
 **Q: `JWT` 쓰면 세션 하이재킹에 대하여 안전한가요?**
 
-> A: 아니요! `JWT`도 쿠키나 `localStorage`에 저장하면 똑같이 탈취 가능합니다.
+> A: 아니다. `JWT`도 쿠키나 `localStorage`에 저장하면 똑같이 탈취 가능하다.
 
 **Q: `HTTPS`만 쓰면 세션 하이재킹에 대하여 안전한가요?**
 
-> A: `네트워크 스니핑`은 막지만, [`XSS` 공격](https://www.yolog.co.kr/post/security-xss)은 막지 못합니다.
+> A: `네트워크 스니핑`은 막지만 [`XSS` 공격](https://www.yolog.co.kr/post/security-xss)은 막지 못한다.
 
 **Q: 개발 환경에서 `Secure` 플래그 때문에 쿠키가 안 보여요! 때문에 세션 하이재킹에 대하여 안전한가요?**
 
-> A: `localhost`는 예외적으로 `Secure` 없이도 동작합니다. `개발/프로덕션`을 구분하여 처리할 수 있습니다.
+> A: `localhost`는 예외적으로 `Secure` 없이도 동작한다. `개발/프로덕션`을 구분하여 처리할 수 있다.
 
 ---
 
-**질문이나 피드백은 댓글로 남겨주세요!** 🙏
+:::note
+**핵심 정리**
+
+- **세션 하이재킹 원리**:
+  - HTTP는 Stateless → 상태 유지를 위해 세션/쿠키 사용
+  - 공격자가 세션 ID를 탈취하면 피해자 행세 가능
+  - JavaScript로 `document.cookie` 접근 시 쿠키 탈취 가능
+- **공격 방법**:
+  - XSS 공격으로 악성 스크립트 주입
+  - `document.cookie`로 세션 쿠키 읽기
+  - 공격자 서버로 쿠키 전송
+  - 탈취한 쿠키로 피해자 행세
+- **방어 방법 1: HttpOnly 쿠키**:
+  - JavaScript에서 쿠키 접근 차단
+  - `Set-Cookie: sid=...; HttpOnly`
+  - XSS 공격으로도 쿠키 탈취 불가
+  - 가장 기본적이고 필수적인 방어법
+- **방어 방법 2: Secure 플래그**:
+  - HTTPS에서만 쿠키 전송
+  - 네트워크 스니핑 공격 방어
+  - 프로덕션 환경에서 필수
+  - `Set-Cookie: sid=...; Secure`
+- **방어 방법 3: SameSite 쿠키**:
+  - CSRF 공격 방어
+  - `SameSite=Strict`: 같은 사이트에서만 쿠키 전송
+  - `SameSite=Lax`: GET 요청만 허용 (기본값)
+  - `SameSite=None`: Secure 필수
+- **방어 방법 4: 세션 타임아웃**:
+  - 일정 시간 후 자동 로그아웃
+  - `Max-Age=1800` (30분)
+  - 탈취된 쿠키의 유효 시간 제한
+- **JWT는 안전하지 않다**:
+  - JWT도 쿠키/localStorage에 저장하면 탈취 가능
+  - XSS 공격에는 취약
+  - HttpOnly 쿠키에 저장하는 것이 안전
+- **HTTPS만으로는 부족하다**:
+  - 네트워크 스니핑은 막음
+  - XSS 공격은 막지 못함
+  - HttpOnly + Secure + SameSite 조합 필수
+- **실무 권장 조합**:
+  - 필수: HttpOnly 쿠키
+  - 프로덕션: Secure 플래그
+  - CSRF 방어: SameSite=Lax
+  - 타임아웃: Max-Age 설정
+  - 추가: XSS 방어 (이스케이프, CSP)
+
+**세션 하이재킹은 신분증 도용과 같다. 공격자가 피해자의 신분증(세션 쿠키)을 훔쳐서 피해자인 척한다. HttpOnly는 신분증을 금고에 보관(JavaScript 접근 차단), Secure는 암호화 운송(HTTPS 전송), SameSite는 신분증 사용처 제한(같은 사이트만), 타임아웃은 신분증 유효기간(자동 만료)과 같다.**
+:::

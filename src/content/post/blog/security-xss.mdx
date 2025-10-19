@@ -7,8 +7,6 @@ category: HTTP
 image: '/images/security-xss/thumbnail.webp'
 ---
 
-import Highlight from '@/components/mdx/Highlight'
-
 # XSS(Cross-Site Scripting) 완벽 가이드: 실습으로 이해하는 웹 보안
 
 "우리 서비스에 사용자가 아래와 같은 스크립트를 입력했는데 진짜 알림이 떴어요!"
@@ -19,9 +17,9 @@ import Highlight from '@/components/mdx/Highlight'
 </script>
 ```
 
-단순한 `CREATE` 기능에서 발생한 이 문제는 `XSS(Cross-Site Scripting)`라는 심각한 보안 취약점이었습니다.
+단순한 `CREATE` 기능에서 발생한 이 문제는 `XSS(Cross-Site Scripting)`라는 심각한 보안 취약점이었다.
 
-이번 포스트에서는 웹 개발자라면 반드시 알아야 할 `XSS` 공격의 원리부터 실제 방어 방법까지 실습을 통해 완벽하게 이해해보겠습니다.
+이번 포스트에서는 웹 개발자라면 반드시 알아야 할 `XSS` 공격의 원리부터 실제 방어 방법까지 실습을 통해 완벽하게 이해해보겠다.
 
 ![XSS 공격으로부터 웹을 지키자](/images/security-xss/thumbnail.webp)
 
@@ -275,7 +273,7 @@ console.log(lodashEscape('<script>alert("XSS")</script>'));
 
 ### 왜 "Cross-Site" Scripting인가?
 
-`XSS`의 핵심은 **신뢰할 수 없는 출처의 스크립트가 신뢰받는 사이트에서 실행되는 것**입니다.
+`XSS`의 핵심은 신뢰할 수 없는 출처의 스크립트가 신뢰받는 사이트에서 실행되는 것이다.
 
 ```javascript
 // 공격 시나리오
@@ -287,14 +285,58 @@ console.log(lodashEscape('<script>alert("XSS")</script>'));
 
 ### XSS로 가능한 공격들
 
-`XSS`는 단순한 `alert`창을 띄우는 것 이상의 심각한 공격이 가능합니다:
+`XSS`는 단순한 `alert`창을 띄우는 것 이상의 심각한 공격이 가능하다:
 
-1. **🍪 [세션 하이재킹](https://www.yolog.co.kr/post/security-session-hijacking)**: 쿠키를 훔쳐 사용자 계정 탈취
-2. **🎣 피싱 공격**: 가짜 로그인 창으로 비밀번호 수집
-3. **📸 키로거**: 키보드 입력 모니터링
-4. **🔄 리다이렉트**: 악성 사이트로 자동 이동
-5. **💾 정보 유출**: 개인정보, 결제정보 등 탈취
+1. 🍪 [세션 하이재킹](https://www.yolog.co.kr/post/security-session-hijacking): 쿠키를 훔쳐 사용자 계정 탈취
+2. 🎣 피싱 공격: 가짜 로그인 창으로 비밀번호 수집
+3. 📸 키로거: 키보드 입력 모니터링
+4. 🔄 리다이렉트: 악성 사이트로 자동 이동
+5. 💾 정보 유출: 개인정보, 결제정보 등 탈취
 
-이러한 고급 공격 기법들은 [**세션 하이재킹**](https://www.yolog.co.kr/post/security-session-hijacking) 포스트에서 실습을 통해 자세히 다루고 있습니다.
+이러한 고급 공격 기법들은 [세션 하이재킹](https://www.yolog.co.kr/post/security-session-hijacking) 포스트에서 실습을 통해 자세히 다루고 있다.
+
+---
+
+:::note
+**핵심 정리**
+
+- **XSS 공격 원리**:
+  - 신뢰할 수 없는 스크립트가 신뢰받는 사이트에서 실행
+  - 사용자 입력을 그대로 HTML에 삽입하면 취약
+  - 브라우저는 정상 스크립트와 악성 스크립트를 구별 불가
+- **XSS 공격 유형**:
+  - Stored XSS: DB에 저장된 스크립트가 모든 사용자에게 실행
+  - Reflected XSS: URL 파라미터로 전달된 스크립트가 즉시 실행
+  - DOM-based XSS: JavaScript로 DOM을 조작할 때 발생
+- **공격 가능한 것들**:
+  - 세션 쿠키 탈취 (`document.cookie`)
+  - 가짜 로그인 폼으로 피싱
+  - 키보드 입력 모니터링
+  - 악성 사이트로 리다이렉트
+  - 개인정보, 결제정보 유출
+- **방어 방법 1: 이스케이프(Escape)**:
+  - `<` → `&lt;`, `>` → `&gt;`
+  - HTML 특수 문자를 텍스트로 변환
+  - 스크립트 코드가 실행되지 않음
+- **방어 방법 2: 새니타이즈(Sanitize)**:
+  - 허용된 HTML 태그만 남기고 제거
+  - DOMPurify 같은 라이브러리 사용
+  - 화이트리스트 방식으로 안전한 태그만 허용
+- **방어 방법 3: CSP(Content Security Policy)**:
+  - HTTP 헤더로 허용할 스크립트 출처 지정
+  - `Content-Security-Policy: default-src 'self'`
+  - 인라인 스크립트 차단
+- **React의 자동 방어**:
+  - JSX는 자동으로 값을 이스케이프
+  - `dangerouslySetInnerHTML`은 예외 (주의 필요)
+  - 사용자 입력을 직접 HTML로 렌더링하지 않음
+- **실무 권장 조합**:
+  - 필수: 사용자 입력 이스케이프
+  - 리치 에디터: 새니타이즈 (DOMPurify)
+  - 추가: CSP 헤더 설정
+  - 검증: 정기적인 보안 테스트
+
+**XSS 공격은 위조 화폐와 같다. 진짜(정상 스크립트)처럼 보이지만 실제로는 가짜(악성 스크립트)다. 이스케이프는 위조 화폐 감별기(특수 문자 변환), 새니타이즈는 은행의 검수 과정(안전한 것만 허용), CSP는 현금 출처 확인(허용된 출처만 실행)과 같다.**
+:::
 
 ---

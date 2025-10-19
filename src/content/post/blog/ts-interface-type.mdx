@@ -7,8 +7,6 @@ category: DEVELOPMENT
 image: '/images/ts-interface-type/thumbnail.webp'
 ---
 
-import Highlight from '@/components/mdx/Highlight'
-
 # 끊이지 않는 논쟁, Type vs Interface
 
 우리가 사용하는 언어는 **TypeScript**인데, 실제로 리액트 개발을 하다보면 왜인지는 모르겠지만 **InterfaceScript** 같은 느낌이 드는 경우가 있습니다. `type` 보다 왜인지 모르겠지만, `interface`를 쓰는 경우가 자연스럽게 더 많았기 때문입니다.
@@ -445,16 +443,59 @@ type Action =
 
 ## 마무리
 
-`type` vs `interface` 논쟁은 계속될 것입니다. 하지만 중요한 것은 팀 내에서 일관된 컨벤션을 유지하고, 각각의 장단점을 이해한 상태에서 적절히 활용하는 것입니다.
+`type` vs `interface` 논쟁은 계속될 것이다. 하지만 중요한 것은 팀 내에서 일관된 컨벤션을 유지하고 각각의 장단점을 이해한 상태에서 적절히 활용하는 것이다.
 
-우리 팀은 성능과 확장성을 고려하여 `interface`를 기본으로 선택했지만, `type`의 강력한 기능이 필요한 순간을 놓치지 않고 활용하고 있습니다.
+우리 팀은 성능과 확장성을 고려하여 `interface`를 기본으로 선택했지만 `type`의 강력한 기능이 필요한 순간을 놓치지 않고 활용하고 있다.
 
-더 자세한 내용은 다음 자료들을 참고하세요:
+더 자세한 내용은 다음 자료들을 참고하시기 바란다:
 
 - [Matt Pocock의 원문](https://www.totaltypescript.com/type-vs-interface-which-should-you-use)
 - [TypeScript 공식 문서](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#differences-between-type-aliases-and-interfaces)
 - [TypeScript 성능 위키](https://github.com/microsoft/TypeScript/wiki/Performance#preferring-interfaces-over-intersections)
 
-여러분의 팀도 프로젝트 특성에 맞는 최적의 선택을 하시길 바랍니다!
-또한 이 주제는 정말 다양한 관점과 경험을 나눌 수 있는 영역이기 때문에,
-더 좋은 의견이나 추천하실 방안이 있다면 댓글로 공유해 주시면 감사하겠습니다.
+여러분의 팀도 프로젝트 특성에 맞는 최적의 선택을 하시길 바란다.
+
+---
+
+:::note
+**핵심 정리**
+
+- **성능 차이**:
+  - Interface가 교차 타입(&)보다 컴파일 성능 우수
+  - Sentry 사례: intersection → extends 전환으로 성능 개선
+  - 대규모 프로젝트에서 체감 가능한 차이
+- **Interface 장점**:
+  - Declaration Merging (선언 병합) 가능
+  - 확장성이 뛰어남 (extends)
+  - 컴파일 성능 우수
+  - 객체 타입 정의에 최적화
+- **Type 장점**:
+  - Union, Intersection, Mapped Type 가능
+  - Conditional Type 지원
+  - Utility Type 활용 (Pick, Omit 등)
+  - Primitive, Tuple, Function도 정의 가능
+- **권장 사용 패턴**:
+  - 객체 구조 정의: interface 사용
+  - Props, State: interface
+  - Union Type: type 사용
+  - 복잡한 타입 조작: type 사용
+- **성능 최적화**:
+  - 교차 타입(&) 대신 extends 사용
+  - 중첩된 intersection 피하기
+  - Interface 병합보다 extends 선호
+- **실무 가이드라인**:
+  - 기본: interface 사용
+  - Union/Intersection 필요: type 사용
+  - 라이브러리 확장: interface (Declaration Merging)
+  - 복잡한 타입 연산: type 사용
+- **ESLint 규칙**:
+  - `@typescript-eslint/consistent-type-definitions`
+  - `@typescript-eslint/no-unsafe-declaration-merging`
+  - `@typescript-eslint/prefer-interface`
+- **팀 컨벤션의 중요성**:
+  - 일관성이 가장 중요
+  - 각 도구의 장단점 이해 필수
+  - 프로젝트 특성에 맞게 선택
+
+**Type vs Interface는 연필 vs 볼펜과 같다. Interface는 볼펜처럼 명확하고 일관된 선을 그린다(객체 정의). Type은 연필처럼 다양한 표현이 가능하다(Union, Conditional). 일반 글쓰기는 볼펜으로, 디자인 스케치는 연필로 하듯, 객체는 Interface로, 복잡한 타입 연산은 Type으로 작성하면 된다.**
+:::

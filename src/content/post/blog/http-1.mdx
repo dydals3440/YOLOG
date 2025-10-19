@@ -34,56 +34,58 @@ image: '/images/http-1/thumbnail.webp'
 
 import Highlight from '@/components/mdx/Highlight'
 
-최근 `다국어 서비스`와 `쿠키 기반 인증 처리`, 그리고 `CORS 정책 설정` 같은 기능을 구현하면서 좋은 서비스를 만들기 위해서는 HTTP에 대해 정말 깊이 있게 이해해야 할 필요성을 느꼈습니다.
+최근 `다국어 서비스`와 `쿠키 기반 인증 처리`, 그리고 `CORS 정책 설정` 같은 기능을 구현하면서 좋은 서비스를 만들기 위해서는 HTTP에 대해 정말 깊이 있게 이해해야 할 필요성을 느꼈다.
 
-다양한 강의와 자료를 찾아보며 조금씩 정리를 해보려고 합니다.
-공교롭게도 이번이 첫 번째 포스트이며, 이후에 추가적으로 더 깊게 공부하면서 추가적으로 정리를 해보려고 합니다.
+다양한 강의와 자료를 찾아보며 조금씩 정리를 해본다.
+공교롭게도 이번이 첫 번째 포스트이며, 이후에 추가적으로 더 깊게 공부하면서 추가적으로 정리를 해본다.
 
-앞으로 네트워크 통신을 이해하고 싶은 분들에게 도움이 되는 블로그가 되기를 바라며 시작해보겠습니다.
+앞으로 네트워크 통신을 이해하고 싶은 분들에게 도움이 되는 블로그가 되기를 바라며 시작해본다.
 
 ---
 
-## **HTTP/1.0 (📅 1996년)**
+## HTTP/1.0 (1996년)
 
 | 항목           | 설명                                                     |
 | -------------- | -------------------------------------------------------- |
-| ✅ 지원 메서드 | `GET`, `POST`, `HEAD`                                    |
-| 🧩 주요 헤더   | `Last-Modified`, `Expires`                               |
+| ✅ 지원 메서드 | [`GET`](https://developer.mozilla.org/ko/docs/Web/HTTP/Methods/GET), [`POST`](https://developer.mozilla.org/ko/docs/Web/HTTP/Methods/POST), [`HEAD`](https://developer.mozilla.org/ko/docs/Web/HTTP/Methods/HEAD)                                    |
+| 🧩 주요 헤더   | [`Last-Modified`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Last-Modified), [`Expires`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Expires)                               |
 | ❗ 특징        | 요청마다 TCP 연결을 **매번 새로 생성**해야 함 (비효율적) |
 
-HTTP/1.0은 1996년에 등장한 가장 초기 버전입니다. `GET`, `POST`, `HEAD` 메서드만 지원하며 기능이 제한적입니다.
-`Last-Modified`, `Expires` 헤더로 단순한 캐시만 가능합니다. 요청마다 TCP 연결을 새로 맺고 끊기 때문에 성능이 떨어집니다. 지속적인 연결(`Keep-Alive`)이 없어 다수 요청 처리에 비효율적입니다.
+HTTP/1.0은 1996년에 등장한 가장 초기 버전이다. `GET`, `POST`, `HEAD` 메서드만 지원하며 기능이 제한적이다.
+`Last-Modified`, `Expires` 헤더로 단순한 캐시만 가능하다. 요청마다 TCP 연결을 새로 맺고 끊기 때문에 성능이 떨어진다. 지속적인 연결(`Keep-Alive`)이 없어 다수 요청 처리에 비효율적이다.
+
+마치 매번 편의점에 갈 때마다 문을 열고 닫는 것과 같다. 한 번 가서 여러 개를 사면 편한데, 물건 하나 살 때마다 문을 여닫아야 하니 비효율적인 것이다.
 
 ---
 
-## **HTTP/1.1 (📅 1997년 ~ 2014년)**
+## HTTP/1.1 (1997년 ~ 2014년)
 
 | 항목           | 설명                                                      |
 | -------------- | --------------------------------------------------------- |
-| ✅ 추가 메서드 | `PUT`, `PATCH`, `DELETE`, `OPTIONS`, `TRACE`              |
-| 🧩 개선된 헤더 | `ETag`, `Cache-Control` (캐시 세밀 제어)                  |
+| ✅ 추가 메서드 | [`PUT`](https://developer.mozilla.org/ko/docs/Web/HTTP/Methods/PUT), [`PATCH`](https://developer.mozilla.org/ko/docs/Web/HTTP/Methods/PATCH), [`DELETE`](https://developer.mozilla.org/ko/docs/Web/HTTP/Methods/DELETE), [`OPTIONS`](https://developer.mozilla.org/ko/docs/Web/HTTP/Methods/OPTIONS), [`TRACE`](https://developer.mozilla.org/ko/docs/Web/HTTP/Methods/TRACE)              |
+| 🧩 개선된 헤더 | [`ETag`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/ETag), [`Cache-Control`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Cache-Control) (캐시 세밀 제어)                  |
 | 🔄 Keep-Alive  | TCP 연결을 **재사용**하여 여러 HTTP 요청 가능             |
 | 📌 특징        | 성능 개선 및 캐시/헤더 관리 강화. 사실상 웹의 표준이었음. |
 
-HTTP는 기본적으로 **[TCP](https://www.yolog.co.kr/post/http-tcp) 연결 위에서 동작하는 프로토콜**입니다.
+HTTP는 기본적으로 **[TCP](https://www.yolog.co.kr/post/http-tcp) 연결 위에서 동작하는 프로토콜**이다.
 
-즉, 클라이언트가 서버에 요청을 보내기 위해서는 먼저 **[TCP 연결](https://www.yolog.co.kr/post/http-tcp)을 맺고**, 그 위에 HTTP 메시지를 주고받는 방식으로 통신이 이루어집니다.
+즉, 클라이언트가 서버에 요청을 보내기 위해서는 먼저 **[TCP 연결](https://www.yolog.co.kr/post/http-tcp)을 맺고**, 그 위에 HTTP 메시지를 주고받는 방식으로 통신이 이루어진다.
 
-그런데 **초기의 HTTP/1.0에서는** 하나의 요청이 끝나면 **TCP 연결도 바로 종료**되었습니다.
+그런데 **초기의 HTTP/1.0에서는** 하나의 요청이 끝나면 **TCP 연결도 바로 종료**되었다.
 
-따라서, 다음 요청을 보내기 위해서는 **다시 TCP 연결을 새로 맺어야 했고**, 이 과정에서 **시간이 지연되는 단점**이 있었습니다.
+따라서, 다음 요청을 보내기 위해서는 **다시 TCP 연결을 새로 맺어야 했고**, 이 과정에서 **시간이 지연되는 단점**이 있었다.
 
-이 문제를 해결하기 위해 등장한 개념이 바로 **TCP 연결을 재사용**하는 방식입니다.
+이 문제를 해결하기 위해 등장한 개념이 바로 **TCP 연결을 재사용**하는 방식이다.
 
-즉, 한 번 TCP 연결을 맺어두면, 그 연결을 통해 **여러 개의 HTTP 요청과 응답을 주고받을 수 있게** 한 것입니다.
+즉, 한 번 TCP 연결을 맺어두면, 그 연결을 통해 **여러 개의 HTTP 요청과 응답을 주고받을 수 있게** 한 것이다.
 
-이러한 방식은 **HTTP/1.1부터 도입된 `Connection: Keep-Alive` 헤더**를 통해 구현됩니다.
+이러한 방식은 **HTTP/1.1부터 도입된 [`Connection: Keep-Alive`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Connection) 헤더**를 통해 구현된다.
 
-이 헤더를 통해 클라이언트와 서버는 “이 TCP 연결을 끊지 말고 유지하자”는 의사를 교환하고, 같은 연결을 계속 재사용하여 통신 효율을 높일 수 있게 된 것이죠.
+이 헤더를 통해 클라이언트와 서버는 "이 TCP 연결을 끊지 말고 유지하자"는 의사를 교환하고, 같은 연결을 계속 재사용하여 통신 효율을 높일 수 있게 된 것이다.
 
 ---
 
-## **HTTP/2 (📅 2015년 정식화)**
+## HTTP/2 (2015년 정식화)
 
 | 항목             | 설명                                                                   |
 | ---------------- | ---------------------------------------------------------------------- |
@@ -92,9 +94,11 @@ HTTP는 기본적으로 **[TCP](https://www.yolog.co.kr/post/http-tcp) 연결 �
 | 🔄 다중화 스트림 | **동시에 여러 요청/응답 처리** 가능 (병렬 처리)                        |
 | ⚠️ 단점          | 여전히 TCP 기반이라 지연(Latency)에 취약                               |
 
+> **참고 자료**: [MDN - HTTP/2](https://developer.mozilla.org/ko/docs/Glossary/HTTP_2)
+
 ---
 
-## **HTTP/3 (📅 승인: 2022년)**
+## HTTP/3 (승인: 2022년)
 
 | 항목    | 설명                                               |
 | ------- | -------------------------------------------------- |
@@ -103,9 +107,13 @@ HTTP는 기본적으로 **[TCP](https://www.yolog.co.kr/post/http-tcp) 연결 �
 | 🚀 성능 | **초저지연**, 빠른 연결, 패킷 손실에 강함          |
 | 💡 변화 | HTTP가 TCP 의존에서 벗어남 (웹 통신의 근본적 변화) |
 
+마치 고속도로에서 일반 차선(TCP)을 쓰다가 자율주행 전용 차선(QUIC/UDP)으로 바꾼 것과 같다. 더 빠르고 안전하며 유연한 통신이 가능해진 것이다.
+
+> **참고 자료**: [MDN - HTTP/3](https://developer.mozilla.org/ko/docs/Glossary/HTTP_3)
+
 ---
 
-## **🧱 HTTP의 핵심 구성 요소**
+## HTTP의 핵심 구성 요소
 
 | 구성 요소                   | 설명                                                                                                       |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -113,17 +121,17 @@ HTTP는 기본적으로 **[TCP](https://www.yolog.co.kr/post/http-tcp) 연결 �
 | **메서드**                  | 요청의 목적을 나타냄. (예: `GET`, `POST`, `PUT`, `DELETE` 등)                                              |
 | **헤더 (Header)**           | 요청 또는 응답에 대한 **메타 정보**를 담는 영역 (HTTP 1.1 부터, 헤더와 바디로 구분해서 보내는 방식이 나옴) |
 | **본문 (Body)**             | 실제 데이터를 담는 영역. (예: JSON, 파일 등)                                                               |
-| **상태 코드 (Status Code)** | 서버의 응답 상태를 숫자로 표현. (200: 성공, 404: 없음, 500: 서버 오류 등)                                  |
+| **상태 코드 (Status Code)** | 서버의 응답 상태를 숫자로 표현. ([`200`](https://developer.mozilla.org/ko/docs/Web/HTTP/Status/200): 성공, [`404`](https://developer.mozilla.org/ko/docs/Web/HTTP/Status/404): 없음, [`500`](https://developer.mozilla.org/ko/docs/Web/HTTP/Status/500): 서버 오류 등)                                  |
 
-HTTP/1.1부터는 요청과 응답을 **‘헤더(Header)’와 ‘본문(Body)’으로 명확히 구분하는 방식**이 자리잡았습니다.
+HTTP/1.1부터는 요청과 응답을 **'헤더(Header)'와 '본문(Body)'으로 명확히 구분하는 방식**이 자리잡았다.
 
-이 중 `본문(Body)`은 우리가 실제로 주고받고자 하는 데이터 자체, 예를 들어 JSON, 이미지, 폼 데이터 등이 들어가는 영역입니다.
+이 중 `본문(Body)`은 우리가 실제로 주고받고자 하는 데이터 자체, 예를 들어 JSON, 이미지, 폼 데이터 등이 들어가는 영역이다.
 
-반면에 `헤더(Header)`는 이 데이터를 어떻게 처리해야 하는지, 또는 어떤 형식인지 등과 같은 부가 정보(메타데이터)를 담고 있습니다.
+반면에 `헤더(Header)`는 이 데이터를 어떻게 처리해야 하는지, 또는 어떤 형식인지 등과 같은 부가 정보(메타데이터)를 담고 있다.
 
-예를 들어, 데이터의 타입(`Content-Type`), 길이(`Content-Length`), 인코딩 방식, 인증 정보, 캐싱 전략, 클라이언트나 서버의 정보 등이 모두 **헤더**에 포함됩니다.
+예를 들어, 데이터의 타입([`Content-Type`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Type)), 길이([`Content-Length`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Length)), 인코딩 방식, 인증 정보, 캐싱 전략, 클라이언트나 서버의 정보 등이 모두 **헤더**에 포함된다.
 
-이러한 **헤더를 정확히 이해하고 활용하는 능력**은 HTTP를 제대로 다루는 데 있어 매우 중요합니다.
+이러한 **헤더를 정확히 이해하고 활용하는 능력**은 HTTP를 제대로 다루는 데 있어 매우 중요하다.
 
 단순히 데이터를 주고받는 수준을 넘어,
 
@@ -133,8 +141,22 @@ HTTP/1.1부터는 요청과 응답을 **‘헤더(Header)’와 ‘본문(Body)�
 - **다국어 대응**
 - **CORS 처리** 등
 
-다양한 상황에서 헤더를 어떻게 구성하고 해석하느냐에 따라 전체 시스템의 효율성과 안정성이 달라지기 때문입니다.
+다양한 상황에서 헤더를 어떻게 구성하고 해석하느냐에 따라 전체 시스템의 효율성과 안정성이 달라지기 때문이다.
 
-결국, **HTTP 헤더에 대한 깊은 이해**는 단순한 요청/응답 수준을 넘어서 **웹 통신을 잘 다루는 개발자**로 나아가기 위한 핵심 역량이라 할 수 있습니다.
+결국, **HTTP 헤더에 대한 깊은 이해**는 단순한 요청/응답 수준을 넘어서 **웹 통신을 잘 다루는 개발자**로 나아가기 위한 핵심 역량이라 할 수 있다.
 
-이번 게시글은, 단순히 `HTTP 버전별 차이점`을 정리하는 것이 목적이기에, 조금 더 자세한 내용은 추후의 게시글에서 다루도록 하겠습니다.
+---
+
+## 마치며
+
+:::note
+**핵심 정리**
+
+- **HTTP/1.0**: 매 요청마다 TCP 연결 생성/종료 (비효율적)
+- **HTTP/1.1**: Keep-Alive로 TCP 연결 재사용, 캐싱 강화
+- **HTTP/2**: 헤더 압축과 다중화로 성능 대폭 개선
+- **HTTP/3**: UDP 기반 QUIC으로 초저지연 구현
+- **핵심 구성**: URL, 메서드, 헤더, 본문, 상태 코드
+
+**HTTP 헤더에 대한 깊은 이해는 웹 통신을 잘 다루는 개발자로 나아가기 위한 핵심 역량이다.**
+:::

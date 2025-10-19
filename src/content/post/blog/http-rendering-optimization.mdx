@@ -7,15 +7,13 @@ category: DEVELOPMENT
 image: '/images/http-rendering-optimization/thumbnail.webp'
 ---
 
-import Highlight from '@/components/mdx/Highlight'
-
 # 렌더링 최적화
 
-브라우저가 웹 페이지를 렌더링하려면 이미지, 글꼴, 스타일시트 같은 <Highlight>추가 자원</Highlight>이 필요합니다. 이 자원들은 대부분 원격 서버에 있어서 <Highlight color="blue">HTTP 요청</Highlight>으로 불러와야 합니다.
+브라우저가 웹 페이지를 렌더링하려면 이미지, 글꼴, 스타일시트 같은 추가 자원이 필요하다. 이 자원들은 대부분 원격 서버에 있어서 HTTP 요청으로 불러와야 한다.
 
-이런 추가 요청은 <Highlight color="orange">렌더링 성능</Highlight>에 큰 영향을 줍니다. 웹 페이지가 빠르게 로드되려면 이러한 HTTP 요청을 효율적으로 제어해야 합니다.
+이런 추가 요청은 렌더링 성능에 큰 영향을 준다. 웹 페이지가 빠르게 로드되려면 이러한 HTTP 요청을 효율적으로 제어해야 한다.
 
-이번 포스팅에서는 브라우저의 렌더링 과정을 이해하고, 외부 리소스의 로드 시점을 조절해서 웹 성능을 최적화하는 기법들을 살펴보겠습니다.
+이번 포스팅에서는 브라우저의 렌더링 과정을 이해하고, 외부 리소스의 로드 시점을 조절해서 웹 성능을 최적화하는 기법들을 살펴보겠다.
 
 ![렌더링 최적화](/images/http-rendering-optimization/thumbnail.webp)
 
@@ -736,19 +734,36 @@ const handler = () => {
 
 ---
 
-## 마무리
+## 마치며
 
-이번 포스팅에서는 브라우저의 렌더링 과정과 최적화 기법들을 알아보았습니다.
+이번 포스팅에서는 브라우저의 렌더링 과정과 최적화 기법들을 알아보았다.
 
-- **Critical Rendering Path**: 파싱 → DOM/CSSOM → 렌더 트리 → 레이아웃 → 페인팅
-- **스크립트 최적화**: `async`와 `defer` 속성으로 파싱 차단 방지
-- **리소스 프리로딩**: `preload`와 `prefetch`로 중요 리소스 미리 다운로드
-- **이미지 지연 로딩**: `loading="lazy"`로 뷰포트 외부 이미지 지연 로드
+웹 페이지 성능은 사용자 경험에 직접적인 영향을 미친다. 로딩 시간이 1초 늘어날 때마다 전환율이 감소한다는 연구 결과도 있다.
 
-이러한 기법들을 적절히 활용하면 웹 페이지의 로딩 성능을 크게 개선할 수 있습니다. 특히 모바일 환경이나 네트워크가 느린 환경에서 더욱 효과적입니다.
+이러한 최적화 기법들을 적절히 활용하면 웹 페이지의 로딩 성능을 크게 개선할 수 있다. 특히 모바일 환경이나 네트워크가 느린 환경에서 더욱 효과적이다.
 
-> **참고 자료**:
->
-> - [MDN - 리소스 힌트](https://developer.mozilla.org/ko/docs/Web/HTML/Attributes/rel/preload)
-> - [Google Web.dev - 리소스 우선순위 지정](https://web.dev/articles/prioritize-resources)
-> - [webpack Prefetch 공식 문서](https://webpack.js.org/guides/code-splitting/#prefetchingpreloading-modules)
+:::note
+**핵심 정리**
+
+- **Critical Rendering Path**: 파싱 → DOM/CSSOM → 렌더 트리 → 레이아웃 → 페인팅의 5단계
+- **script 태그 최적화**:
+  - 일반 script: 파싱 차단, 다운로드 및 실행 후 재개
+  - `async`: 파싱과 병렬 다운로드, 다운로드 완료 시 즉시 실행
+  - `defer`: 파싱과 병렬 다운로드, 파싱 완료 후 실행 (순서 보장)
+- **리소스 프리로딩**:
+  - `<link rel="preload">`: 현재 페이지에서 곧 필요한 리소스 미리 다운로드
+  - `<link rel="prefetch">`: 다음 페이지에서 사용할 리소스 유휴 시간에 다운로드
+- **이미지 최적화**: `loading="lazy"`로 뷰포트 외부 이미지 지연 로드
+- **선택 기준**:
+  - async: 독립적인 스크립트 (분석 도구, 광고)
+  - defer: DOM 의존 스크립트, 순서 중요
+  - preload: 즉시 필요한 중요 리소스
+  - prefetch: 다음 페이지 리소스
+
+**렌더링 최적화는 마치 교통 신호를 조절하는 것과 같다. 중요한 차량(리소스)은 빠르게 통과시키고, 덜 급한 차량은 나중에 보내면 전체 흐름이 빨라진다.**
+
+**참고 자료**:
+- [MDN - 리소스 힌트](https://developer.mozilla.org/ko/docs/Web/HTML/Attributes/rel/preload)
+- [Google Web.dev - 리소스 우선순위 지정](https://web.dev/articles/prioritize-resources)
+- [webpack Prefetch 공식 문서](https://webpack.js.org/guides/code-splitting/#prefetchingpreloading-modules)
+:::

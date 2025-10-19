@@ -15,8 +15,6 @@ category: HTTP
 image: '/images/http-content-negotiation/thumbnail.webp'
 ---
 
-import Highlight from '@/components/mdx/Highlight'
-
 :::info
 
 **HTTP Content Negotiation: 클라이언트와 서버가 원하는 콘텐츠 형식을 결정하는 과정**
@@ -27,19 +25,19 @@ import Highlight from '@/components/mdx/Highlight'
 
 ## HTTP Content Negotiation이란?
 
-HTTP 콘텐츠 협상은 말 그대로 클라이언트와 서버가 “같은 자원”을 놓고 어떤 형태로 주고받을지 흥정하는 메커니즘이다. 시장에서 상인과 고객이 가격과 조건을 맞춰가듯, 웹에서도 브라우저와 서버가 헤더를 통해 서로 가능한 형식을 주고받으며 최적의 결과를 만든다.
+HTTP 콘텐츠 협상은 말 그대로 클라이언트와 서버가 "같은 자원"을 놓고 어떤 형태로 주고받을지 흥정하는 메커니즘이다. 시장에서 상인과 고객이 가격과 조건을 맞춰가듯, 웹에서도 브라우저와 서버가 헤더를 통해 서로 가능한 형식을 주고받으며 최적의 결과를 만든다.
 
 같은 내용이라도 누군가는 `HTML` 문서를, 누군가는 `JSON` 데이터를 원한다. 어떤 클라이언트는 압축을 풀 수 있고, 또 어떤 클라이언트는 그렇지 못하다. 누군가는 한국어 페이지를, 누군가는 영어 페이지를 선호한다. 서버의 역할은 이 다양한 요구를 이해하고 가장 알맞은 자원을 선택해 응답하는 것이다.
 
 콘텐츠 협상에 핵심적으로 쓰이는 헤더는 다음과 같다.
 
-- `Accept` ↔ `Content-Type`: 미디어 타입 협상
-- `Accept-Encoding` ↔ `Content-Encoding`: 압축 방식 협상
-- `Accept-Language` ↔ (문서/리소스 선택): 언어 협상
+- [`Accept`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Accept) ↔ [`Content-Type`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Type): 미디어 타입 협상
+- [`Accept-Encoding`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Accept-Encoding) ↔ [`Content-Encoding`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Encoding): 압축 방식 협상
+- [`Accept-Language`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Accept-Language) ↔ (문서/리소스 선택): 언어 협상
 
-> `Vary: Accept-Encoding`은 거의 항상 기본 적용되지만, `Vary: Accept-Language`를 적용하면 `CDN 캐시`가 언어별로 따로 저장되므로 캐시 효율이 떨어질 수 있음을 주의해야 한다.
+> [`Vary: Accept-Encoding`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Vary)은 거의 항상 기본 적용되지만, `Vary: Accept-Language`를 적용하면 `CDN 캐시`가 언어별로 따로 저장되므로 캐시 효율이 떨어질 수 있음을 주의해야 한다.
 
-또한 캐시 계층은 이러한 협상 결과에 민감하므로, 서버는 종종 `Vary` 헤더를 사용해 “어떤 요청 헤더에 따라 응답이 달라질 수 있는지”를 명시한다.
+또한 캐시 계층은 이러한 협상 결과에 민감하므로, 서버는 종종 `Vary` 헤더를 사용해 "어떤 요청 헤더에 따라 응답이 달라질 수 있는지"를 명시한다.
 
 ```http
 Vary: Accept, Accept-Encoding, Accept-Language
@@ -56,13 +54,15 @@ Vary: Accept, Accept-Encoding, Accept-Language
 < Content-Type: text/html; charset=utf-8
 ```
 
-- **핵심**: `Accept`는 “원하는 형식”, `Content-Type`은 “실제로 보낸 형식”. 둘은 항상 같을 필요는 없지만, 서버는 `Accept`를 최대한 존중해 선택한다.
+- **핵심**: `Accept`는 "원하는 형식", `Content-Type`은 "실제로 보낸 형식". 둘은 항상 같을 필요는 없지만, 서버는 `Accept`를 최대한 존중해 선택한다.
 - **사례**: 깃허브는 같은 리소스라도 `Accept`에 따라 서로 다른 표현(HTML 페이지, JSON 등)을 줄 수 있다.
 
 ```bash
 curl https://github.com/dydals3440 -H "Accept: text/html" --verbose
 curl https://github.com/dydals3440 -H "Accept: application/json" --verbose
 ```
+
+마치 레스토랑에서 같은 재료로 스테이크를 주문할 때, 어떤 손님은 웰던을, 어떤 손님은 미디엄 레어를 원하는 것과 같다. 서버는 손님의 요구를 듣고 가장 적합한 형태로 제공한다.
 
 ### Express에서의 포맷 협상: `res.format`
 
@@ -98,6 +98,8 @@ app.get('/profile', (req, res) => {
 > Accept-Encoding: gzip, br
 < Content-Encoding: gzip
 ```
+
+마치 택배를 보낼 때 박스를 압축 포장하는 것과 같다. 받는 사람이 박스를 풀 수 있다면(압축 해제 가능), 더 적은 공간으로 더 빠르게 배송할 수 있다.
 
 ### curl로 확인하기
 
@@ -150,6 +152,8 @@ Accept-Language: ko-KR,ko;q=0.9,en-US;q=0.5,en;q=0.3
 
 위처럼 각 언어에는 `q`라는 품질 지수(0.0~1.0)를 붙여 우선순위를 표현한다. 값이 높을수록 선호도가 높다.
 
+마치 글로벌 콜센터에서 고객이 "한국어로 상담받고 싶어요"라고 말하면, 한국어를 할 수 있는 상담원으로 연결해주는 것과 같다.
+
 ### 사례
 
 - 유튜브와 같이 다국어를 제공하는 서비스는 `Accept-Language`를 바탕으로 기본 언어 페이지를 결정한다.
@@ -181,7 +185,7 @@ app.get('/', (req, res) => {
 
 ## 1.4 사용자 에이전트 (User-Agent)
 
-클라이언트는 `User-Agent`로 자신을 소개한다. 다만 이 값은 신뢰하기 어려워(우회/변조 가능) 현대적인 콘텐츠 협상에는 적합하지 않다. 기능 지원 여부는 UA 스니핑보다 **기능 감지(Feature Detection)** 나 **표준 헤더 기반 협상**을 권장한다.
+클라이언트는 [`User-Agent`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/User-Agent)로 자신을 소개한다. 다만 이 값은 신뢰하기 어려워(우회/변조 가능) 현대적인 콘텐츠 협상에는 적합하지 않다. 기능 지원 여부는 UA 스니핑보다 **기능 감지(Feature Detection)** 나 **표준 헤더 기반 협상**을 권장한다.
 
 ```http
 User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36
@@ -207,10 +211,25 @@ app.use((req, res, next) => {
 
 ---
 
-## 마무리
+## 마치며
 
-콘텐츠 협상은 “같은 자원”을 사용자 환경에 가장 알맞게 표현하는 기술이다. 핵심은 요청의 `Accept*` 계열 헤더를 이해하고, 서버에서 가능한 표현 중 최적을 선택해 `Content-*` 헤더와 함께 응답하는 것이다.
+콘텐츠 협상은 "같은 자원"을 사용자 환경에 가장 알맞게 표현하는 기술이다. 핵심은 요청의 `Accept*` 계열 헤더를 이해하고, 서버에서 가능한 표현 중 최적을 선택해 `Content-*` 헤더와 함께 응답하는 것이다.
 
 캐시를 고려해 `Vary`를 적절히 설정하는 것까지 포함하면, 다양한 클라이언트에 일관되고 효율적인 경험을 제공할 수 있다.
 
 사람도 원하는 것을 이야기 해야 필요한 것을 얻을 수 있듯이, 웹 서비스도 원하는 것을 이야기 해야 필요한 것을 얻을 수 있다는 것을 알게 되었다.
+
+:::note
+**핵심 정리**
+
+- **콘텐츠 협상이란**: 클라이언트와 서버가 헤더를 통해 최적의 콘텐츠 형식을 결정하는 과정
+- **주요 협상 헤더**:
+  - `Accept` ↔ `Content-Type`: 미디어 타입 (HTML, JSON 등)
+  - `Accept-Encoding` ↔ `Content-Encoding`: 압축 방식 (gzip, br 등)
+  - `Accept-Language`: 언어 선호도 (ko, en 등)
+- **Vary 헤더**: 어떤 요청 헤더에 따라 응답이 달라지는지 명시 (캐시 제어)
+- **실무 활용**: Express의 `res.format`, `compression`, `negotiator` 등으로 구현
+- **주의사항**: `User-Agent`는 신뢰하기 어려우므로 기능 감지 권장
+
+**콘텐츠 협상은 레스토랑에서 손님의 주문을 듣고 가장 적합한 요리를 제공하는 것과 같다. 클라이언트가 원하는 형식을 요청하면, 서버는 가능한 한 그에 맞춰 응답한다.**
+:::
