@@ -500,8 +500,7 @@ const verifyRecaptcha = async (token) => {
 
 ---
 
-:::note
-**핵심 정리**
+## 핵심 정리
 
 - **CSRF 공격 원리**:
   - 로그인한 사용자의 권한을 도용
@@ -541,4 +540,3 @@ const verifyRecaptcha = async (token) => {
   - 의심 행위: reCAPTCHA 적용
 
 **CSRF 공격은 피싱 사기와 같다. 은행 직원을 사칭해서(정상 사이트 요청으로 위장) 피해자 몰래 계좌이체를 실행한다. SameSite 쿠키는 신분증 확인(같은 사이트인지 검증), CSRF 토큰은 일회용 비밀번호(공격자가 알 수 없는 값)와 같다.**
-:::

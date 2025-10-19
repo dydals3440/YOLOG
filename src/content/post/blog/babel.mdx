@@ -18,6 +18,8 @@ category: DEVELOPMENT
 image: '/images/babel/thumbnail.webp'
 ---
 
+import Highlight from '@/components/mdx/Highlight'
+
 # Babel로 배우는 현대 JavaScript 호환성
 
 개발을 시작하고 나서 나는 비전공자이기에 주변에서 얻을 인사이트가 많이 부족하여
@@ -519,8 +521,7 @@ module.exports = {
 
 ---
 
-:::note
-**핵심 정리**
+## 핵심 정리
 
 - **Babel의 역할**:
   - 최신 JavaScript를 구형 브라우저가 이해할 수 있는 코드로 변환
@@ -564,4 +565,3 @@ module.exports = {
   - corejs: 3 (최신 Polyfill)
 
 **Babel은 통역사와 같다. 최신 언어(ES6+)를 구형 브라우저가 이해할 수 있는 언어(ES5)로 통역해준다. Polyfill은 번역기에 없는 단어를 사전에 추가하는 것과 같다. 새로운 단어(Promise, Array.from)를 구형 브라우저도 이해할 수 있도록 정의를 추가한다.**
-:::

@@ -20,8 +20,6 @@ category: HTTP
 image: '/images/http-cors/thumbnail.webp'
 ---
 
-import Highlight from '@/components/mdx/Highlight'
-
 # CORS란?
 
 `CORS(Cross-Origin Resource Sharing)`는 브라우저에서 다른 출처에 있는 리소스를 사용할 수 있는 규칙이다.
@@ -436,8 +434,7 @@ CORS를 사용하는 요청은 특정 API와 리소스에 한정된다.
 
 CORS는 웹 보안의 핵심 메커니즘으로, 브라우저가 다른 출처의 리소스를 안전하게 사용할 수 있도록 한다.
 
-:::note
-**핵심 정리**
+## 핵심 정리
 
 - **출처(Origin)**: 프로토콜, 호스트, 포트 세 가지를 조합한 것
 - **단순 요청**: GET, POST, HEAD 메소드와 안전한 헤더만 사용하는 요청
@@ -448,4 +445,3 @@ CORS는 웹 보안의 핵심 메커니즘으로, 브라우저가 다른 출처�
   - `Access-Control-Allow-Headers`: 허용할 헤더 지정
   - `Access-Control-Max-Age`: 사전 요청 결과 캐시 시간
 - **보안과 편의성의 균형**: CORS는 보안을 위해 필요하지만, 개발 시 불편함을 초래할 수 있다. 개발 환경과 프로덕션 환경에서 적절한 CORS 정책을 설정하는 것이 중요하다.
-  :::

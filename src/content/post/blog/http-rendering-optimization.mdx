@@ -7,6 +7,8 @@ category: DEVELOPMENT
 image: '/images/http-rendering-optimization/thumbnail.webp'
 ---
 
+import Highlight from '@/components/mdx/Highlight'
+
 # 렌더링 최적화
 
 브라우저가 웹 페이지를 렌더링하려면 이미지, 글꼴, 스타일시트 같은 추가 자원이 필요하다. 이 자원들은 대부분 원격 서버에 있어서 HTTP 요청으로 불러와야 한다.
@@ -71,9 +73,9 @@ HTML 문서에서 이런 스크립트 태그를 만나면 브라우저는 <Highl
 
 이처럼 스크립트 태그는 <Highlight color="pink">파싱을 중단</Highlight>시켜 렌더링 시간을 늘립니다. 자바스크립트 파일이 많거나 무거울수록 페이지 로드 속도가 느려집니다.
 
-:::note
-**핵심 정리**: 브라우저의 렌더링 과정은 <Highlight>파싱 → DOM/CSSOM → 렌더 트리 → 레이아웃 → 페인팅</Highlight>의 5단계를 거치며, `<script>` 태그를 만나면 <Highlight color="orange">파싱을 중단</Highlight>하고 자바스크립트를 다운로드/실행한 후 재개합니다.
-:::
+## 핵심 정리
+
+브라우저의 렌더링 과정은 <Highlight>파싱 → DOM/CSSOM → 렌더 트리 → 레이아웃 → 페인팅</Highlight>의 5단계를 거치며, `<script>` 태그를 만나면 <Highlight color="orange">파싱을 중단</Highlight>하고 자바스크립트를 다운로드/실행한 후 재개합니다.
 
 ---
 
@@ -408,9 +410,9 @@ HTML 파싱 ──────────────────────�
 스크립트 다운로드 ─────────────────┘
 ```
 
-:::note
-**핵심 정리**: `async` 속성은 스크립트를 병렬로 다운로드하고 완료된 순서대로 실행합니다. DOM과 무관하고 서로 독립적인 스크립트(광고, 분석 도구 등)에 적합합니다.
-:::
+## 핵심 정리
+
+`async` 속성은 스크립트를 병렬로 다운로드하고 완료된 순서대로 실행합니다. DOM과 무관하고 서로 독립적인 스크립트(광고, 분석 도구 등)에 적합합니다.
 
 ---
 
@@ -491,9 +493,9 @@ webpack 같은 번들러는 chunk라고 부르는 작은 자바스크립트 파�
 
 그래서 [webpack이 HTML에 chunk를 추가](https://webpack.js.org/guides/code-splitting/#prefetchingpreloading-modules)할 때 `defer` 속성을 사용합니다.
 
-:::note
-**핵심 정리**: `defer` 속성은 스크립트를 병렬로 다운로드하되, DOM 생성 후 코드에 정의된 순서대로 실행합니다. 서로 의존적인 스크립트나 webpack chunk 파일에 적합합니다.
-:::
+## 핵심 정리
+
+`defer` 속성은 스크립트를 병렬로 다운로드하되, DOM 생성 후 코드에 정의된 순서대로 실행합니다. 서로 의존적인 스크립트나 webpack chunk 파일에 적합합니다.
 
 ---
 
@@ -562,9 +564,9 @@ head 태그에 다음과 같이 추가합니다.
 
 `preload`는 이미지, 비디오, 스타일시트, 폰트, 자바스크립트 등 모든 리소스에 사용할 수 있습니다.
 
-:::note
-**핵심 정리**: `preload`는 현재 페이지에서 곧 사용될 중요한 리소스를 미리 다운로드하여 실제 사용 시점의 로딩 시간을 제거합니다.
-:::
+## 핵심 정리
+
+`preload`는 현재 페이지에서 곧 사용될 중요한 리소스를 미리 다운로드하여 실제 사용 시점의 로딩 시간을 제거합니다.
 
 ---
 
@@ -651,9 +653,9 @@ import(/* webpackPrefetch: true */ './path/to/LoginModal.js');
 
 빌드 시 자동으로 link prefetch 태그를 추가합니다. Next.js의 Link 컴포넌트도 prefetch를 기본 제공합니다.
 
-:::note
-**핵심 정리**: `prefetch`는 다음 페이지에서 사용될 리소스를 유휴 시간에 미리 다운로드합니다. 브라우저 호환성을 확인하고, 다음 페이지 예측이 가능한 경우에 사용하면 효과적입니다.
-:::
+## 핵심 정리
+
+`prefetch`는 다음 페이지에서 사용될 리소스를 유휴 시간에 미리 다운로드합니다. 브라우저 호환성을 확인하고, 다음 페이지 예측이 가능한 경우에 사용하면 효과적입니다.
 
 ---
 
@@ -728,9 +730,9 @@ const handler = () => {
 
 이미지가 많은 사진첩이나 블로그, 특히 모바일 환경에서 효과적입니다.
 
-:::note
-**핵심 정리**: 이미지 태그의 `loading="lazy"` 속성을 사용하면 뷰포트에 들어올 때만 이미지를 로드하여 초기 렌더링 성능을 크게 개선할 수 있습니다.
-:::
+## 핵심 정리
+
+이미지 태그의 `loading="lazy"` 속성을 사용하면 뷰포트에 들어올 때만 이미지를 로드하여 초기 렌더링 성능을 크게 개선할 수 있습니다.
 
 ---
 
@@ -742,8 +744,7 @@ const handler = () => {
 
 이러한 최적화 기법들을 적절히 활용하면 웹 페이지의 로딩 성능을 크게 개선할 수 있다. 특히 모바일 환경이나 네트워크가 느린 환경에서 더욱 효과적이다.
 
-:::note
-**핵심 정리**
+## 핵심 정리
 
 - **Critical Rendering Path**: 파싱 → DOM/CSSOM → 렌더 트리 → 레이아웃 → 페인팅의 5단계
 - **script 태그 최적화**:
@@ -766,4 +767,3 @@ const handler = () => {
 - [MDN - 리소스 힌트](https://developer.mozilla.org/ko/docs/Web/HTML/Attributes/rel/preload)
 - [Google Web.dev - 리소스 우선순위 지정](https://web.dev/articles/prioritize-resources)
 - [webpack Prefetch 공식 문서](https://webpack.js.org/guides/code-splitting/#prefetchingpreloading-modules)
-:::

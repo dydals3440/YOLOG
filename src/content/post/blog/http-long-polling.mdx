@@ -320,8 +320,7 @@ curl http://localhost:8080/update \
 
 다음 글에서는 롱 폴링의 한계를 극복하는 기술, [`SSE(Server-Sent Events)`](https://www.yolog.co.kr/post/http-sse)와 [`WebSocket`](https://www.yolog.co.kr/post/http-websocket)을 살펴보겠다. 이들은 더 효율적인 실시간 통신을 가능하게 하는 현대적인 해결책이다.
 
-:::note
-**핵심 정리**
+## 핵심 정리
 
 - **롱 폴링이란**: 클라이언트 요청에 대해 서버가 새 데이터가 생길 때까지 응답을 보류하는 방식
 - **동작 원리**: 요청 → 대기 → 데이터 생성 시 즉시 응답 → 타임아웃 시 204 반환 → 재요청
@@ -331,4 +330,3 @@ curl http://localhost:8080/update \
 - **실무 활용**: WebSocket 미지원 환경, 방화벽 제약, 간헐적 업데이트 서비스
 
 **롱 폴링은 "배달 도착하면 알려주세요" 하고 전화를 끊지 않는 것과 같다. 폴링보다 효율적이지만 서버 부담이 크므로 현대적 대안(SSE, WebSocket)을 고려해야 한다.**
-:::

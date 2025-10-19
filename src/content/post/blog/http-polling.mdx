@@ -245,8 +245,7 @@ curl http://localhost:8080/update \
 
 그래서 다음 포스트에서는 폴링보다 진보된 방식인 [`롱 폴링(Long Polling)`](https://www.yolog.co.kr/post/http-long-polling)을 살펴보겠다. 또한 [`서버 푸시(Server-Sent Events)`](https://www.yolog.co.kr/post/http-sse)와 [`양방향 통신(WebSocket)`](https://www.yolog.co.kr/post/http-websocket)까지 다루며, 실시간 통신 기술의 발전 과정을 정리해 보겠다.
 
-:::note
-**핵심 정리**
+## 핵심 정리
 
 - **폴링이란**: 클라이언트가 주기적으로 서버에 요청을 보내 데이터를 확인하는 방식
 - **동작 원리**: 일정 주기마다 HTTP 요청을 보내고, 새 데이터가 있으면 응답, 없으면 204 반환
@@ -256,4 +255,3 @@ curl http://localhost:8080/update \
 - **대안**: Long Polling, Server-Sent Events, WebSocket 등이 더 효율적
 
 **폴링은 "버스 왔나요?"를 계속 묻는 것과 같다. 간단하지만 비효율적이므로 실시간 통신에는 더 나은 대안을 고려해야 한다.**
-:::

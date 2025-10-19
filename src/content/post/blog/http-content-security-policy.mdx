@@ -19,8 +19,6 @@ category: HTTP
 image: '/images/http-content-security-policy/thumbnail.webp'
 ---
 
-import Highlight from '@/components/mdx/Highlight'
-
 # Content Security Policy란?
 
 `Content Security Policy(CSP)`는 크로스 사이트 스크립팅(XSS) 공격을 방어하기 위한 웹 보안 메커니즘이다.
@@ -320,8 +318,7 @@ CSP는 **크로스 사이트 스크립팅(XSS) 공격 방어**에는 효과적�
 
 `다층 방어(Defense in Depth)` 전략을 통해 여러 보안 계층을 구축하고, 기본적인 보안 지식을 바탕으로 꾸준히 학습하며 실무에 적용하는 것이 중요하다.
 
-:::note
-**핵심 정리**
+## 핵심 정리
 
 - **CSP란**: XSS 공격을 방어하기 위한 HTTP 응답 헤더 기반 보안 메커니즘
 - **기본 설정**: `Content-Security-Policy: default-src 'self'`로 현재 출처만 허용
@@ -330,4 +327,3 @@ CSP는 **크로스 사이트 스크립팅(XSS) 공격 방어**에는 효과적�
 - **종합적 보안**: CSP만으로는 부족하며, 쿠키 보안, 입력 검증, 추가 보안 헤더 등을 함께 적용해야 한다
 
 **보안은 기능이 아니라 프로세스다.** 지속적인 모니터링, 업데이트, 그리고 개선이 필요한 영역이다.
-:::
