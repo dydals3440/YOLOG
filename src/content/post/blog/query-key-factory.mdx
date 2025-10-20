@@ -11,13 +11,13 @@ image: '/images/query-key-factory/thumbnail.webp'
 
 > 🙆🏻‍♂️ 아마 대부분의 프론트엔드 개발자 분들은 Tanstack-Query라는 도구를 활용해서 비동기 상태 관리를 할 것입니다.
 
-실제로 Tanstack-Query는 현재 (2025년 10월 15일 기준) 약 1150만회 이상 다운받아질 정도로 프론트엔드 개발자에게 있어서 필수 불가결한 라이브러리 중 하나입니다. (물론 SWR도... 있기는 합니다 ^ㅁ^)
+실제로 Tanstack-Query는 현재 (2025년 10월 15일 기준) 약 1150만회 이상 다운받아질 정도로 프론트엔드 개발자에게 있어서 필수 불가결한 라이브러리 중 하나입니다. (물론 SWR도... 있기는 한다 ^ㅁ^)
 
 ![놀라운 query-key-factory 설치 수](/images/query-key-factory/1.webp)
 
-현재 운영중인 서비스에서도 Tanstack-Query를 매우 알차게 사용하고 있습니다.
+현재 운영중인 서비스에서도 Tanstack-Query를 매우 알차게 사용하고 있다.
 
-많은 분들이 아시겠지만 Tanstack-Query를 도입하면 아래와 같은 장점을 얻게 됩니다.
+많은 분들이 아시겠지만 Tanstack-Query를 도입하면 아래와 같은 장점을 얻게 된다.
 
 1. 데이터 캐싱 및 상태 관리
 2. 자동화된 데이터 동기화
@@ -27,29 +27,29 @@ image: '/images/query-key-factory/thumbnail.webp'
 6. `Optimistic Update`, `Background Update`와 같은 최적화된 데이터 업데이트 (사용자 경험과 연관)
 7. 개발 편의성 (`Query`, `Mutation`을 통한 직관적인 코드 작성, DevTool의 유용함)
 
-물론 이 외에도 정말 많은 장점이 있겠지만, Tanstack Query를 도입하면 비동기 데이터 요청 및 캐싱이 많이 필요한 프로젝트에서 개발 속도와 유지보수성을 크게 향상시킬 수 있습니다.
+물론 이 외에도 정말 많은 장점이 있겠지만, Tanstack Query를 도입하면 비동기 데이터 요청 및 캐싱이 많이 필요한 프로젝트에서 개발 속도와 유지보수성을 크게 향상시킬 수 있다.
 
 ---
 
 ## 그래서, 말하고자 하는게 뭐야?
 
-위의 Tanstack-Query에 대한 장점을 잘 보면 `QueryKey`가 매우 중요한 역할을 하고 있다는 것을 알 수 있습니다!
+위의 Tanstack-Query에 대한 장점을 잘 보면 `QueryKey`가 매우 중요한 역할을 하고 있다는 것을 알 수 있다!
 
-실제로 아래 공식문서에서도 `QueryKey`의 중요성을 설명하고 있습니다!
+실제로 아래 공식문서에서도 `QueryKey`의 중요성을 설명하고 있다!
 
 ![공식문서에서의 QueryKey의 중요성](/images/query-key-factory/2.webp)
 
 ### 쿼리 키 (Query Keys)
 
-TanStack Query는 쿼리 키를 기반으로 쿼리 캐싱을 관리합니다.
+TanStack Query는 쿼리 키를 기반으로 쿼리 캐싱을 관리한다.
 
-`QueryKey`는 최상위 수준에서 `배열(Array)` 형태를 가져야 하며, 단순히 문자열 하나로 구성된 배열일 수도 있고 여러 문자열과 중첩된 객체로 이루어진 복잡한 배열일 수도 있습니다.
+`QueryKey`는 최상위 수준에서 `배열(Array)` 형태를 가져야 하며, 단순히 문자열 하나로 구성된 배열일 수도 있고 여러 문자열과 중첩된 객체로 이루어진 복잡한 배열일 수도 있다.
 
-`QueryKey`가 `직렬화 가능(serializable)`하고 쿼리 데이터에 고유하다면 어떤 형태로든 사용할 수 있습니다!
+`QueryKey`가 `직렬화 가능(serializable)`하고 쿼리 데이터에 고유하다면 어떤 형태로든 사용할 수 있다!
 
 **뭐 대충, 엄청 중요하다는 의미입니다.**
 
-사실 처음 개발을 할 때에는 `QueryKey`에 대한 중요성이 크게 느껴지지 않았습니다.
+사실 처음 개발을 할 때에는 `QueryKey`에 대한 중요성이 크게 느껴지지 않았다.
 
 1. 전체 조회를 한다.
 
@@ -60,15 +60,15 @@ const queryKeys = {
 };
 ```
 
-전체 조회만 있으면 이렇게 하면 괜찮을 것 같았습니다!
+전체 조회만 있으면 이렇게 하면 괜찮을 것 같았다!
 
 2. 상세 조회도 한다.
 
-여기서 살짝 고민이 생겼습니다.
+여기서 살짝 고민이 생겼다.
 
 물론 일반적으로 `[todos, 1]` 이런식으로 `QueryKey`를 관리해도 되지 않을까 라는 생각을 했지만, 이러면 상세 페이지만 `invalidate(새로고침)`을 하고 싶은 경우가 대응이 어려워집니다.
 
-그래서 생각한 `QueryKey`의 구조는 아래와 같아졌습니다.
+그래서 생각한 `QueryKey`의 구조는 아래와 같아졌다.
 
 ```js
 const queryKeys = {
@@ -83,11 +83,11 @@ const queryKeys = {
 };
 ```
 
-뭐, 여기까지는 그래도 대응 할 만 했습니다.
+뭐, 여기까지는 그래도 대응 할 만 했다.
 
 3. challenge의 종류가 생긴 경우? (영상 챌린지, 녹음 챌린지 등등)
 
-여기서부터 이제 혼란이 오기 시작했습니다. 어떤식으로 관리해야지??
+여기서부터 이제 혼란이 오기 시작했다. 어떤식으로 관리해야지??
 
 ```js
 const queryKeys = {
@@ -104,11 +104,11 @@ const queryKeys = {
 };
 ```
 
-물론 `filters`라는 파라미터를 전달받아서 `{ filters }` 형태로 `QueryKey`를 관리해도 될 것 같다고 생각했습니다!
+물론 `filters`라는 파라미터를 전달받아서 `{ filters }` 형태로 `QueryKey`를 관리해도 될 것 같다고 생각했다!
 
-그러나 현재 저희 서비스 뿐만 아니라 대부분의 서비스들은 계속 늘어나는 고객들의 요구사항과 편리함을 충족하기 위해서 기능을 추가할 것이고, 그에 따라 `QueryKey`의 변동이 정말 많이 일어날 것 같다고 생각했습니다.
+그러나 현재 저희 서비스 뿐만 아니라 대부분의 서비스들은 계속 늘어나는 고객들의 요구사항과 편리함을 충족하기 위해서 기능을 추가할 것이고, 그에 따라 `QueryKey`의 변동이 정말 많이 일어날 것 같다고 생각했다.
 
-현재 서비스의 크기 정도면 충분히 이런식으로 관리가 가능하다고 생각했지만, 앞으로 많은 직원들이 들어오거나 협업을 하는데에 있어서 `QueryKey`를 효율적으로 관리하는 기준을 잡는 것이 매우 필요하다고 생각했습니다.
+현재 서비스의 크기 정도면 충분히 이런식으로 관리가 가능하다고 생각했지만, 앞으로 많은 직원들이 들어오거나 협업을 하는데에 있어서 `QueryKey`를 효율적으로 관리하는 기준을 잡는 것이 매우 필요하다고 생각했다.
 
 ![매번, 리팩토링 하려고 했지만 쉽지 않았다는 핑계..](/images/query-key-factory/3.webp)
 
@@ -116,7 +116,7 @@ const queryKeys = {
 
 `QueryKey`를 한번 빠르게 정리하고 싶었으나...
 
-서비스 출시 이후 늘어나는 요구사항과 유저 에러들을 즉각 대응하느라 (핑계) 정말 시간이 남지 않아서 리팩토링을 하지 못했습니다.
+서비스 출시 이후 늘어나는 요구사항과 유저 에러들을 즉각 대응하느라 (핑계) 정말 시간이 남지 않아서 리팩토링을 하지 못했다.
 
 > 이제는 진짜 할 것이다... (아래로...)
 
@@ -124,7 +124,7 @@ const queryKeys = {
 
 ## 공식문서, 너는 어떻게 추천해주니?
 
-자 진짜 리팩토링 합니다...
+자 진짜 리팩토링 한다...
 
 일단 모를때는 공식문서부터 봐봅시다...
 
@@ -137,21 +137,21 @@ const queryKeys = {
 - [Effective React Query Keys](https://tkdodo.eu/blog/effective-react-query-keys)
 - [Query Key Factory Package](https://www.npmjs.com/package/query-key-factory)
 
-당연히 저말고도 많은 사람들이 비슷한 고민을 겪고 있고, 공식문서에서는 크게 2가지 방식을 추천해주셨습니다.
+당연히 저말고도 많은 사람들이 비슷한 고민을 겪고 있고, 공식문서에서는 크게 2가지 방식을 추천해주셨다.
 
-하나씩 알아보고자 합니다.
+하나씩 알아보고자 한다.
 
 ---
 
 ## 1. Effective React Query Keys
 
-Effective React Query Keys에서는 먼저 저의 뼈를 찌르는 문장으로 시작했습니다.
+Effective React Query Keys에서는 먼저 저의 뼈를 찌르는 문장으로 시작했다.
 
 ### 1. Colocate (코드 근처에 배치)
 
-모든 `QueryKey`를 `/src/utils/queryKeys.ts`와 같은 글로벌 파일에 저장하는 것이 좋은 선택이라고 생각하지 않습니다.
+모든 `QueryKey`를 `/src/utils/queryKeys.ts`와 같은 글로벌 파일에 저장하는 것이 좋은 선택이라고 생각하지 않다.
 
-대신 `QueryKey`를 관련된 쿼리와 가까운 위치에 배치합니다.
+대신 `QueryKey`를 관련된 쿼리와 가까운 위치에 배치한다.
 
 예를 들면, 다음과 같은 구조입니다:
 
@@ -166,19 +166,19 @@ src
   │         ├─ queries.ts
 ```
 
-각 `queries.ts` 파일은 React Query와 관련된 모든 내용을 포함하며, 일반적으로 커스텀 훅만 export합니다.
+각 `queries.ts` 파일은 React Query와 관련된 모든 내용을 포함하며, 일반적으로 커스텀 훅만 export한다.
 
-쿼리 함수와 `Query Key`는 지역적으로 관리됩니다.
+쿼리 함수와 `Query Key`는 지역적으로 관리된다.
 
-이를 보며 일단 폴더 구조를 features 중심으로 변경해야겠다고 생각했습니다.
+이를 보며 일단 폴더 구조를 features 중심으로 변경해야겠다고 생각했다.
 
 ---
 
 ### 2. 항상 배열 형태의 Query Key 사용하기
 
-`QueryKey`는 문자열 하나로도 정의할 수 있지만, 통일성을 위해 항상 `배열(Array)`을 사용하는 것이 좋습니다.
+`QueryKey`는 문자열 하나로도 정의할 수 있지만, 통일성을 위해 항상 `배열(Array)`을 사용하는 것이 좋다.
 
-React Query는 내부적으로 문자열도 배열로 변환하므로 아래처럼 작성하는 것이 더 좋습니다:
+React Query는 내부적으로 문자열도 배열로 변환하므로 아래처럼 작성하는 것이 더 좋다:
 
 ```js
 // 🚨 React Query가 내부적으로 ['todos']로 변환함
@@ -188,15 +188,15 @@ useQuery({ queryKey: 'todos' });
 useQuery({ queryKey: ['todos'] });
 ```
 
-**업데이트**: React Query v4부터는 모든 `Query Key`가 배열 형태여야 합니다.
+**업데이트**: React Query v4부터는 모든 `Query Key`가 배열 형태여야 한다.
 
 ### 3. Query Key 구조 설계
 
-`QueryKey`는 일반적인 수준에서부터 구체적인 수준까지 단계적으로 구조화하는 것이 좋습니다.
+`QueryKey`는 일반적인 수준에서부터 구체적인 수준까지 단계적으로 구조화하는 것이 좋다.
 
 필요에 따라 세부적인 레벨을 추가하세요.
 
-예를 들어, 필터링 가능한 ToDo 리스트와 세부 조회를 제공하는 경우는 아래와 같이 설계할 수 있습니다:
+예를 들어, 필터링 가능한 ToDo 리스트와 세부 조회를 제공하는 경우는 아래와 같이 설계할 수 있다:
 
 ```js
 ['todos', 'list', { filters: 'all' }],
@@ -205,7 +205,7 @@ useQuery({ queryKey: ['todos'] });
   ['todos', 'detail', 2];
 ```
 
-이러한 구조를 사용하면 다음과 같은 이점이 있습니다:
+이러한 구조를 사용하면 다음과 같은 이점이 있다:
 
 1. `['todos']`: ToDo와 관련된 모든 데이터를 무효화할 수 있음
 2. `['todos', 'list']`: 모든 리스트를 무효화할 수 있음
@@ -234,7 +234,7 @@ function useUpdateTitle() {
 
 #### 2. 모든 리스트 무효화
 
-구체적인 키를 설정하기 어려운 경우, 모든 리스트를 무효화하는 방식도 가능합니다:
+구체적인 키를 설정하기 어려운 경우, 모든 리스트를 무효화하는 방식도 가능한다:
 
 ```js
 function useUpdateTitle() {
@@ -285,9 +285,9 @@ function useUpdateTitle() {
 
 ## 2. Query Key Factory
 
-사실 1번의 방법을 통해 `QueryKey`의 효율적 관리를 위해 기능별 폴더구조를 잡는게 중요한 것을 알 수 있게 되었지만, 개인적으로 `QueryKey`를 효율적으로 관리하는 부분에 대한 궁금증은 아직 해소되지 않았습니다.
+사실 1번의 방법을 통해 `QueryKey`의 효율적 관리를 위해 기능별 폴더구조를 잡는게 중요한 것을 알 수 있게 되었지만, 개인적으로 `QueryKey`를 효율적으로 관리하는 부분에 대한 궁금증은 아직 해소되지 않았다.
 
-공식문서에서 아래와 같은 라이브러리를 활용하는 것을 추천해주었기에 한번 바로 사용해보고자 했습니다.
+공식문서에서 아래와 같은 라이브러리를 활용하는 것을 추천해주었기에 한번 바로 사용해보고자 했다.
 
 > **참고 자료**: [Query Key Factory](https://github.com/lukemorales/query-key-factory)
 
@@ -295,9 +295,9 @@ function useUpdateTitle() {
 
 #### 1. 표준화된 키 생성 (Standardized Keys)
 
-`query-key-factory`를 사용하면 모든 키가 배열 형태로 표준화됩니다.
+`query-key-factory`를 사용하면 모든 키가 배열 형태로 표준화된다.
 
-또한 직렬화 가능한 객체를 포함한 키를 생성할 수 있습니다.
+또한 직렬화 가능한 객체를 포함한 키를 생성할 수 있다.
 
 ```ts
 export const todos = createQueryKeys('todos', {
@@ -321,7 +321,7 @@ export const todos = createQueryKeys('todos', {
 }
 ```
 
-`queryKey`가 필요하지 않은 경우에는 `null`로 설정할 수도 있습니다:
+`queryKey`가 필요하지 않은 경우에는 `null`로 설정할 수도 있다:
 
 ```ts
 export const users = createQueryKeys('users', {
@@ -336,7 +336,7 @@ export const users = createQueryKeys('users', {
 
 #### 2. Query Key와 Query Option 동시 선언 (Generate the Query Options You Need)
 
-`queryKey`와 `queryFn`을 함께 선언하여 필요한 Query Option을 바로 생성할 수 있습니다.
+`queryKey`와 `queryFn`을 함께 선언하여 필요한 Query Option을 바로 생성할 수 있다.
 
 ```ts
 export const users = createQueryKeys('users', {
@@ -355,9 +355,9 @@ export function useUserDetail(id: string) {
 
 #### 3. 문맥 기반 쿼리 생성 (Generate Contextual Queries)
 
-특정 컨텍스트에 종속된 쿼리를 생성할 수 있습니다.
+특정 컨텍스트에 종속된 쿼리를 생성할 수 있다.
 
-예를 들어 사용자의 좋아요 데이터를 가져오는 쿼리를 생성할 때 유용합니다.
+예를 들어 사용자의 좋아요 데이터를 가져오는 쿼리를 생성할 때 유용한다.
 
 ```ts
 export const users = createQueryKeys('users', {
@@ -397,7 +397,7 @@ export function useUserLikes(userId: string) {
 
 #### 4. 직렬화 가능한 키 스코프 정의 (Access to Serializable Keys Scope)
 
-전체 키 스코프를 쉽게 액세스하고, 해당 컨텍스트의 캐시를 무효화할 수 있습니다.
+전체 키 스코프를 쉽게 액세스하고, 해당 컨텍스트의 캐시를 무효화할 수 있다.
 
 ```js
 users.detail(userId).queryKey; // => ['users', 'detail', userId]
@@ -408,7 +408,7 @@ users.detail._def; // => ['users', 'detail']
 
 #### 5. 단일 파일에서 Query Keys 선언 (Declare Your Query Keys in a Single File)
 
-하나의 파일에서 QueryKeys를 선언하고 관리할 수 있습니다.
+하나의 파일에서 QueryKeys를 선언하고 관리할 수 있다.
 
 ```ts
 export const queries = createQueryKeyStore({
@@ -433,7 +433,7 @@ export const queries = createQueryKeyStore({
 
 #### 6. 기능별로 Query Keys 선언 (Declare Your Query Keys by Feature)
 
-기능별로 세분화하여 QueryKeys를 선언하고, 이를 하나의 객체로 병합할 수 있습니다.
+기능별로 세분화하여 QueryKeys를 선언하고, 이를 하나의 객체로 병합할 수 있다.
 
 ```ts
 // queries/users.ts
@@ -462,9 +462,9 @@ export const queries = mergeQueryKeys(users, todos);
 
 #### 7. TypeScript 기반의 강력한 타입 안전성 (Type Safety and Smart Autocomplete)
 
-타입스크립트와 통합되어 IDE에서 자동완성 및 강력한 타입 지원을 제공합니다.
+타입스크립트와 통합되어 IDE에서 자동완성 및 강력한 타입 지원을 제공한다.
 
-키의 구조나 출력 타입을 쉽게 확인할 수 있습니다.
+키의 구조나 출력 타입을 쉽게 확인할 수 있다.
 
 **스토어의 Query Keys 타입 추론**
 
@@ -506,15 +506,15 @@ export type TodosKeys = inferQueryKeys<typeof todos>;
 
 항상 사내 프로젝트에 도입 이전에 직접 서버를 만들면서 개인적으로 먼저 작업을 한 후 효율적인 구조를 찾아보는 편입니다.
 
-물론 제가 만든 구조가 정확한 정답은 아닐지라도, 이전보다 확실하게 개발하는데에 있어서 효율적이면 최대한 빠르게 리팩토링을 진행하고자 합니다.
+물론 제가 만든 구조가 정확한 정답은 아닐지라도, 이전보다 확실하게 개발하는데에 있어서 효율적이면 최대한 빠르게 리팩토링을 진행하고자 한다.
 
 아래는 앞으로 사내 코드 도입에 진행 할 예시입니다.
 
 1. 도메인을 기준으로 폴더 구조를 나누자.
 
-이름은 중요하지 않습니다. 기능별 폴더 구조를 나누는게 중요하다고 느꼈습니다.
+이름은 중요하지 않다. 기능별 폴더 구조를 나누는게 중요하다고 느꼈다.
 
-`features`든 `domains`든 기능을 기준으로 폴더 구조를 나누어야 겠습니다.
+`features`든 `domains`든 기능을 기준으로 폴더 구조를 나누어야 겠다.
 
 ![도메인을 기준으로, 폴더 구조를 나누자.](/images/query-key-factory/6.webp)
 
@@ -543,11 +543,11 @@ export const todoKeys = createQueryKeyStore({
 });
 ```
 
-이렇게 라이브러리를 활용하면 매우 효율적으로 쿼리키를 관리할 수 있습니다.
+이렇게 라이브러리를 활용하면 매우 효율적으로 쿼리키를 관리할 수 있다.
 
 3. 해당 키를 활용하여 hooks를 생성하자
 
-일단은 `useQuery` / `useInfiniteQuery`를 활용하는 `queries` 폴더와, `useMutation`을 활용하는 `mutations` 폴더로 크게 나누었습니다.
+일단은 `useQuery` / `useInfiniteQuery`를 활용하는 `queries` 폴더와, `useMutation`을 활용하는 `mutations` 폴더로 크게 나누었다.
 
 ```ts
 // queries/todo.query.ts
@@ -721,16 +721,16 @@ export default function TodosPage() {
 
 ## 마무리
 
-그동안 `QueryKey` 관리에 대한 많은 고민이 있었는데 공식문서와 다양한 블로그, 라이브러리들을 탐방하며 다양한 해결책을 알아낼 수 있었습니다.
+그동안 `QueryKey` 관리에 대한 많은 고민이 있었는데 공식문서와 다양한 블로그, 라이브러리들을 탐방하며 다양한 해결책을 알아낼 수 있었다.
 
-효율적인 `QueryKey` 관리에 대해 고민하며 기존 서비스의 폴더 구조의 유지보수 어려움에 대한 문제점도 발견하여 고칠 수 있는 소중한 기회가 되었습니다.
+효율적인 `QueryKey` 관리에 대해 고민하며 기존 서비스의 폴더 구조의 유지보수 어려움에 대한 문제점도 발견하여 고칠 수 있는 소중한 기회가 되었다.
 
-더 나아가 `Optimistic Update`를 통한 User Experience를 향상 시키기 위한 작업을 진행하려고 했는데, 이때 `QueryKey`에 대한 문제가 있었는데 이번 기회에 이를 쉽게 해결하고 원하던 `Optimistic Update`를 조금 더 쉽게 적용할 수 있게 될 것 같습니다.
+더 나아가 `Optimistic Update`를 통한 User Experience를 향상 시키기 위한 작업을 진행하려고 했는데, 이때 `QueryKey`에 대한 문제가 있었는데 이번 기회에 이를 쉽게 해결하고 원하던 `Optimistic Update`를 조금 더 쉽게 적용할 수 있게 될 것 같다.
 
-저처럼 혹시라도 `QueryKey` 관리에 대해서 많은 고민을 한 사람에게 조금이나마 이 게시글이 도움이 되셨으면 좋겠습니다!
+저처럼 혹시라도 `QueryKey` 관리에 대해서 많은 고민을 한 사람에게 조금이나마 이 게시글이 도움이 되셨으면 좋겠다!
 
 효율적인 `QueryKey` 관리에 대해 (폴더구조 등) 좋은 경험을 갖고 계신다면 댓글은 언제나 환영입니다!!
 
-아래는 직접 사내 프로젝트 도입전 혼자 Nest.js로 서버를 만들어가며 QueryKeyFactory 테스트를 해보는 영상이니, 위의 블로그 글이 이해가 안간다면 조금씩 참고해보셔도 좋을 것 같습니다!
+아래는 직접 사내 프로젝트 도입전 혼자 Nest.js로 서버를 만들어가며 QueryKeyFactory 테스트를 해보는 영상이니, 위의 블로그 글이 이해가 안간다면 조금씩 참고해보셔도 좋을 것 같다!
 
 https://youtu.be/O_G-oQ1_Zag?si=oCKpbzskrnXJeHd0

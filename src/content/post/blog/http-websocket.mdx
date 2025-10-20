@@ -64,7 +64,7 @@ wss.on('connection', (ws) => {
   console.log('새로운 클라이언트 연결됨');
 
   // 연결 시 환영 메시지 전송
-  ws.send('환영합니다! WebSocket 서버에 연결되었습니다.');
+  ws.send('환영한다! WebSocket 서버에 연결되었다.');
 
   // 클라이언트로부터 메시지 수신
   ws.on('message', (data) => {
@@ -84,7 +84,7 @@ console.log('WebSocket 서버가 8080 포트에서 실행 중...');
 
 ### 핸드셰이크 과정 직접 확인하기
 
-WebSocket은 일반 curl로는 테스트하기 어렵습니다. macOS/Linux에서는 `netcat(nc)` 명령어를 사용해 [TCP](https://www.yolog.co.kr/post/http-tcp) 메시지를 직접 보낼 수 있습니다:
+WebSocket은 일반 curl로는 테스트하기 어렵다. macOS/Linux에서는 `netcat(nc)` 명령어를 사용해 [TCP](https://www.yolog.co.kr/post/http-tcp) 메시지를 직접 보낼 수 있다:
 
 ```bash
 # netcat 설치 확인
@@ -167,7 +167,7 @@ ws.onerror = (error) => {
 
 ### Network 탭에서 WebSocket 통신 확인
 
-개발자 도구의 Network 탭에서 WebSocket 연결을 아래와 같이 확인할 수 있습니다.
+개발자 도구의 Network 탭에서 WebSocket 연결을 아래와 같이 확인할 수 있다.
 
 ![브라우저 network 탭에서 웹소켓 연결 확인](/images/http-websocket/3.webp)
 
@@ -218,7 +218,7 @@ wss.on('connection', (ws) => {
   console.log('새 WebSocket 클라이언트 연결');
 
   // 환영 메시지 전송
-  ws.send('WebSocket 서버에 연결되었습니다!');
+  ws.send('WebSocket 서버에 연결되었다!');
 
   // 메시지 수신 처리
   ws.on('message', (data) => {
@@ -277,14 +277,14 @@ const wss = new WebSocketServer({ server });
 // 새로운 클라이언트 연결 처리
 wss.on('connection', (ws) => {
   // 환영 메시지 생성 및 전송
-  const welcomeMessage = new Message('채팅방에 입장했습니다.');
+  const welcomeMessage = new Message('채팅방에 입장했다.');
   ws.send(JSON.stringify(welcomeMessage));
 
   // 연결된 클라이언트 목록에 추가
   webSocketClients.push(ws);
 
   // 다른 클라이언트들에게 입장 알림
-  broadcast(ws, '새로운 사용자가 입장했습니다.', true);
+  broadcast(ws, '새로운 사용자가 입장했다.', true);
 
   // 클라이언트로부터 메시지 수신
   ws.on('message', (data) => {
@@ -310,7 +310,7 @@ wss.on('connection', (ws) => {
     webSocketClients = webSocketClients.filter((client) => client !== ws);
 
     // 다른 클라이언트들에게 퇴장 알림
-    broadcast(null, '사용자가 퇴장했습니다.', true);
+    broadcast(null, '사용자가 퇴장했다.', true);
   });
 });
 
@@ -382,7 +382,7 @@ const initWebSocket = () => {
   // 연결 성공
   webSocket.addEventListener('open', () => {
     console.log('WebSocket 연결 성공');
-    addSystemMessage('서버에 연결되었습니다.');
+    addSystemMessage('서버에 연결되었다.');
   });
 
   // 메시지 수신
@@ -398,13 +398,13 @@ const initWebSocket = () => {
   // 연결 종료
   webSocket.addEventListener('close', () => {
     console.log('WebSocket 연결 종료');
-    addSystemMessage('서버와의 연결이 끊어졌습니다.');
+    addSystemMessage('서버와의 연결이 끊어졌다.');
   });
 
   // 에러 처리
   webSocket.addEventListener('error', (error) => {
     console.error('WebSocket 에러:', error);
-    addSystemMessage('연결 중 오류가 발생했습니다.');
+    addSystemMessage('연결 중 오류가 발생했다.');
   });
 };
 
@@ -457,7 +457,7 @@ const initSendButton = () => {
       webSocket.send(text);
       textField.value = '';
     } else {
-      addSystemMessage('연결이 끊어졌습니다. 새로고침해주세요.');
+      addSystemMessage('연결이 끊어졌다. 새로고침해주세요.');
     }
   };
 
@@ -538,7 +538,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 ## 7. HTTP 통신 기법 비교
 
-이제 우리가 학습한 모든 HTTP 통신 기법을 비교해보겠습니다:
+이제 우리가 학습한 모든 HTTP 통신 기법을 비교해보겠다:
 
 | 기법                                                                        | 통신 방향       | 실시간성  | 효율성    | 복잡도 | 사용 사례             |
 | --------------------------------------------------------------------------- | --------------- | --------- | --------- | ------ | --------------------- |

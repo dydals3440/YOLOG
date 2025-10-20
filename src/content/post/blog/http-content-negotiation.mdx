@@ -202,7 +202,7 @@ app.use((req, res, next) => {
   const userAgent = String(req.headers['user-agent'] || '');
   const isIE = /msie|trident/i.test(userAgent);
   if (isIE) {
-    res.status(400).send('<html><body>IE는 지원하지 않습니다.</body></html>');
+    res.status(400).send('<html><body>IE는 지원하지 않다.</body></html>');
     return;
   }
   next();

@@ -9,29 +9,29 @@ image: '/images/ts-interface-type/thumbnail.webp'
 
 # 끊이지 않는 논쟁, Type vs Interface
 
-우리가 사용하는 언어는 **TypeScript**인데, 실제로 리액트 개발을 하다보면 왜인지는 모르겠지만 **InterfaceScript** 같은 느낌이 드는 경우가 있습니다. `type` 보다 왜인지 모르겠지만, `interface`를 쓰는 경우가 자연스럽게 더 많았기 때문입니다.
+우리가 사용하는 언어는 **TypeScript**인데, 실제로 리액트 개발을 하다보면 왜인지는 모르겠지만 **InterfaceScript** 같은 느낌이 드는 경우가 있다. `type` 보다 왜인지 모르겠지만, `interface`를 쓰는 경우가 자연스럽게 더 많았기 때문입니다.
 
 ![Type vs Interface](/images/ts-interface-type/thumbnail.webp)
 
-신규 프로젝트를 시작하면서 팀 내 개발 컨벤션을 만들어야 하는데, 막상 저부터도 `type`과 `interface`의 차이와 장단점을 명확하게 설명하기 어려웠습니다.
+신규 프로젝트를 시작하면서 팀 내 개발 컨벤션을 만들어야 하는데, 막상 저부터도 `type`과 `interface`의 차이와 장단점을 명확하게 설명하기 어려웠다.
 
-그래서, 이번 블로그를 통해서 그동안 다양한 자료들을 통해 학습한 내용을 정리하며, 우리팀은 어떠한 방식을 선택했는지 공유하려고 합니다.
+그래서, 이번 블로그를 통해서 그동안 다양한 자료들을 통해 학습한 내용을 정리하며, 우리팀은 어떠한 방식을 선택했는지 공유하려고 한다.
 
 ## 일관성만 있으면 아무거나 사용해도 상관이 없는 것일까?
 
-성능 차이가 크게 없다면 아무거나 사용해도 된다고는 하지만, 실제로는 성능 차이가 없지는 않습니다.
+성능 차이가 크게 없다면 아무거나 사용해도 된다고는 하지만, 실제로는 성능 차이가 없지는 않다.
 
 ![이 아저씨는 아닙니당..!](/images/ts-interface-type/1.webp)
 
-실제로, 아래는 흔히 빡빡이 아저씨라고 불리는 타입스크립트에서 유명하신 [Matt Pocock씨가 작성한 내용](https://www.totaltypescript.com/type-vs-interface-which-should-you-use)을 토대로 한번 설명해보겠습니다.
+실제로, 아래는 흔히 빡빡이 아저씨라고 불리는 타입스크립트에서 유명하신 [Matt Pocock씨가 작성한 내용](https://www.totaltypescript.com/type-vs-interface-which-should-you-use)을 토대로 한번 설명해보겠다.
 
 ## 실제 성능 사례: Sentry의 경험
 
-Matt Pocock의 [Type vs Interface에 대한 블로그 포스트](https://www.totaltypescript.com/type-vs-interface-which-should-you-use)를 보면, 실제 성능 문제점에 대해서 Sentry의 경험을 공유해주었습니다.
+Matt Pocock의 [Type vs Interface에 대한 블로그 포스트](https://www.totaltypescript.com/type-vs-interface-which-should-you-use)를 보면, 실제 성능 문제점에 대해서 Sentry의 경험을 공유해주었다.
 
-Sentry 팀이 교차 타입(`&`)을 인터페이스 `extends`로 바꿨더니 **컴파일 성능이 눈에 띄게 개선되었다**고 보고했습니다. 구체적인 수치는 프로젝트마다 다르지만, 대규모 코드베이스에서는 확실히 체감할 수 있는 차이가 있었다고 합니다.
+Sentry 팀이 교차 타입(`&`)을 인터페이스 `extends`로 바꿨더니 **컴파일 성능이 눈에 띄게 개선되었다**고 보고했다. 구체적인 수치는 프로젝트마다 다르지만, 대규모 코드베이스에서는 확실히 체감할 수 있는 차이가 있었다고 한다.
 
-우리가 보통 버튼 컴포넌트를 만든다고 할 때, 버튼에서 활용할 수 있는 props들을 모두 일일이 선언하는 게 불가능하기 때문에 우리는 이를 확장합니다.
+우리가 보통 버튼 컴포넌트를 만든다고 할 때, 버튼에서 활용할 수 있는 props들을 모두 일일이 선언하는 게 불가능하기 때문에 우리는 이를 확장한다.
 
 ### 타입으로 확장하는 경우 (intersection 활용)
 
@@ -51,13 +51,13 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 ```
 
-[TypeScript 성능 위키](https://github.com/microsoft/TypeScript/wiki/Performance#preferring-interfaces-over-intersections)에서도 명시적으로 권장합니다:
+[TypeScript 성능 위키](https://github.com/microsoft/TypeScript/wiki/Performance#preferring-interfaces-over-intersections)에서도 명시적으로 권장한다:
 
-> `interface Foo extends Bar, Baz {}`가 `type Foo = Bar & Baz & {...}`보다 타입 체킹 성능이 좋습니다.
+> `interface Foo extends Bar, Baz {}`가 `type Foo = Bar & Baz & {...}`보다 타입 체킹 성능이 좋다.
 
 ## 그러면 왜 interface의 extends가 빠를까?
 
-이를 이해하기 위해서는 TypeScript 컴파일러가 타입을 처리하는 방식을 알아야 합니다. (세부 메커니즘은 복합적이지만, 핵심 차이점을 설명하겠습니다)
+이를 이해하기 위해서는 TypeScript 컴파일러가 타입을 처리하는 방식을 알아야 한다. (세부 메커니즘은 복합적이지만, 핵심 차이점을 설명하겠다)
 
 ### 1. interface extends의 동작 방식 (빠름 ⚡)
 
@@ -85,7 +85,7 @@ interface AuthenticatedUser extends BaseUser, UserProfile {
 
 **왜 빠른가?**
 
-1. **이름 기반 캐싱**: TypeScript는 `AuthenticatedUser`라는 이름으로 이 타입을 내부 레지스트리에 저장합니다
+1. **이름 기반 캐싱**: TypeScript는 `AuthenticatedUser`라는 이름으로 이 타입을 내부 레지스트리에 저장한다
 2. **재사용 시 빠른 참조**: 다른 곳에서 `AuthenticatedUser`를 사용할 때, 컴파일러는 캐시된 타입을 바로 가져옵니다
 3. **계층적 체크**: 각 부모 인터페이스를 독립적으로 체크할 수 있어 효율적입니다
 
@@ -104,8 +104,8 @@ type AuthenticatedUser = BaseUser &
 **왜 느린가?**
 
 1. **익명 타입 생성**: 매번 새로운 "익명" 타입을 만듭니다
-2. **캐싱 제한**: 구조적으로 매번 재계산이 필요합니다
-3. **플래튼(Flatten) 과정**: 모든 속성을 하나의 평면 구조로 합쳐야 합니다
+2. **캐싱 제한**: 구조적으로 매번 재계산이 필요한다
+3. **플래튼(Flatten) 과정**: 모든 속성을 하나의 평면 구조로 합쳐야 한다
 
 ### 실제 성능 차이 예시
 
@@ -147,16 +147,16 @@ interface Window {
 window.gtag('config', 'GA_MEASUREMENT_ID'); // ✅ 타입 체크 통과
 ```
 
-이것은 `interface`의 명과 암을 잘 보여주는 특징입니다. 의도적으로 사용하면 강력하지만, 실수로 같은 이름을 선언하면 문제가 됩니다.
+이것은 `interface`의 명과 암을 잘 보여주는 특징입니다. 의도적으로 사용하면 강력하지만, 실수로 같은 이름을 선언하면 문제가 된다.
 
-우리는 이러한 문제를 방지할 수 있습니다:
+우리는 이러한 문제를 방지할 수 있다:
 
 - **ESLint**: [`@typescript-eslint/no-unsafe-declaration-merging`](https://typescript-eslint.io/rules/no-unsafe-declaration-merging/)
 - **Biome**: [`noRedeclare`](https://biomejs.dev/linter/rules/no-redeclare/), [`noUnsafeDeclarationMerging`](https://biomejs.dev/linter/rules/no-unsafe-declaration-merging/)
 
 #### 2. 인덱스 시그니처 차이
 
-**타입 별칭은 "닫힌(closed)" 특성**을 가지고, **인터페이스는 선언 병합으로 "열린(open)" 특성**을 가집니다. 이로 인해 인터페이스는 암묵적 인덱스 시그니처를 가정하기 어렵습니다.
+**타입 별칭은 "닫힌(closed)" 특성**을 가지고, **인터페이스는 선언 병합으로 "열린(open)" 특성**을 가집니다. 이로 인해 인터페이스는 암묵적 인덱스 시그니처를 가정하기 어렵다.
 
 ```tsx
 interface UserInterface {
@@ -380,9 +380,9 @@ updateConfig({ api: { retry: { count: 5 } } }); // ✅ OK
 
 ## 그래서 우리 팀은 어떤 걸 선택했나?
 
-우리 팀은 **`interface`를 기본으로 사용하고, `type`의 특별한 기능이 필요할 때만 `type`을 사용**하기로 정했습니다.
+우리 팀은 **`interface`를 기본으로 사용하고, `type`의 특별한 기능이 필요할 때만 `type`을 사용**하기로 정했다.
 
-TypeScript 공식 문서에서도 "`interface`는 열림(open), `type`은 닫힘(closed)"의 특성 차이를 강조하며, 용도에 따라 선택하라고 권장합니다.
+TypeScript 공식 문서에서도 "`interface`는 열림(open), `type`은 닫힘(closed)"의 특성 차이를 강조하며, 용도에 따라 선택하라고 권장한다.
 
 ### 선택 이유
 
