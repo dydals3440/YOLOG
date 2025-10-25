@@ -19,7 +19,7 @@ const { slot, format = 'auto', responsive = true, className = '' } = Astro.props
          data-ad-slot={slot}
          data-ad-format={format}
          data-full-width-responsive={responsive}></ins>
-    <script>
+    <script is:inline>
        (adsbygoogle = window.adsbygoogle || []).push({});
     </script>
   </div>
