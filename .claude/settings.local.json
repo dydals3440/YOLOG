@@ -12,7 +12,12 @@
       "Bash(if [ -f \"$base.webp\" ])",
       "Bash(then echo \"$png\")",
       "Bash(fi)",
-      "Bash(for file in http-content-security-policy.mdx http-websocket.mdx http-sse.mdx http-content-negotiation.mdx http-same-origin-policy.mdx component.mdx browser-structure.mdx security-csrf.mdx security-xss.mdx security-session-hijacking.mdx ts-interface-type.mdx rbac-abac.mdx when-to-use-usestate-vs-usereducer.mdx http-rendering-optimization.mdx css-bem-methodology.mdx query-key-factory.mdx)"
+      "Bash(for file in http-content-security-policy.mdx http-websocket.mdx http-sse.mdx http-content-negotiation.mdx http-same-origin-policy.mdx component.mdx browser-structure.mdx security-csrf.mdx security-xss.mdx security-session-hijacking.mdx ts-interface-type.mdx rbac-abac.mdx when-to-use-usestate-vs-usereducer.mdx http-rendering-optimization.mdx css-bem-methodology.mdx query-key-factory.mdx)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npm outdated:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(bun run build:*)"
     ],
     "deny": [],
     "ask": []

@@ -33,6 +33,9 @@ const TableOfContent = ({
   );
 };
 
+const HEADING_OFFSET = 30;
+const SCROLL_THROTTLE_MS = 50;
+
 const useTocScroll = (tableOfContents: TOCSectionModel[]) => {
   const [currentSectionSlug, setCurrentSectionSlug] = useState<string>();
 
@@ -41,17 +44,18 @@ const useTocScroll = (tableOfContents: TOCSectionModel[]) => {
   useEffect(() => {
     if (!hasContent) return;
 
-    let headings: { id: string; top: number }[];
+    let headings: { id: string; top: number }[] = [];
     let pageTop = 0;
 
-    const onResize = () => {
-      headings = Array.from(
-        document.querySelectorAll<HTMLElement>('.mdx h2')
-      ).map((element) => ({
+    const updateHeadings = () => {
+      const headingElements = document.querySelectorAll<HTMLElement>('.mdx h2');
+      headings = Array.from(headingElements).map((element) => ({
         id: element.id,
         top: element.offsetTop,
       }));
+    };
 
+    const updatePageTop = () => {
       pageTop = parseFloat(
         window
           .getComputedStyle(document.documentElement)
@@ -60,12 +64,16 @@ const useTocScroll = (tableOfContents: TOCSectionModel[]) => {
       );
     };
 
+    const onResize = () => {
+      updateHeadings();
+      updatePageTop();
+    };
+
     const onScroll = throttle(() => {
-      if (!headings) return;
+      if (headings.length === 0) return;
 
       let current: typeof currentSectionSlug = undefined;
       const top = window.scrollY + pageTop;
-      const HEADING_OFFSET = 30;
 
       headings.forEach((heading) => {
         if (top >= heading.top - HEADING_OFFSET) {
@@ -74,10 +82,13 @@ const useTocScroll = (tableOfContents: TOCSectionModel[]) => {
       });
 
       setCurrentSectionSlug(current);
-    }, 50);
+    }, SCROLL_THROTTLE_MS);
 
-    onResize();
+    // 초기 설정
+    updateHeadings();
+    updatePageTop();
     onScroll();
+
     window.addEventListener('scroll', onScroll, { capture: true });
     window.addEventListener('resize', onResize, { capture: true });
 

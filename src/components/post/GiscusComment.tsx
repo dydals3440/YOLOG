@@ -5,6 +5,14 @@ const giscusThemes = {
   dark: 'https://giscus.app/themes/transparent_dark.css',
 } as const;
 
+// 환경 변수에서 Giscus 설정 가져오기
+const GISCUS_CONFIG = {
+  repo: import.meta.env.PUBLIC_GISCUS_REPO,
+  repoId: import.meta.env.PUBLIC_GISCUS_REPO_ID,
+  category: import.meta.env.PUBLIC_GISCUS_CATEGORY,
+  categoryId: import.meta.env.PUBLIC_GISCUS_CATEGORY_ID,
+} as const;
+
 export const changeGiscusTheme = (theme: keyof typeof giscusThemes) => {
   const sendMessage = (config: unknown) => {
     const iframe = document.querySelector<HTMLIFrameElement>(
@@ -25,15 +33,21 @@ export const changeGiscusTheme = (theme: keyof typeof giscusThemes) => {
 
 const GiscusComment = (props: React.HTMLAttributes<HTMLElement>) => {
   useEffect(() => {
+    // Giscus 설정 검증
+    if (!GISCUS_CONFIG.repo || !GISCUS_CONFIG.repoId) {
+      console.error('Giscus configuration is missing. Please check environment variables.');
+      return;
+    }
+
     const theme: keyof typeof giscusThemes =
       document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 
     const giscusAttributes = {
       src: 'https://giscus.app/client.js',
-      'data-repo': 'dydals3440/YOLOG',
-      'data-repo-id': 'R_kgDOLsWIKw',
-      'data-category': 'Announcements',
-      'data-category-id': 'DIC_kwDOLsWIK84Cqzdk',
+      'data-repo': GISCUS_CONFIG.repo,
+      'data-repo-id': GISCUS_CONFIG.repoId,
+      'data-category': GISCUS_CONFIG.category,
+      'data-category-id': GISCUS_CONFIG.categoryId,
       'data-mapping': 'pathname',
       'data-strict': '0',
       'data-reactions-enabled': '1',
@@ -49,6 +63,11 @@ const GiscusComment = (props: React.HTMLAttributes<HTMLElement>) => {
     Object.entries(giscusAttributes).forEach(([key, value]) =>
       giscusScript.setAttribute(key, value)
     );
+
+    // 스크립트 로드 에러 처리
+    giscusScript.onerror = () => {
+      console.error('Failed to load Giscus script');
+    };
 
     const container = document.querySelector('#giscus');
     if (container && !container.hasChildNodes()) {

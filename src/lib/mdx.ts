@@ -1,4 +1,5 @@
 import { type CollectionEntry, getCollection } from 'astro:content';
+import { sortPostsByDate } from './blog-utils';
 
 export interface PostInfoModel {
   title: string;
@@ -16,14 +17,8 @@ export const isBlogPost = (post: { slug: string }) => {
 export const getPostCollection = async (): Promise<
   CollectionEntry<'post'>[]
 > => {
-  return (await getCollection('post')).sort(sortCollectionDateDesc);
-};
-
-export const sortCollectionDateDesc = (
-  a: CollectionEntry<'post'>,
-  b: CollectionEntry<'post'>
-) => {
-  return new Date(b.data.date).valueOf() - new Date(a.data.date).valueOf();
+  const posts = await getCollection('post');
+  return sortPostsByDate(posts);
 };
 
 export const resolveSlug = (slug: string) => {
@@ -84,26 +79,45 @@ export type TOCSectionModel = {
   text: string;
 };
 
-export const parseToc = (source: string) => {
-  const withoutCodeBlocks = source.replace(/```[\s\S]*?```/g, '');
+/**
+ * 마크다운 소스에서 H2 제목을 추출하여 TOC를 생성한다
+ * @param source 마크다운 소스 문자열
+ * @returns TOC 섹션 배열
+ */
+export const parseToc = (source: string): TOCSectionModel[] => {
+  try {
+    // 코드 블록 제거 (```로 감싸진 부분)
+    const withoutCodeBlocks = source.replace(/```[\s\S]*?```/g, '');
 
-  return withoutCodeBlocks
-    .split('\n')
-    .filter((line) => line.match(/(^#{2})\s/))
-    .map((rawHeading) => {
-      const removeMdx = rawHeading
-        .replace(/^##*\s/, '')
-        .replace(/[*,~]{2,}/g, '')
-        .replace(/(?<=\])\((.*?)\)/g, '')
-        .replace(/(?<!\S)((http)(s?):\/\/|www\.).+?(?=\s)/g, '');
+    // H2 헤딩만 필터링
+    const h2Lines = withoutCodeBlocks
+      .split('\n')
+      .filter((line) => /^#{2}\s/.test(line));
+
+    return h2Lines.map((rawHeading) => {
+      // 마크다운 문법 제거
+      let cleanText = rawHeading
+        .replace(/^##\s+/, '') // ## 제거
+        .replace(/[*~]{2,}/g, '') // **bold**, ~~strike~~ 제거
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // 링크에서 텍스트만 추출
+        .replace(/(?:https?:\/\/|www\.)\S+/g, '') // URL 제거
+        .trim();
+
+      // 슬러그 생성: 한글, 영문, 숫자, 공백, 하이픈만 허용
+      const slug = cleanText
+        .toLowerCase()
+        .replace(/[^a-z0-9가-힣\s-]/g, '') // 허용된 문자만 유지
+        .replace(/\s+/g, '-') // 공백을 하이픈으로
+        .replace(/-+/g, '-') // 연속된 하이픈을 하나로
+        .replace(/^-+|-+$/g, ''); // 앞뒤 하이픈 제거
 
       return {
-        slug: removeMdx
-          .trim()
-          .toLowerCase()
-          .replace(/[^a-z0-9ㄱ-ㅎ|ㅏ-ㅣ|가-힣 -]/g, '')
-          .replace(/\s/g, '-'),
-        text: removeMdx,
+        slug,
+        text: cleanText,
       };
     });
+  } catch (error) {
+    console.error('Failed to parse TOC:', error);
+    return [];
+  }
 };

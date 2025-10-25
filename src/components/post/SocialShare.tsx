@@ -28,6 +28,9 @@ interface ShareOption {
 	label: string;
 }
 
+// 링크 복사 성공 시 아이콘 복원 시간 (ms)
+const COPY_ICON_RESTORE_DELAY = 2000;
+
 const SHARE_OPTIONS: ShareOption[] = [
 	{
 		platform: "twitter",
@@ -81,10 +84,10 @@ const SocialShare = ({ title, url }: SocialShareProps) => {
 				description: "클립보드에 저장되었습니다",
 			});
 
-			// 2초 후 아이콘 복원
+			// 아이콘 복원
 			setTimeout(() => {
 				setIsCopied(false);
-			}, 2000);
+			}, COPY_ICON_RESTORE_DELAY);
 		} catch (err) {
 			toast({
 				title: "복사 실패",

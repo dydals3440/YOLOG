@@ -10,10 +10,8 @@ import dayjs from 'dayjs';
 export function sortPostsByDate(
   posts: CollectionEntry<'post'>[]
 ): CollectionEntry<'post'>[] {
-  return [...posts].sort((a, b) => {
-    const dateA = new Date(a.data.date);
-    const dateB = new Date(b.data.date);
-    return dateB.getTime() - dateA.getTime();
+  return posts.toSorted((a, b) => {
+    return new Date(b.data.date).valueOf() - new Date(a.data.date).valueOf();
   });
 }
 

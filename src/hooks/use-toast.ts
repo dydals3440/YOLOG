@@ -110,8 +110,23 @@ export const reducer = (state: State, action: Action): State => {
         ),
       }
     }
-    case 'REMOVE_TOAST':
-      if (action.toastId === undefined) {
+    case 'REMOVE_TOAST': {
+      const removedToastId = action.toastId
+
+      // 타임아웃 정리
+      if (removedToastId) {
+        const timeout = toastTimeouts.get(removedToastId)
+        if (timeout) {
+          clearTimeout(timeout)
+          toastTimeouts.delete(removedToastId)
+        }
+      } else {
+        // 모든 토스트 제거 시 모든 타임아웃 정리
+        toastTimeouts.forEach((timeout) => clearTimeout(timeout))
+        toastTimeouts.clear()
+      }
+
+      if (removedToastId === undefined) {
         return {
           ...state,
           toasts: [],
@@ -119,8 +134,9 @@ export const reducer = (state: State, action: Action): State => {
       }
       return {
         ...state,
-        toasts: state.toasts.filter((t) => t.id !== action.toastId),
+        toasts: state.toasts.filter((t) => t.id !== removedToastId),
       }
+    }
   }
 }
 

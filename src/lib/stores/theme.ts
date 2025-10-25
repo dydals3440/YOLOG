@@ -27,21 +27,30 @@ const initThemeStoreSubscribe = () => {
     }
   }
 
-  const handleMediaQuery = (event: MediaQueryListEvent | MediaQueryList) => {
-    applyTheme(event.matches ? THEME_MAP.dark : THEME_MAP.light)
-  }
+  let mediaQuery: MediaQueryList | null = null
+  let mediaQueryHandler: ((event: MediaQueryListEvent | MediaQueryList) => void) | null = null
 
   themeStore.subscribe((theme) => {
+    // 이전 리스너 정리
+    if (mediaQuery && mediaQueryHandler) {
+      mediaQuery.removeEventListener('change', mediaQueryHandler)
+      mediaQueryHandler = null
+    }
+
     if (theme !== THEME_MAP.system) {
       applyTheme(theme)
+      mediaQuery = null
       return
     }
 
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    // 시스템 테마 모드
+    mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    mediaQueryHandler = (event: MediaQueryListEvent | MediaQueryList) => {
+      applyTheme(event.matches ? THEME_MAP.dark : THEME_MAP.light)
+    }
 
-    mediaQuery.removeEventListener('change', handleMediaQuery)
-    mediaQuery.addEventListener('change', handleMediaQuery)
-    handleMediaQuery(mediaQuery)
+    mediaQuery.addEventListener('change', mediaQueryHandler)
+    mediaQueryHandler(mediaQuery)
   })
 }
 
