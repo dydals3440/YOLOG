@@ -53,7 +53,7 @@ let orderCount = 0;
 
 `OrderInfo`는 주문 정보를 담는 타입이다. `currentBalance`는 사용자의 잔액, `orderCount`는 총 주문 수를 저장한다.
 
-문제는 이 변수들이 전역 변수라는 점이다. 어디서든 접근하고 수정할 수 있다. 누군가 실수로 `currentBalance = -10000`을 실행하면? 음수 잔액이 허용되는 말도 안 되는 상황이 발생한다.
+문제는 이 변수들이 전역 변수라는 점이다. 어디서든 접근하고 수정할 수 있다. 누군가 실수로 `currentBalance = -10_000`을 실행하면? 음수 잔액이 허용되는 말도 안 되는 상황이 발생한다.
 
 ### 주문 생성 함수
 
@@ -210,12 +210,14 @@ function createOrder2(restaurant: string, items: string[], price: number) {
   // ... (위와 똑같은 코드 복붙)
 }
 
-// 사용자 100명이면? 1000명이면? 😱
+// 사용자 100명이면? 1_000명이면? 😱
 ```
 
 같은 로직을 계속 복사해서 붙여넣어야 한다. 코드 중복이 극에 달한다.
 
-이런 문제를 해결하기 위해 등장한 것이 바로 `객체지향 프로그래밍`이다. 관련된 데이터와 기능을 하나로 묶고, 외부에서 함부로 접근하지 못하도록 보호하며, 재사용 가능한 설계를 만들 수 있다면 얼마나 좋을까?
+이런 문제를 해결하기 위해 등장한 것이 바로 `객체지향 프로그래밍`이다.
+
+관련된 데이터와 기능을 하나로 묶고, 외부에서 함부로 접근하지 못하도록 보호하며, 재사용 가능한 설계를 만들 수 있다면 얼마나 좋을까?
 
 ---
 
@@ -349,10 +351,10 @@ static orderCount = 0;
 ```ts
 class Order {
   // ❌ Instance Level - 각 객체마다 개별 복사본이 생성됨
-  deliveryFee: number = 3000; // 모든 주문이 3000원으로 동일한데 매번 생성?
+  deliveryFee: number = 3_000; // 모든 주문이 3_000원으로 동일한데 매번 생성?
 
   // ✅ Class Level - 클래스에 단 하나만 존재
-  static DELIVERY_FEE: number = 3000;
+  static DELIVERY_FEE: number = 3_000;
   static orderCount = 0;
 
   constructor(private price: number) {
@@ -369,18 +371,18 @@ class Order {
 **메모리 비교:**
 
 ```ts
-const order1 = new Order(10000);
-const order2 = new Order(20000);
-const order3 = new Order(30000);
+const order1 = new Order(10_000);
+const order2 = new Order(20_000);
+const order3 = new Order(30_000);
 
 // Instance Level이면?
-// order1.deliveryFee = 3000 (메모리 차지)
-// order2.deliveryFee = 3000 (메모리 차지)
-// order3.deliveryFee = 3000 (메모리 차지)
+// order1.deliveryFee = 3_000 (메모리 차지)
+// order2.deliveryFee = 3_000 (메모리 차지)
+// order3.deliveryFee = 3_000 (메모리 차지)
 // → 똑같은 값을 3번 저장! 메모리 낭비
 
 // Class Level이면?
-// Order.DELIVERY_FEE = 3000 (딱 1개만 존재)
+// Order.DELIVERY_FEE = 3_000 (딱 1개만 존재)
 // → 모든 객체가 같은 값을 공유! 메모리 효율적
 ```
 
@@ -416,7 +418,7 @@ console.log(user2.balance); // 21_100
 
 **재사용 가능한 설계:**
 
-같은 클래스로 여러 객체를 만들 수 있다. 사용자가 1000명이어도 `new User()`만 반복하면 된다.
+같은 클래스로 여러 객체를 만들 수 있다. 사용자가 1_000명이어도 `new User()`만 반복하면 된다.
 
 **독립적인 상태 관리:**
 
@@ -429,7 +431,7 @@ const user = new User(50_000);
 
 // ❌ 문제: 외부에서 직접 잔액 수정 가능
 user.balance = -10_000; // 음수 잔액?
-user.balance = 999999999; // 무한 머니 버그?
+user.balance = 999_999_999; // 무한 머니 버그?
 
 // ❌ 문제: 주문 내역도 직접 조작 가능
 user.orderHistory = []; // 주문 내역 삭제?
@@ -441,7 +443,7 @@ user.orderHistory = []; // 주문 내역 삭제?
 
 ## 캡슐화
 
-`캡슐화(Encapsulation)`는 `객체지향`의 첫 번째 핵심 원칙이다. 약 캡슐을 생각해보자. 캡슐 안에 약 성분이 들어있지만 우리는 내용물을 직접 만지거나 수정할 수 없다. 정해진 방법(먹는 것)으로만 사용할 수 있다.
+`캡슐화(Encapsulation)`는 `객체지향`의 첫 번째 핵심 원칙이다. 자동차를 생각해보자. 운전자는 엔진의 복잡한 내부 구조를 몰라도 된다. 핸들, 액셀, 브레이크만 조작하면 된다. 엔진 내부를 직접 만지지 못하도록 보호되어 있다.
 
 프로그래밍에서도 마찬가지다. **내부 데이터는 숨기고, 정해진 메서드를 통해서만 접근하도록 만드는 것**이 `캡슐화`다.
 
@@ -517,14 +519,14 @@ class User {
 
 ```ts
 const user = new User(50_000);
-user.balance = -10000; // ❌ 말도 안 되는 값 허용
+user.balance = -10_000; // ❌ 말도 안 되는 값 허용
 ```
 
 **After (캡슐화 후):**
 
 ```ts
 const user = new User(50_000);
-// user.balance = -10000; // ❌ 컴파일 에러!
+// user.balance = -10_000; // ❌ 컴파일 에러!
 user.addBalance(10_000); // ✅ 메서드를 통해 안전하게 추가
 ```
 
@@ -541,7 +543,9 @@ addBalance(amount: number): void {
 }
 ```
 
-사용자가 음수나 0을 충전하려고 하면 에러가 발생한다. 데이터 무결성이 보장된다.
+사용자가 음수나 0을 충전하려고 하면 에러가 발생한다.
+
+**데이터 무결성**이 보장된다.
 
 ### 캡슐화의 핵심 원칙
 
@@ -697,7 +701,7 @@ const order = new Order('맘스터치', 12_000, 3_000);
 console.log(order.finalPrice); // 15_000
 
 order.deliveryFee = 0; // 배달비 무료 이벤트!
-console.log(order.finalPrice); // 여전히 15000 ❌
+console.log(order.finalPrice); // 여전히 15_000 ❌
 ```
 
 `deliveryFee`를 변경해도 `finalPrice`는 업데이트되지 않는다. `finalPrice`는 생성자에서 딱 한 번만 계산되기 때문이다.
@@ -765,7 +769,7 @@ console.log(user.balance); // 50_000
 user.balance = 30_000; // ✅ 성공
 console.log(user.balance); // 30_000
 
-// user.balance = -1000; // ❌ Error: 잔액은 0보다 작을 수 없습니다
+// user.balance = -1_000; // ❌ Error: 잔액은 0보다 작을 수 없습니다
 ```
 
 속성처럼 사용하지만 내부적으로는 검증 로직이 실행된다.
@@ -793,26 +797,25 @@ Getter와 Setter는 `캡슐화`의 또 다른 형태다. 내부 데이터를 직
 
 ### 추상화란 무엇인가?
 
-커피머신을 떠올려보자. 우리는 커피머신의 복잡한 내부 구조(물 펌프, 압력 조절, 온도 센서, 그라인더)를 이해하지 않아도 버튼 하나만 누르면 커피를 만들 수 있다.
+배달 앱을 떠올려보자. 우리는 "주문하기" 버튼만 누르면 된다. 내부에서 재고 확인, 결제 처리, 배달원 배정, 알림 전송이 어떻게 이루어지는지 몰라도 되고, 알 필요도 없다.
 
 ```ts
 // 내부 구현 (복잡함, 외부에서 볼 필요 없음)
-private boilWater() { /* 물 끓이기 */ }
-private grindBeans() { /* 원두 갈기 */ }
-private extractCoffee() { /* 커피 추출 */ }
-private addMilk() { /* 우유 넣기 */ }
+private checkStock() { /* 재고 확인 */ }
+private processPayment() { /* 결제 처리 */ }
+private assignDriver() { /* 배달원 배정 */ }
+private sendNotification() { /* 알림 전송 */ }
 
 // 외부 인터페이스 (간단함, 이것만 알면 됨)
-public makeCoffee() {
-  this.boilWater();
-  this.grindBeans();
-  this.extractCoffee();
+public placeOrder() {
+  this.checkStock();
+  this.processPayment();
+  this.assignDriver();
+  this.sendNotification();
 }
 ```
 
-사용자는 `makeCoffee()`만 호출하면 된다. 내부가 어떻게 동작하는지 몰라도 되고, 알 필요도 없다. 이것이 `추상화`다.
-
-배달 앱에서도 마찬가지다. 사용자는 "주문하기" 버튼만 누르면 되지, 내부에서 재고 확인, 결제 처리, 배달원 배정, 알림 전송이 어떻게 이루어지는지 알 필요가 없다.
+사용자는 `placeOrder()`만 호출하면 된다. 내부가 어떻게 동작하는지 몰라도 되고, 알 필요도 없다. 이것이 `추상화`다.
 
 ### Interface 정의
 
@@ -1050,7 +1053,7 @@ class Order {
 
 ```ts
 class ExpressOrder extends Order {
-  private expressFee = 5000;
+  private expressFee = 5_000;
 
   constructor(restaurant: string, totalPrice: number, items: string[]) {
     super(restaurant, totalPrice, items); // 부모 생성자 호출
@@ -1077,6 +1080,8 @@ class ExpressOrder extends Order {
 **override 키워드:**
 
 부모 메서드를 재정의할 때 사용한다. 명시적으로 "이것은 부모 메서드를 오버라이드하는 것"임을 표시한다.
+
+기본적으로 `override`는 선택사항이지만, `tsconfig.json`에서 `noImplicitOverride: true`로 설정하면 반드시 명시해야 한다. 이렇게 하면 실수로 부모 메서드를 덮어쓰는 것을 방지할 수 있다.
 
 ### 사용 예시
 
@@ -1304,7 +1309,7 @@ deliveryOptions.push(new RobotDelivery()); // 기존 코드 수정 없이 추가
 
 ```ts
 class ExpressOrder extends Order {
-  private expressFee = 5000;
+  private expressFee = 5_000;
 
   override getInfo(): string {
     return `[특급배달] ${super.getInfo()}`;
@@ -1312,7 +1317,7 @@ class ExpressOrder extends Order {
 }
 
 class PremiumPackagingOrder extends Order {
-  private packagingFee = 3000;
+  private packagingFee = 3_000;
 
   override getInfo(): string {
     return `[프리미엄포장] ${super.getInfo()}`;
@@ -1381,7 +1386,7 @@ class PremiumPackagingOrder(Order):
 class ExpressPremiumOrder(ExpressOrder, PremiumPackagingOrder):
     pass
 
-order = ExpressPremiumOrder("맘스터치", 12000, ["싸이버거"])
+order = ExpressPremiumOrder("맘스터치", 12_000, ["싸이버거"])
 print(order.get_info())  # 어느 get_info가 호출될까? 🤔
 ```
 
@@ -1434,6 +1439,30 @@ class ExpressOrder extends Order {
 
 `상속`은 강한 결합이다. `ExpressOrder IS-A Order` - 영원히 Order의 일부다. 나중에 다른 부모로 바꾸고 싶어도 불가능하다.
 
+```ts
+// 처음에는 Order를 상속
+class ExpressOrder extends Order {
+  private expressFee = 5_000;
+
+  override getInfo(): string {
+    return `[특급배달] ${super.getInfo()}`;
+  }
+
+  getTotalPrice(): number {
+    return super.getTotalPrice() + this.expressFee;
+  }
+}
+
+// 나중에 요구사항이 바뀌어서 다른 부모로 바꾸고 싶다면?
+class ExpressOrder extends NewOrderSystem {
+  // ❌ Error!
+  // 문제 1: TypeScript는 단일 상속만 지원 - 동시에 두 부모를 가질 수 없음
+  // 문제 2: Order의 메서드(getInfo, getTotalPrice)에 의존하는 코드를 모두 수정해야 함
+  // 문제 3: 이미 ExpressOrder를 사용하는 모든 코드가 깨짐
+  // 문제 4: 부모를 바꾸면 자식의 모든 로직을 다시 작성해야 할 수도 있음
+}
+```
+
 ### 실제 시나리오
 
 ```ts
@@ -1467,10 +1496,17 @@ class ExpressPremiumOrder extends ??? {
 
 ### 기능별 독립 클래스
 
+핵심은 **각 기능을 독립적인 클래스로 분리**하는 것이다. 배달 방식, 포장 방식을 각각 별도의 클래스로 만들면 다음과 같은 장점이 있다:
+
+- **재사용성**: 특급배달 기능을 여러 주문에서 재사용 가능
+- **독립적 수정**: 배달비가 바뀌어도 배달 클래스만 수정하면 됨
+- **테스트 용이성**: 각 기능을 독립적으로 테스트 가능
+- **조합 자유**: 필요한 기능만 골라서 조합 가능
+
 ```ts
 // 특급배달 서비스
 class ExpressDeliveryService {
-  private fee = 5000;
+  private fee = 5_000;
 
   applyExpress(price: number): number {
     console.log('특급배달 적용');
@@ -1484,7 +1520,7 @@ class ExpressDeliveryService {
 
 // 프리미엄 포장 서비스
 class PremiumPackagingService {
-  private fee = 3000;
+  private fee = 3_000;
 
   applyPackaging(price: number): number {
     console.log('프리미엄 포장 적용');
@@ -1704,9 +1740,75 @@ class Car extends Vehicle {
 
 자주 변경되지 않는 기본 클래스가 있을 때. 예: `Shape` → `Circle`, `Rectangle`
 
+```ts
+// ✅ Shape는 거의 변하지 않는 안정적인 기본 클래스
+class Shape {
+  constructor(protected name: string) {}
+
+  getDescription(): string {
+    return `이것은 ${this.name}입니다`;
+  }
+}
+
+class Circle extends Shape {
+  constructor(private radius: number) {
+    super('원');
+  }
+
+  getArea(): number {
+    return Math.PI * this.radius ** 2;
+  }
+}
+
+class Rectangle extends Shape {
+  constructor(private width: number, private height: number) {
+    super('사각형');
+  }
+
+  getArea(): number {
+    return this.width * this.height;
+  }
+}
+
+const circle = new Circle(5);
+console.log(circle.getDescription()); // 이것은 원입니다
+console.log(circle.getArea()); // 78.5...
+```
+
 **3. 공통 동작이 많을 때**
 
 부모의 메서드를 그대로 사용하는 경우가 많으면 `상속`이 편하다.
+
+```ts
+// ✅ 모든 동물이 공통으로 가진 동작이 많을 때
+class Animal {
+  eat() {
+    console.log('먹는다');
+  }
+
+  sleep() {
+    console.log('잔다');
+  }
+
+  breathe() {
+    console.log('숨쉰다');
+  }
+}
+
+class Dog extends Animal {
+  // eat, sleep, breathe를 그대로 사용
+  bark() {
+    console.log('짖는다');
+  }
+}
+
+class Cat extends Animal {
+  // eat, sleep, breathe를 그대로 사용
+  meow() {
+    console.log('야옹');
+  }
+}
+```
 
 **Composition을 사용하는 경우:**
 
@@ -1726,7 +1828,42 @@ class Order {
 
 **2. 여러 기능 조합이 필요**
 
-빠른 배달 + 프리미엄 포장 + 우선 처리... 레고 블록처럼 자유로운 조합이 필요할 때.
+기능을 레고 블록처럼 자유롭게 조합해야 할 때.
+
+```ts
+// ✅ 다양한 조합이 가능한 Composition
+class Order {
+  constructor(
+    private restaurant: string,
+    private price: number,
+    private delivery?: DeliveryOption, // 선택적
+    private packaging?: PackagingOption // 선택적
+  ) {}
+
+  getTotalPrice(): number {
+    let total = this.price;
+    if (this.delivery) total = this.delivery.applyFee(total);
+    if (this.packaging) total = this.packaging.applyFee(total);
+    return total;
+  }
+}
+
+// 자유로운 조합!
+const basic = new Order('맘스터치', 12_000); // 기본만
+const express = new Order('맘스터치', 12_000, new ExpressDelivery()); // 특급배달만
+const premium = new Order(
+  '맘스터치',
+  12_000,
+  undefined,
+  new PremiumPackaging()
+); // 포장만
+const full = new Order(
+  '맘스터치',
+  12_000,
+  new ExpressDelivery(),
+  new PremiumPackaging()
+); // 둘 다
+```
 
 **3. 런타임에 동작 변경**
 
@@ -1749,6 +1886,24 @@ order.setPaymentMethod(new KakaoPayPayment());
 ## Decoupling - Interface로 결합도 낮추기
 
 Composition의 마지막 퍼즐 조각은 `Decoupling (결합도 낮추기)`이다. 현재 문제는 `Order` 클래스가 구체적인 클래스(`ExpressDeliveryService`)에 의존하고 있다는 점이다.
+
+```ts
+// ❌ 문제: 구체적인 클래스에 직접 의존
+class Order {
+  private delivery = new ExpressDeliveryService(); // 강한 결합!
+
+  constructor(private restaurant: string, private price: number) {}
+
+  getTotalPrice(): number {
+    return this.delivery.applyFee(this.price);
+  }
+}
+
+// 문제점:
+// 1. ExpressDeliveryService를 다른 서비스로 바꾸려면? → 코드 수정 필요
+// 2. 일반 배달로 바꾸고 싶다면? → Order 클래스 내부를 뜯어고쳐야 함
+// 3. 테스트할 때 가짜 배달 서비스를 넣고 싶다면? → 불가능
+```
 
 Interface를 사용해서 추상적인 개념에 의존하도록 변경하자. **"구체가 아닌 추상에 의존하라"**
 
@@ -1810,7 +1965,7 @@ class Order {
 ```ts
 // 특급배달
 class ExpressDelivery implements DeliveryOption {
-  private fee = 5000;
+  private fee = 5_000;
 
   applyFee(price: number): number {
     return price + this.fee;
@@ -1823,7 +1978,7 @@ class ExpressDelivery implements DeliveryOption {
 
 // 일반배달
 class StandardDelivery implements DeliveryOption {
-  private fee = 2000;
+  private fee = 2_000;
 
   applyFee(price: number): number {
     return price + this.fee;
@@ -1847,7 +2002,7 @@ class FreeDelivery implements DeliveryOption {
 
 // 프리미엄 포장
 class PremiumPackaging implements PackagingOption {
-  private fee = 3000;
+  private fee = 3_000;
 
   applyFee(price: number): number {
     return price + this.fee;
@@ -1860,7 +2015,7 @@ class PremiumPackaging implements PackagingOption {
 
 // 기본 포장
 class StandardPackaging implements PackagingOption {
-  private fee = 1000;
+  private fee = 1_000;
 
   applyFee(price: number): number {
     return price + this.fee;
@@ -2070,7 +2225,7 @@ class RegularOrder extends AbstractOrder {
 
 ```ts
 class ExpressOrder extends AbstractOrder {
-  private expressFee = 5000;
+  private expressFee = 5_000;
 
   protected calculatePrice(): number {
     const total = this.basePrice + this.expressFee;
@@ -2090,8 +2245,8 @@ class ExpressOrder extends AbstractOrder {
 
 ```ts
 class PremiumOrder extends AbstractOrder {
-  private packagingFee = 3000;
-  private priorityFee = 2000;
+  private packagingFee = 3_000;
+  private priorityFee = 2_000;
 
   protected calculatePrice(): number {
     const total = this.basePrice + this.packagingFee + this.priorityFee;
@@ -2299,16 +2454,16 @@ class Order {
 
 ### 실전 가이드
 
-그럼 언제 패턴을 적용해야 할까? 간단한 기준이 있다.
+나는 이런 기준으로 패턴을 적용하고 있다.
 
-**언제 패턴을 적용할까?**
+**내가 패턴을 적용하는 시점:**
 
 - **Interface**: 2개 이상의 구현체가 **실제로 존재**할 때 (예상이 아니라 실제로!)
 - **Abstract Class**: 3개 이상의 자식 클래스가 **실제로 필요**할 때
 - **Composition**: 기능 조합이 **지금 당장** 필요할 때
 - **Singleton**: 전역 인스턴스가 **반드시** 하나여야 할 때
 
-"혹시 필요할지 몰라"는 패턴 적용의 이유가 되지 못한다.
+개인적으로 "혹시 필요할지 몰라"라는 이유로 패턴을 미리 만들지 않는다.
 
 **"혹시 몰라서" 만들지 마라:**
 
@@ -2337,12 +2492,11 @@ function log(message: string): void {
 
 프로덕트는 **살아있는 생명체**다. 요구사항은 계속 변한다. 6개월 전에 "필수"라고 생각했던 기능이 지금은 쓸모없어진 경험, 누구나 있을 것이다.
 
-두 가지 길이 있다:
+완벽한 설계를 위해 8주를 쓸 것인가, 1주 만에 출시하고 피드백으로 개선할 것인가?
 
-- **완벽한 설계를 추구하는 길**: 모든 경우의 수를 고려한다 → 설계에 2주 → 구현에 4주 → 테스트에 2주 → **출시가 늦어진다** → 시장 기회를 놓친다
-- **단순하게 시작하는 길**: 필요한 것만 만든다 → 1주 만에 출시 → 사용자 피드백을 받는다 → 실제로 필요한 부분만 개선한다 → **빠르게 성장한다**
+나는 후자를 선택한다. 필요할 때 리팩토링하는 것이 미래를 예측하려는 것보다 낫다.
 
-**리팩토링은 죄가 아니다.** 오히려 건강한 코드의 증거다. 요구사항이 바뀌면서 코드도 진화하는 것은 자연스러운 일이다.
+**리팩토링은 죄가 아니다.** 요구사항이 바뀌면서 코드가 진화하는 것은 자연스러운 일이다.
 
 ### 실전에서 중요한 원칙들
 
