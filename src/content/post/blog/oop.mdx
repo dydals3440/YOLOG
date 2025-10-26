@@ -1,0 +1,2394 @@
+---
+title: 객체지향 프로그래밍(OOP) - 배달 서비스를 설계하며 이해하는 OOP의 핵심 개념
+date: 2025-10-26
+updatedDate: 2025-10-26
+tags:
+  [
+    객체지향,
+    OOP,
+    TypeScript,
+    Class,
+    캡슐화,
+    추상화,
+    상속,
+    다형성,
+    Composition,
+    Interface,
+    Abstract Class,
+  ]
+category: DEVELOPMENT
+image: '/images/oop/thumbnail.webp'
+---
+
+우리가 매일 사용하는 배달 앱을 떠올려보자. 음식을 주문하고, 결제하고, 배달원이 배달하는 일련의 과정이 자연스럽게 진행된다. 이 복잡한 시스템을 코드로 어떻게 구현할까?
+
+`함수형 프로그래밍`과 `객체지향 프로그래밍(OOP)` 모두 장단점이 있다. 이 글은 둘 중 무엇이 더 좋은지 논하는 글이 아니다. 대신 `OOP`의 핵심 개념을 배달 앱 예제로 같이 만들어보며 이해해보자.
+
+특히 React 개발자라면 `함수형` 스타일에 익숙할 것이다. 하지만 복잡한 비즈니스 로직(주문, 결제, 장바구니 등)을 다룰 때 `OOP`의 `캡슐화`, `추상화`, `다형성`을 활용하면 더 체계적으로 코드를 관리할 수 있다.
+
+이 글에서는 배달 앱 시스템을 직접 구현하면서 `OOP`의 4대 원칙(`캡슐화`, `추상화`, `상속`, `다형성`)과 고급 패턴(`Composition`, `Decoupling`, `Abstract Class`)까지 완벽하게 이해해보자.
+
+---
+
+## 클래스 없이 구현해보기
+
+먼저 `객체지향` 없이 변수와 함수만으로 배달 시스템을 구현해보자.
+`OOP`가 왜 필요한지 직접 경험하면서 이해하는 것이 가장 빠르다.
+
+### 타입과 전역 변수
+
+```ts
+type OrderInfo = {
+  id: string;
+  restaurant: string;
+  items: string[];
+  totalPrice: number;
+  status: 'pending' | 'confirmed' | 'delivered';
+};
+
+// 전역 변수
+let currentBalance = 50_000;
+let orderCount = 0;
+```
+
+`OrderInfo`는 주문 정보를 담는 타입이다. `currentBalance`는 사용자의 잔액, `orderCount`는 총 주문 수를 저장한다.
+
+문제는 이 변수들이 전역 변수라는 점이다. 어디서든 접근하고 수정할 수 있다. 누군가 실수로 `currentBalance = -10000`을 실행하면? 음수 잔액이 허용되는 말도 안 되는 상황이 발생한다.
+
+### 주문 생성 함수
+
+```ts
+function createOrder(
+  restaurant: string,
+  items: string[],
+  price: number
+): OrderInfo {
+  // 잔액 확인
+  if (currentBalance < price) {
+    throw new Error('잔액이 부족합니다');
+  }
+
+  // 잔액 차감
+  currentBalance -= price;
+  orderCount++;
+
+  return {
+    id: `ORDER-${orderCount}`,
+    restaurant,
+    items,
+    totalPrice: price,
+    status: 'pending',
+  };
+}
+```
+
+주문을 생성하는 함수다. 잔액을 확인하고 차감한 뒤 주문 정보를 반환한다.
+
+여기서도 문제가 있다. `currentBalance`와 `createOrder` 함수는 서로 긴밀하게 연결되어 있지만 코드상으로는 분리되어 있다.
+
+나중에 코드가 복잡해지면 어떤 변수와 함수가 관련 있는지 파악하기 어렵다.
+
+### 주문 상태 변경 함수
+
+```ts
+function updateOrderStatus(
+  order: OrderInfo,
+  newStatus: OrderInfo['status']
+): void {
+  order.status = newStatus;
+  console.log(`주문 ${order.id} 상태: ${newStatus}`);
+}
+```
+
+주문 상태를 변경하는 함수다. 겉보기에는 문제없어 보이지만 치명적인 결함이 있다.
+
+```ts
+const order = createOrder('맘스터치', ['싸이버거', '감자튀김'], 12_000);
+updateOrderStatus(order, 'delivered'); // ✅ 정상
+
+// 하지만 이것도 가능하다
+order.status = 'pending'; // ❌ 배달 완료를 다시 대기 중으로?
+```
+
+함수를 거치지 않고 직접 상태를 변경할 수 있다. 검증 없이 무엇이든 할 수 있으므로 데이터 무결성을 보장할 수 없다.
+
+### 문제점 정리
+
+이 코드의 치명적인 문제는 세 가지다. (물론 `함수형 프로그래밍`을 제대로 사용한다면 클로저와 고차함수로 이런 문제를 해결할 수 있다. 하지만 많은 경우 이런 안티패턴으로 작성되곤 한다.)
+
+**1. 전역 변수의 남용**
+
+어디서든 `currentBalance`를 수정할 수 있다. 검증 없이 잘못된 값을 할당할 수 있으며, 누가 언제 수정했는지 추적하기 어렵다.
+
+```ts
+let currentBalance = 50_000;
+
+function createOrder(price: number) {
+  currentBalance -= price;
+}
+
+// 문제 상황 1: 어디서든 직접 수정 가능
+currentBalance = -10_000; // ❌ 음수 잔액? 검증 없음!
+
+// 문제 상황 2: 동시에 여러 곳에서 수정
+createOrder(5_000);
+currentBalance -= 3_000; // 다른 곳에서 직접 차감
+createOrder(2_000);
+// 누가 언제 얼마를 차감했는지 추적 불가능! 😱
+```
+
+물론, 클로저를 사용하면 이 문제를 해결할 수 있다:
+
+```ts
+function createUser(initialBalance: number) {
+  let currentBalance = initialBalance; // 클로저로 보호
+  return {
+    createOrder(price: number) {
+      if (currentBalance < price) throw new Error('잔액 부족');
+      currentBalance -= price;
+    },
+  };
+}
+```
+
+함수형 프로그래밍에서도 클로저로 데이터를 보호할 수 있지만,
+이 글에서는 글의 주제에 맞춰 `OOP`가 제공하는 더 강력한 기능들(상속, 다형성, 타입 시스템 활용)에 집중해보자.
+
+**2. 관련 데이터와 함수의 분리**
+
+`currentBalance`와 `createOrder`는 밀접한 관계지만 코드에서는 완전히 분리되어 있다. 유지보수 시 어떤 변수와 함수가 연관되는지 파악하기 힘들다.
+
+```ts
+// 파일 어딘가에...
+let currentBalance = 50_000;
+let orderHistory: OrderInfo[] = [];
+let userAddress = '서울시 강남구';
+
+// 수백 줄 떨어진 곳에...
+function createOrder(price: number) {
+  if (currentBalance < price) throw new Error('잔액 부족');
+  currentBalance -= price; // 어느 변수를 쓰는지 찾기 힘듦
+}
+
+// 또 다른 곳에...
+function addBalance(amount: number) {
+  currentBalance += amount; // currentBalance가 뭐였더라?
+}
+
+// 또 다른 곳에...
+function getOrderCount() {
+  return orderHistory.length; // orderHistory는 어디서 선언했지?
+}
+
+// ❌ 변수와 함수가 산재되어 있어서:
+// - currentBalance를 사용하는 모든 함수를 찾기 어려움
+// - 실수로 잘못된 변수를 수정할 수 있음
+// - 코드 이해와 유지보수가 힘듦
+```
+
+**3. 재사용성의 한계**
+
+사용자를 여러 명 만들고 싶다면? 전역 변수만으로는 이런 식으로 작성하게 된다:
+
+```ts
+// 사용자 2명을 만들려면...
+let currentBalance1 = 50_000;
+let orderHistory1: OrderInfo[] = [];
+
+let currentBalance2 = 30_000;
+let orderHistory2: OrderInfo[] = [];
+
+function createOrder1(restaurant: string, items: string[], price: number) {
+  if (currentBalance1 < price) throw new Error('잔액 부족');
+  currentBalance1 -= price;
+  // ...
+}
+
+function createOrder2(restaurant: string, items: string[], price: number) {
+  if (currentBalance2 < price) throw new Error('잔액 부족');
+  currentBalance2 -= price;
+  // ... (위와 똑같은 코드 복붙)
+}
+
+// 사용자 100명이면? 1000명이면? 😱
+```
+
+같은 로직을 계속 복사해서 붙여넣어야 한다. 코드 중복이 극에 달한다.
+
+이런 문제를 해결하기 위해 등장한 것이 바로 `객체지향 프로그래밍`이다. 관련된 데이터와 기능을 하나로 묶고, 외부에서 함부로 접근하지 못하도록 보호하며, 재사용 가능한 설계를 만들 수 있다면 얼마나 좋을까?
+
+---
+
+## Class의 탄생
+
+`Class`는 `객체지향`의 첫 걸음이다. 관련된 데이터와 함수를 하나로 묶어주는 `설계도(Template)`다. 마치 건물을 짓기 전에 설계도를 그리듯이, 클래스를 정의하면 그것을 바탕으로 여러 개의 객체를 만들 수 있다.
+
+### 사용자 클래스 정의
+
+```ts
+class User {
+  balance: number = 0;
+  orderHistory: OrderInfo[] = [];
+
+  constructor(initialBalance: number) {
+    this.balance = initialBalance;
+  }
+
+  createOrder(restaurant: string, items: string[], price: number): OrderInfo {
+    if (this.balance < price) {
+      throw new Error('잔액이 부족합니다');
+    }
+
+    this.balance -= price;
+
+    const order: OrderInfo = {
+      id: `ORDER-${this.orderHistory.length + 1}`,
+      restaurant,
+      items,
+      totalPrice: price,
+      status: 'pending',
+    };
+
+    this.orderHistory.push(order);
+    return order;
+  }
+}
+```
+
+`User` 클래스는 사용자 한 명을 나타낸다. 잔액(`balance`)과 주문 내역(`orderHistory`)을 가지며, 주문을 생성하는 메서드(`createOrder`)를 제공한다.
+
+### 클래스와 인스턴스
+
+클래스를 이해하는 가장 쉬운 비유는 **붕어빵 틀**이다.
+
+붕어빵 틀 자체는 먹을 수 없다. 하지만 이 틀에 팥을 넣으면 팥 붕어빵이 되고, 슈크림을 넣으면 슈크림 붕어빵이 된다. 하나의 틀로 서로 다른 붕어빵을 무한히 만들 수 있다.
+
+```ts
+// 붕어빵 틀 (클래스)
+class 붕어빵 {
+  constructor(public 속재료: string) {}
+
+  먹기() {
+    console.log(`${this.속재료} 붕어빵을 먹는다`);
+  }
+}
+
+// 틀로 찍어낸 실제 붕어빵들 (인스턴스)
+const 팥붕어빵 = new 붕어빵('팥');
+const 슈크림붕어빵 = new 붕어빵('슈크림');
+const 크림치즈붕어빵 = new 붕어빵('크림치즈');
+
+팥붕어빵.먹기(); // "팥 붕어빵을 먹는다"
+슈크림붕어빵.먹기(); // "슈크림 붕어빵을 먹는다"
+```
+
+마찬가지로 `User` 클래스 자체는 실행할 수 없다. 하지만 실제 데이터를 넣어 `인스턴스(Instance)`를 만들면 사용할 수 있다.
+
+```ts
+const user1 = new User(50_000); // 첫 번째 사용자 (잔액 5만원)
+const user2 = new User(30_000); // 두 번째 사용자 (잔액 3만원)
+const user3 = new User(100_000); // 세 번째 사용자 (잔액 10만원)
+```
+
+같은 `User` 클래스로 만들어졌지만, 각각 다른 잔액을 가진 독립적인 사용자 객체다. 붕어빵 틀 하나로 팥, 슈크림, 크림치즈 붕어빵을 만들듯이, `User` 클래스 하나로 여러 사용자를 만들 수 있다.
+
+**constructor (생성자):**
+
+객체를 생성할 때 자동으로 호출되는 특별한 함수다. 초기값을 설정하는 역할을 한다.
+
+```ts
+const user = new User(50_000);
+```
+
+`new User(50_000)`을 실행하면 constructor가 호출되어 `balance`가 50_000으로 초기화된다.
+
+**this 키워드:**
+
+`this.balance`는 현재 객체 자기 자신의 `balance`를 가리킨다. 멤버 변수나 메서드에 접근할 때 사용한다.
+
+### 주문 클래스 정의
+
+```ts
+class Order {
+  static orderCount = 0;
+
+  id: string;
+  restaurant: string;
+  items: string[];
+  totalPrice: number;
+  status: 'pending' | 'confirmed' | 'delivered';
+
+  constructor(restaurant: string, items: string[], price: number) {
+    Order.orderCount++;
+    this.id = `ORDER-${Order.orderCount}`;
+    this.restaurant = restaurant;
+    this.items = items;
+    this.totalPrice = price;
+    this.status = 'pending';
+  }
+
+  updateStatus(newStatus: Order['status']): void {
+    this.status = newStatus;
+    console.log(`주문 ${this.id} 상태: ${newStatus}`);
+  }
+}
+```
+
+`Order` 클래스는 주문 하나를 나타낸다. 주문 정보와 상태 변경 메서드를 포함한다.
+
+**static 멤버:**
+
+```ts
+static orderCount = 0;
+```
+
+`static` 키워드는 클래스 레벨 멤버를 만든다. 이게 무슨 뜻일까?
+
+**Instance Level vs Class Level:**
+
+```ts
+class Order {
+  // ❌ Instance Level - 각 객체마다 개별 복사본이 생성됨
+  deliveryFee: number = 3000; // 모든 주문이 3000원으로 동일한데 매번 생성?
+
+  // ✅ Class Level - 클래스에 단 하나만 존재
+  static DELIVERY_FEE: number = 3000;
+  static orderCount = 0;
+
+  constructor(private price: number) {
+    Order.orderCount++; // static은 클래스 이름으로 접근
+  }
+
+  calculateTotal(): number {
+    // this가 아닌 클래스 이름으로 접근
+    return this.price + Order.DELIVERY_FEE;
+  }
+}
+```
+
+**메모리 비교:**
+
+```ts
+const order1 = new Order(10000);
+const order2 = new Order(20000);
+const order3 = new Order(30000);
+
+// Instance Level이면?
+// order1.deliveryFee = 3000 (메모리 차지)
+// order2.deliveryFee = 3000 (메모리 차지)
+// order3.deliveryFee = 3000 (메모리 차지)
+// → 똑같은 값을 3번 저장! 메모리 낭비
+
+// Class Level이면?
+// Order.DELIVERY_FEE = 3000 (딱 1개만 존재)
+// → 모든 객체가 같은 값을 공유! 메모리 효율적
+```
+
+**언제 static을 사용할까?**
+
+- 모든 인스턴스가 공유하는 값 (배달비, 세율 등)
+- 변하지 않는 상수 값 (`static readonly`)
+- 인스턴스 개수 추적 (`orderCount`)
+- 유틸리티 함수 (`static` 메서드)
+
+`static` 멤버는 클래스에 속하므로 `this`가 아닌 **클래스 이름**으로 접근한다. `Order.orderCount`, `Order.DELIVERY_FEE` 이런 식이다.
+
+### 객체 생성과 사용
+
+```ts
+const user1 = new User(50_000);
+const user2 = new User(30_000);
+
+const order1 = user1.createOrder('맘스터치', ['싸이버거'], 6_500);
+const order2 = user2.createOrder('맥도날드', ['빅맥세트'], 8_900);
+
+console.log(user1.balance); // 43_500
+console.log(user2.balance); // 21_100
+```
+
+같은 클래스로 여러 개의 독립적인 객체를 생성할 수 있다. `user1`과 `user2`는 각자 자신만의 잔액과 주문 내역을 가진다.
+
+### 클래스의 장점
+
+**데이터와 기능의 결합:**
+
+`balance`와 `createOrder`가 하나의 클래스 안에 함께 있다. 관련된 것들이 한 곳에 모여있어 관리가 쉽다.
+
+**재사용 가능한 설계:**
+
+같은 클래스로 여러 객체를 만들 수 있다. 사용자가 1000명이어도 `new User()`만 반복하면 된다.
+
+**독립적인 상태 관리:**
+
+각 객체는 자신만의 상태를 가진다. `user1`이 주문해도 `user2`의 잔액에는 영향이 없다.
+
+하지만 아직 치명적인 문제가 있다:
+
+```ts
+const user = new User(50_000);
+
+// ❌ 문제: 외부에서 직접 잔액 수정 가능
+user.balance = -10_000; // 음수 잔액?
+user.balance = 999999999; // 무한 머니 버그?
+
+// ❌ 문제: 주문 내역도 직접 조작 가능
+user.orderHistory = []; // 주문 내역 삭제?
+```
+
+검증 없이 무엇이든 할 수 있다. 데이터 무결성이 보장되지 않는다. 다음 섹션에서 이를 해결해보자.
+
+---
+
+## 캡슐화
+
+`캡슐화(Encapsulation)`는 `객체지향`의 첫 번째 핵심 원칙이다. 약 캡슐을 생각해보자. 캡슐 안에 약 성분이 들어있지만 우리는 내용물을 직접 만지거나 수정할 수 없다. 정해진 방법(먹는 것)으로만 사용할 수 있다.
+
+프로그래밍에서도 마찬가지다. **내부 데이터는 숨기고, 정해진 메서드를 통해서만 접근하도록 만드는 것**이 `캡슐화`다.
+
+### 접근 제어자
+
+TypeScript에는 3가지 접근 제어자가 있다:
+
+- `public`: 어디서든 접근 가능 (기본값)
+- `private`: 클래스 내부에서만 접근 가능
+- `protected`: 클래스 내부 + 상속받은 자식 클래스에서 접근 가능
+
+### 캡슐화의 핵심 - 내부 상태 보호
+
+배달 앱 포인트를 생각해보자. 사용자가 "내 포인트를 1억으로 바꿔줘!"라고 직접 수정할 수 없다. 대신 주문을 하거나 이벤트에 참여하면 시스템이 알아서 포인트를 올려준다.
+
+```ts
+// ❌ 불가능: 내 포인트 1억 만들어줘!
+user.points = 100_000_000;
+
+// ✅ 가능: 정해진 방법으로만
+user.completeOrder(order); // 주문 완료 → 포인트 적립
+user.attendEvent(); // 이벤트 참여 → 포인트 적립
+```
+
+마찬가지로 `User` 클래스의 `balance`도 외부에서 직접 수정하면 안 된다. **외부 행동(메서드)을 통해서만 내부 상태를 변경**할 수 있어야 한다.
+
+### private으로 데이터 보호
+
+```ts
+class User {
+  private balance: number = 0; // 외부에서 접근 불가
+  private orderHistory: OrderInfo[] = [];
+
+  constructor(initialBalance: number) {
+    this.balance = initialBalance;
+  }
+
+  getBalance(): number {
+    return this.balance;
+  }
+
+  addBalance(amount: number): void {
+    if (amount <= 0) {
+      throw new Error('충전 금액은 0보다 커야 합니다');
+    }
+    this.balance += amount;
+  }
+
+  createOrder(restaurant: string, items: string[], price: number): OrderInfo {
+    if (this.balance < price) {
+      throw new Error('잔액이 부족합니다');
+    }
+
+    this.balance -= price;
+
+    const order: OrderInfo = {
+      id: `ORDER-${this.orderHistory.length + 1}`,
+      restaurant,
+      items,
+      totalPrice: price,
+      status: 'pending',
+    };
+
+    this.orderHistory.push(order);
+    return order;
+  }
+}
+```
+
+`balance`와 `orderHistory`를 `private`으로 선언했다. 이제 외부에서는 직접 접근할 수 없고, `addBalance()` 같은 메서드를 통해서만 변경할 수 있다.
+
+**Before (캡슐화 전):**
+
+```ts
+const user = new User(50_000);
+user.balance = -10000; // ❌ 말도 안 되는 값 허용
+```
+
+**After (캡슐화 후):**
+
+```ts
+const user = new User(50_000);
+// user.balance = -10000; // ❌ 컴파일 에러!
+user.addBalance(10_000); // ✅ 메서드를 통해 안전하게 추가
+```
+
+### 검증 로직 추가
+
+메서드 내부에 검증 로직을 넣으면 잘못된 값이 들어오는 것을 원천 차단할 수 있다.
+
+```ts
+addBalance(amount: number): void {
+  if (amount <= 0) {
+    throw new Error('충전 금액은 0보다 커야 합니다');
+  }
+  this.balance += amount;
+}
+```
+
+사용자가 음수나 0을 충전하려고 하면 에러가 발생한다. 데이터 무결성이 보장된다.
+
+### 캡슐화의 핵심 원칙
+
+**데이터 숨기기 (Information Hiding):**
+
+`private`으로 내부 데이터를 보호한다. 외부에서 직접 접근할 수 없다.
+
+**메서드를 통한 접근 (Controlled Access):**
+
+`public` 메서드로만 데이터를 변경한다. 메서드 내부에 검증 로직을 포함한다.
+
+**유효성 검사 (Validation):**
+
+잘못된 값이 들어오는 것을 방지한다. 데이터 일관성과 무결성을 보장한다.
+
+**유연성 (Flexibility):**
+
+내부 구현을 자유롭게 변경할 수 있다. 외부 API는 그대로 유지하므로 사용자 코드에 영향이 없다.
+
+`캡슐화`를 통해 우리는 데이터를 안전하게 보호할 수 있게 되었다. 외부에서는 `addBalance`와 `createOrder` 같은 공개된 메서드를 통해서만 사용자와 상호작용할 수 있다.
+
+### private constructor와 static factory 메서드
+
+`캡슐화`는 데이터뿐만 아니라 **객체 생성 과정**까지 제어할 수 있다. 생성자를 `private`으로 만들면 외부에서 함부로 객체를 생성하지 못하게 막을 수 있다.
+
+**왜 생성자를 막을까?**
+
+두 가지 이유가 있다:
+
+**1. 검증이 필요한 경우**
+
+객체를 만들 때 복잡한 검증이 필요하다면, `static` 메서드를 거치도록 강제할 수 있다.
+
+**2. 단 하나만 존재해야 하는 경우 (Singleton)**
+
+배달 서비스는 전체 앱에서 단 하나만 존재해야 한다. 왜일까?
+
+```ts
+// ❌ 여러 개 만들면 문제 발생
+const service1 = new DeliveryService(10); // 배달원 10명
+const service2 = new DeliveryService(20); // 배달원 20명
+// 실제로는 배달원이 10명인데 중복 생성으로 30명으로 계산됨! 😱
+```
+
+데이터베이스 연결, 설정 객체, 로거 같은 것들은 **전역에서 단 하나만** 있어야 한다. 여러 개 만들면:
+
+- 데이터베이스 연결이 중복으로 생성되어 리소스 낭비
+- 설정 객체가 여러 개면 일관성 깨짐
+- 로거가 여러 개면 로그 파일이 꼬임
+
+이럴 때 Singleton 패턴을 사용한다. `private constructor`와 `static` 메서드를 조합하면 객체 생성을 완벽하게 통제할 수 있다.
+
+```ts
+class DeliveryService {
+  private static instance: DeliveryService | null = null;
+  private static readonly MAX_DISTANCE_KM = 10; // Class level 상수
+
+  // private constructor - 외부에서 new DeliveryService() 불가능!
+  private constructor(private availableDrivers: number) {
+    console.log(`배달 서비스 생성: ${availableDrivers}명의 기사`);
+  }
+
+  // static factory 메서드 - 검증 로직 포함
+  static createService(drivers: number): DeliveryService {
+    if (drivers <= 0) {
+      throw new Error('배달원은 최소 1명 이상이어야 합니다');
+    }
+    if (drivers > 100) {
+      throw new Error('배달원은 최대 100명까지 가능합니다');
+    }
+    return new DeliveryService(drivers);
+  }
+
+  // Singleton 패턴 - 단 하나의 인스턴스만 존재
+  static getInstance(): DeliveryService {
+    if (!DeliveryService.instance) {
+      DeliveryService.instance = new DeliveryService(10);
+      console.log('배달 서비스 최초 생성');
+    } else {
+      console.log('기존 배달 서비스 반환');
+    }
+    return DeliveryService.instance;
+  }
+
+  canDeliver(distanceKm: number): boolean {
+    return distanceKm <= DeliveryService.MAX_DISTANCE_KM;
+  }
+}
+```
+
+**사용 예시:**
+
+```ts
+// ❌ const service = new DeliveryService(5); // 컴파일 에러!
+// Error: Constructor of class 'DeliveryService' is private
+
+// ✅ static 메서드를 통해서만 생성 가능
+const service1 = DeliveryService.createService(20);
+
+// ✅ Singleton - 항상 같은 인스턴스 반환
+const service2 = DeliveryService.getInstance(); // '배달 서비스 최초 생성'
+const service3 = DeliveryService.getInstance(); // '기존 배달 서비스 반환'
+console.log(service2 === service3); // true - 같은 객체!
+
+// ❌ const bad = DeliveryService.createService(-5); // Error: 배달원은 최소 1명 이상
+// ❌ const bad2 = DeliveryService.createService(200); // Error: 배달원은 최대 100명까지
+```
+
+**private constructor의 장점:**
+
+**생성 로직 통제:**
+
+모든 객체 생성이 `static` 메서드를 거친다. 검증, 초기화, 로깅 등을 한 곳에서 관리할 수 있다.
+
+**잘못된 생성 방지:**
+
+`new DeliveryService(-5)` 같은 말도 안 되는 객체 생성을 원천 차단한다.
+
+**Singleton 패턴 구현:**
+
+전역에서 단 하나의 인스턴스만 존재하도록 보장한다. 데이터베이스 연결, 설정 객체 등에 유용하다.
+
+**의미 있는 이름:**
+
+`DeliveryService.createService()`, `DeliveryService.getInstance()` 같이 명확한 이름으로 생성 의도를 드러낼 수 있다.
+
+생성자를 `private`으로 만드는 것은 `캡슐화`의 고급 활용이다. 내부 데이터를 숨기는 것을 넘어서, **객체가 어떻게 만들어지는지**까지 제어한다. 이것이 진정한 `캡슐화`다.
+
+---
+
+## Getter와 Setter
+
+때로는 속성처럼 보이지만 실제로는 메서드로 동작하는 것이 필요하다. `Getter`와 `Setter`가 바로 그런 역할을 한다.
+
+### 문제 상황
+
+```ts
+class Order {
+  restaurant: string;
+  totalPrice: number;
+  deliveryFee: number;
+  finalPrice: number; // 총 금액 + 배달비
+
+  constructor(restaurant: string, price: number, fee: number) {
+    this.restaurant = restaurant;
+    this.totalPrice = price;
+    this.deliveryFee = fee;
+    this.finalPrice = price + fee; // 생성 시 한 번만 계산
+  }
+}
+
+const order = new Order('맘스터치', 12_000, 3_000);
+console.log(order.finalPrice); // 15_000
+
+order.deliveryFee = 0; // 배달비 무료 이벤트!
+console.log(order.finalPrice); // 여전히 15000 ❌
+```
+
+`deliveryFee`를 변경해도 `finalPrice`는 업데이트되지 않는다. `finalPrice`는 생성자에서 딱 한 번만 계산되기 때문이다.
+
+### Getter로 해결
+
+```ts
+class Order {
+  restaurant: string;
+  totalPrice: number;
+  deliveryFee: number;
+
+  constructor(restaurant: string, price: number, fee: number) {
+    this.restaurant = restaurant;
+    this.totalPrice = price;
+    this.deliveryFee = fee;
+  }
+
+  get finalPrice(): number {
+    return this.totalPrice + this.deliveryFee;
+  }
+}
+
+const order = new Order('맘스터치', 12_000, 3_000);
+console.log(order.finalPrice); // 15_000
+
+order.deliveryFee = 0;
+console.log(order.finalPrice); // 12_000 ✅
+```
+
+`get` 키워드로 정의하면 함수처럼 정의하지만 **속성처럼** 사용할 수 있다. `order.finalPrice()`가 아니라 `order.finalPrice`로 접근한다.
+
+호출될 때마다 새로 계산되므로 항상 최신 값을 반환한다.
+
+### Setter로 검증하기
+
+```ts
+class User {
+  private _balance: number = 0;
+
+  constructor(initialBalance: number) {
+    this._balance = initialBalance;
+  }
+
+  get balance(): number {
+    return this._balance;
+  }
+
+  set balance(amount: number) {
+    if (amount < 0) {
+      throw new Error('잔액은 0보다 작을 수 없습니다');
+    }
+    this._balance = amount;
+  }
+}
+```
+
+`set` 키워드로 값을 설정할 때 검증을 수행한다. 잘못된 값이 들어오면 에러를 발생시킨다.
+
+```ts
+const user = new User(50_000);
+
+console.log(user.balance); // 50_000
+
+user.balance = 30_000; // ✅ 성공
+console.log(user.balance); // 30_000
+
+// user.balance = -1000; // ❌ Error: 잔액은 0보다 작을 수 없습니다
+```
+
+속성처럼 사용하지만 내부적으로는 검증 로직이 실행된다.
+
+### 사용 가이드
+
+**Getter/Setter를 사용하는 경우:**
+
+- 계산된 속성이 필요할 때 (`finalPrice` 같은)
+- 값을 설정할 때 검증이 필요할 때
+- `private` 변수를 간접적으로 노출할 때
+
+**Getter/Setter를 사용하지 않는 경우:**
+
+- 단순히 값을 저장하고 가져오기만 할 때 (그냥 `public` 변수 사용)
+- 복잡한 계산이 필요한 경우 (성능 이슈, 차라리 메서드로 만들기)
+
+Getter와 Setter는 `캡슐화`의 또 다른 형태다. 내부 데이터를 직접 노출하지 않으면서도, 마치 속성처럼 자연스럽게 사용할 수 있게 해준다.
+
+---
+
+## 추상화
+
+`추상화(Abstraction)`는 **복잡한 내부 구현을 숨기고, 필요한 기능만 외부에 노출**하는 것이다.
+
+### 추상화란 무엇인가?
+
+커피머신을 떠올려보자. 우리는 커피머신의 복잡한 내부 구조(물 펌프, 압력 조절, 온도 센서, 그라인더)를 이해하지 않아도 버튼 하나만 누르면 커피를 만들 수 있다.
+
+```ts
+// 내부 구현 (복잡함, 외부에서 볼 필요 없음)
+private boilWater() { /* 물 끓이기 */ }
+private grindBeans() { /* 원두 갈기 */ }
+private extractCoffee() { /* 커피 추출 */ }
+private addMilk() { /* 우유 넣기 */ }
+
+// 외부 인터페이스 (간단함, 이것만 알면 됨)
+public makeCoffee() {
+  this.boilWater();
+  this.grindBeans();
+  this.extractCoffee();
+}
+```
+
+사용자는 `makeCoffee()`만 호출하면 된다. 내부가 어떻게 동작하는지 몰라도 되고, 알 필요도 없다. 이것이 `추상화`다.
+
+배달 앱에서도 마찬가지다. 사용자는 "주문하기" 버튼만 누르면 되지, 내부에서 재고 확인, 결제 처리, 배달원 배정, 알림 전송이 어떻게 이루어지는지 알 필요가 없다.
+
+### Interface 정의
+
+```ts
+interface PaymentMethod {
+  processPayment(amount: number): boolean;
+}
+```
+
+`PaymentMethod`는 결제 수단의 계약서다. "나는 `processPayment` 메서드를 제공한다"는 약속이다.
+
+사용자는 복잡한 내부 구현을 몰라도 된다. 단순하고 명확한 API만 제공받는다.
+
+### 구현 클래스
+
+```ts
+class CreditCardPayment implements PaymentMethod {
+  processPayment(amount: number): boolean {
+    console.log(`신용카드로 ${amount}원 결제 처리 중...`);
+    // 실제로는 복잡한 신용카드 결제 로직
+    return true;
+  }
+}
+
+class KakaoPayPayment implements PaymentMethod {
+  processPayment(amount: number): boolean {
+    console.log(`카카오페이로 ${amount}원 결제 처리 중...`);
+    // 실제로는 복잡한 카카오페이 API 호출
+    return true;
+  }
+}
+```
+
+`CreditCardPayment`와 `KakaoPayPayment`는 `PaymentMethod` 인터페이스를 구현한다. 내부 로직은 완전히 다르지만 외부에서 보기에는 같은 메서드를 제공한다.
+
+### 추상화된 주문 클래스
+
+```ts
+class Order {
+  private status: 'pending' | 'confirmed' | 'delivered' = 'pending';
+
+  constructor(
+    private restaurant: string,
+    private totalPrice: number,
+    private paymentMethod: PaymentMethod
+  ) {}
+
+  processOrder(): void {
+    // 복잡한 내부 로직을 숨김
+    this.validateOrder();
+    this.processPayment();
+    this.confirmOrder();
+  }
+
+  private validateOrder(): void {
+    console.log('주문 유효성 검증 중...');
+  }
+
+  private processPayment(): void {
+    const success = this.paymentMethod.processPayment(this.totalPrice);
+    if (!success) {
+      throw new Error('결제 실패');
+    }
+  }
+
+  private confirmOrder(): void {
+    this.status = 'confirmed';
+    console.log('주문 확정!');
+  }
+}
+```
+
+`private` 메서드로 내부 구현을 숨겼다. 외부에서는 `processOrder()` 하나만 호출하면 된다.
+
+내부에서는 세 가지 단계(검증 → 결제 → 확정)를 자동으로 수행한다. 복잡한 과정을 하나의 간단한 메서드로 추상화했다.
+
+### 사용 예시
+
+```ts
+const creditCard = new CreditCardPayment();
+const order1 = new Order('맘스터치', 12_000, creditCard);
+order1.processOrder();
+
+const kakaoPay = new KakaoPayPayment();
+const order2 = new Order('맥도날드', 8_900, kakaoPay);
+order2.processOrder();
+```
+
+사용자는 `processOrder()` 하나만 호출한다. 내부에서 무슨 일이 일어나는지 몰라도 된다. 이것이 바로 `추상화`의 힘이다.
+
+### 추상화의 장점
+
+**단순성:** 사용자는 간단한 API만 알면 된다.
+
+**안전성:** 내부 구현을 건드릴 수 없다. `private` 메서드는 외부에서 호출 불가능하다.
+
+**유지보수성:** 내부 구현을 자유롭게 변경할 수 있다. 외부 API는 그대로 유지하므로 기존 사용자 코드에 영향이 없다.
+
+**이해하기 쉬움:** 복잡한 로직이 숨겨져 있어 코드가 깔끔하다. 사용자는 "무엇을" 하는지만 알면 되고, "어떻게" 하는지는 몰라도 된다.
+
+---
+
+## Interface
+
+Interface는 단순히 타입을 정의하는 것이 아니다. `계약 (Contract)`이자 `다형성 (Polymorphism)`을 구현하는 핵심 도구다.
+
+### 결제 인터페이스
+
+```ts
+interface PaymentMethod {
+  processPayment(amount: number): boolean;
+  refund(amount: number): boolean;
+}
+```
+
+모든 결제 수단이 구현해야 할 메서드를 정의한다. `processPayment`와 `refund`를 반드시 제공해야 한다.
+
+### 다양한 결제 수단
+
+```ts
+class CreditCardPayment implements PaymentMethod {
+  processPayment(amount: number): boolean {
+    console.log(`신용카드로 ${amount}원 결제`);
+    return true;
+  }
+
+  refund(amount: number): boolean {
+    console.log(`신용카드로 ${amount}원 환불`);
+    return true;
+  }
+}
+
+class KakaoPayPayment implements PaymentMethod {
+  processPayment(amount: number): boolean {
+    console.log(`카카오페이로 ${amount}원 결제`);
+    return true;
+  }
+
+  refund(amount: number): boolean {
+    console.log(`카카오페이로 ${amount}원 환불`);
+    return true;
+  }
+}
+
+class NaverPayPayment implements PaymentMethod {
+  processPayment(amount: number): boolean {
+    console.log(`네이버페이로 ${amount}원 결제`);
+    return true;
+  }
+
+  refund(amount: number): boolean {
+    console.log(`네이버페이로 ${amount}원 환불`);
+    return true;
+  }
+}
+```
+
+세 가지 결제 수단이 모두 같은 인터페이스를 구현한다. 내부 로직은 다르지만 외부에서 보기에는 동일한 메서드를 제공한다.
+
+### 통합 결제 처리
+
+```ts
+class PaymentProcessor {
+  processPayments(payments: PaymentMethod[], amount: number): void {
+    payments.forEach((payment) => {
+      payment.processPayment(amount);
+    });
+  }
+}
+
+const processor = new PaymentProcessor();
+const methods = [
+  new CreditCardPayment(),
+  new KakaoPayPayment(),
+  new NaverPayPayment(),
+];
+
+processor.processPayments(methods, 10_000);
+```
+
+`PaymentMethod` 타입으로 선언하면 어떤 결제 수단이든 동일하게 처리할 수 있다. 배열에 서로 다른 구현체를 넣어도 같은 방식으로 사용할 수 있다.
+
+### Interface의 핵심 역할
+
+**계약(Contract):**
+
+"이런 메서드를 제공한다"는 약속이다. 구현 클래스는 반드시 모든 메서드를 구현해야 한다.
+
+**다형성(Polymorphism):**
+
+같은 인터페이스를 구현한 서로 다른 클래스를 동일하게 다룰 수 있다.
+
+**접근 제어(Access Control):**
+
+Interface로 노출할 기능을 선택한다. 불필요한 기능은 숨긴다.
+
+**유연성(Flexibility):**
+
+구현을 바꿔도 인터페이스는 유지된다. 새로운 구현체를 쉽게 추가할 수 있다.
+
+Interface는 표준 규격과 같다. USB 포트처럼, 표준 인터페이스만 맞으면 어떤 장치든 꽂을 수 있다. `PaymentMethod`라는 표준을 지키면 신용카드든, 카카오페이든, 네이버페이든 모두 사용할 수 있다.
+
+---
+
+## 상속
+
+`상속(Inheritance)`은 **기존 클래스의 기능을 물려받아 새로운 클래스를 만드는 것**이다. 부모가 자식에게 재산을 물려주듯이, 부모 클래스가 자식 클래스에게 속성과 메서드를 물려준다.
+
+### 부모 클래스
+
+```ts
+class Order {
+  protected status: 'pending' | 'confirmed' | 'delivered' = 'pending';
+
+  constructor(
+    protected restaurant: string,
+    protected totalPrice: number,
+    protected items: string[]
+  ) {}
+
+  getInfo(): string {
+    return `${this.restaurant} - ${this.totalPrice}원`;
+  }
+
+  confirm(): void {
+    this.status = 'confirmed';
+    console.log('주문이 확정되었습니다');
+  }
+}
+```
+
+기본 주문 클래스다. `protected` 키워드를 사용하면 자식 클래스에서도 접근할 수 있다.
+
+### 자식 클래스 - 빠른 배달
+
+```ts
+class ExpressOrder extends Order {
+  private expressFee = 5000;
+
+  constructor(restaurant: string, totalPrice: number, items: string[]) {
+    super(restaurant, totalPrice, items); // 부모 생성자 호출
+  }
+
+  override getInfo(): string {
+    return `[특급배달] ${super.getInfo()} + 특급비 ${this.expressFee}원`;
+  }
+
+  getFinalPrice(): number {
+    return this.totalPrice + this.expressFee;
+  }
+}
+```
+
+`extends` 키워드로 `Order` 클래스를 상속받는다. 모든 속성과 메서드를 물려받으며, 추가 기능을 덧붙일 수 있다.
+
+**super 키워드:**
+
+`super()`는 부모 클래스의 생성자를 호출한다. 자식 클래스에서 `constructor`를 정의했다면 반드시 `super()`를 먼저 호출해야 한다.
+
+`super.getInfo()`는 부모 클래스의 메서드를 호출한다. 부모의 기능을 그대로 사용하면서 추가 기능을 덧붙일 수 있다.
+
+**override 키워드:**
+
+부모 메서드를 재정의할 때 사용한다. 명시적으로 "이것은 부모 메서드를 오버라이드하는 것"임을 표시한다.
+
+### 사용 예시
+
+```ts
+const normalOrder = new Order('맘스터치', 12_000, ['싸이버거', '감자튀김']);
+const expressOrder = new ExpressOrder('맥도날드', 8_900, ['빅맥세트']);
+
+console.log(normalOrder.getInfo()); // 맘스터치 - 12_000원
+console.log(expressOrder.getInfo()); // [특급배달] 맥도날드 - 8_900원 + 특급비 5_000원
+console.log(expressOrder.getFinalPrice()); // 13_900
+```
+
+같은 `getInfo` 메서드지만 동작이 다르다. `ExpressOrder`는 부모의 기능을 확장했다.
+
+### 상속의 IS-A 관계
+
+상속은 **"IS-A" 관계**다. 자식 클래스는 부모 클래스의 한 종류다.
+
+```ts
+ExpressOrder IS-A Order  // 특급배달 주문은 주문이다 ✅
+PremiumOrder IS-A Order  // 프리미엄 주문은 주문이다 ✅
+Dog IS-A Animal          // 강아지는 동물이다 ✅
+```
+
+이 관계가 성립할 때만 상속을 사용해야 한다. IS-A 관계가 아니면 상속이 아닌 Composition을 사용해야 한다 (나중에 배운다).
+
+```ts
+// ❌ 잘못된 상속 (자동차는 엔진이 아니다!)
+class Car extends Engine { ... }
+
+// ✅ 올바른 Composition (자동차는 엔진을 가진다)
+class Car {
+  constructor(private engine: Engine) { ... }
+}
+```
+
+**실제 예제: 웹 브라우저의 DOM**
+
+실제로 웹 브라우저의 DOM도 상속으로 구현되어 있다:
+
+```ts
+HTMLDivElement  IS-A  HTMLElement
+HTMLElement     IS-A  Element
+Element         IS-A  Node
+Node            IS-A  EventTarget
+```
+
+그래서 모든 DOM 요소가 `addEventListener`를 쓸 수 있는 것이다! `EventTarget`을 상속받았기 때문이다.
+
+```ts
+const div = document.querySelector('div');
+div.addEventListener('click', ...); // EventTarget의 메서드
+```
+
+이처럼 상속은 실제 웹 기술의 근간이 되는 개념이다.
+
+### 상속의 장점
+
+**코드 재사용:**
+
+`Order`의 모든 기능을 다시 작성할 필요 없이 `상속`받아 사용한다.
+
+**확장성:**
+
+공통 기능은 부모 클래스에서, 특화된 기능은 자식 클래스에서 추가한다.
+
+**일관성:**
+
+부모의 동작 방식을 그대로 유지하면서 확장한다. 기본 동작은 보장된다.
+
+하지만 `상속`에도 한계가 있다. 다음 섹션에서 `상속`의 문제점과 해결책을 살펴보자.
+
+---
+
+## 다형성
+
+### Polymorphism의 의미
+
+`다형성(Polymorphism)` = **Poly(많은)** + **Morph(형태)** = "여러 가지 형태"
+
+같은 메서드 호출이지만, 객체의 실제 타입에 따라 다르게 동작한다. 이것이 `다형성`이다.
+
+```ts
+const deliveries: DeliveryService[] = [
+  new BikeDelivery(), // 오토바이
+  new CarDelivery(), // 자동차
+  new DroneDelivery(), // 드론
+];
+
+// 같은 deliver() 호출이지만
+deliveries.forEach((delivery) => {
+  delivery.deliver(order); // 각자 다른 방식으로 배달!
+});
+```
+
+`BikeDelivery`는 오토바이로, `CarDelivery`는 차량으로, `DroneDelivery`는 드론으로 배달한다. 같은 인터페이스, 다른 동작! 어떤 종류의 배달 방식인지 신경 쓰지 않고, **공통 인터페이스로 다룰 수 있다**.
+
+### 배달 서비스 인터페이스
+
+```ts
+interface DeliveryService {
+  deliver(order: Order): void;
+  estimateTime(): number; // 예상 배달 시간 (분)
+}
+```
+
+모든 배달 서비스가 구현해야 할 메서드를 정의한다.
+
+### 다양한 배달 방식
+
+```ts
+class BikeDelivery implements DeliveryService {
+  deliver(order: Order): void {
+    console.log(`오토바이로 ${order.getInfo()} 배달 시작`);
+  }
+
+  estimateTime(): number {
+    return 30; // 30분
+  }
+}
+
+class CarDelivery implements DeliveryService {
+  deliver(order: Order): void {
+    console.log(`차량으로 ${order.getInfo()} 배달 시작`);
+  }
+
+  estimateTime(): number {
+    return 45; // 45분
+  }
+}
+
+class DroneDelivery implements DeliveryService {
+  deliver(order: Order): void {
+    console.log(`드론으로 ${order.getInfo()} 배달 시작`);
+  }
+
+  estimateTime(): number {
+    return 15; // 15분
+  }
+}
+```
+
+세 가지 배달 방식이 모두 같은 인터페이스를 구현한다. 내부 동작은 다르지만 외부에서 보기에는 동일한 메서드를 제공한다.
+
+### 배달 관리자
+
+```ts
+class DeliveryManager {
+  processDeliveries(services: DeliveryService[], order: Order): void {
+    services.forEach((service) => {
+      console.log(`예상 시간: ${service.estimateTime()}분`);
+      service.deliver(order);
+      console.log('---');
+    });
+  }
+}
+```
+
+`DeliveryService` 타입으로 받으면 어떤 배달 방식이든 동일하게 처리할 수 있다.
+
+### 실제 사용
+
+```ts
+const order = new Order('맘스터치', 12_000, ['싸이버거', '감자튀김']);
+
+const deliveryOptions = [
+  new BikeDelivery(),
+  new CarDelivery(),
+  new DroneDelivery(),
+];
+
+const manager = new DeliveryManager();
+manager.processDeliveries(deliveryOptions, order);
+```
+
+같은 메서드 호출(`deliver`)이지만 실제로는 각 배달 방식에 맞는 다른 동작을 수행한다.
+
+### 다형성의 핵심 개념
+
+**대체 가능성:**
+
+자식 클래스는 부모 클래스 타입으로 사용할 수 있다. 인터페이스를 구현한 클래스는 인터페이스 타입으로 사용할 수 있다.
+
+**단일 인터페이스, 다양한 구현:**
+
+인터페이스는 하나지만 구현은 여러 가지다. 사용자는 인터페이스만 알면 된다.
+
+**런타임 다형성:**
+
+실행 시점에 실제 타입에 따라 적절한 메서드가 호출된다.
+
+**확장성:**
+
+새로운 배달 방식을 추가해도 기존 코드를 수정할 필요가 없다.
+
+```ts
+class RobotDelivery implements DeliveryService {
+  deliver(order: Order): void {
+    console.log(`로봇으로 ${order.getInfo()} 배달 시작`);
+  }
+
+  estimateTime(): number {
+    return 20;
+  }
+}
+
+deliveryOptions.push(new RobotDelivery()); // 기존 코드 수정 없이 추가
+```
+
+`다형성`은 `객체지향`의 꽃이다. 같은 메서드 호출이지만 실제로는 각 객체의 특성에 맞는 다른 동작을 수행한다. 이것이 가능한 이유는 모두 같은 인터페이스를 구현하기 때문이다.
+
+---
+
+## 왜 Composition인가?
+
+지금까지 `상속`을 통해 코드를 재사용하고 확장하는 방법을 배웠다. 하지만 `상속`에는 **치명적인 한계**가 있다.
+
+실제 문제 상황을 봐보자:
+
+- 빠른 배달 주문
+- 프리미엄 포장 주문
+- **빠른 배달 + 프리미엄 포장 주문** ← 어떻게 만들까?
+
+### 상속으로 기능 추가
+
+```ts
+class ExpressOrder extends Order {
+  private expressFee = 5000;
+
+  override getInfo(): string {
+    return `[특급배달] ${super.getInfo()}`;
+  }
+}
+
+class PremiumPackagingOrder extends Order {
+  private packagingFee = 3000;
+
+  override getInfo(): string {
+    return `[프리미엄포장] ${super.getInfo()}`;
+  }
+}
+```
+
+빠른 배달과 프리미엄 포장을 각각 구현했다. 그런데 둘 다 필요한 주문은 어떻게 만들까?
+
+### 상속의 한계
+
+```ts
+// ❌ TypeScript는 다중 상속을 지원하지 않음!
+// class ExpressPremiumOrder extends ExpressOrder, PremiumPackagingOrder {}
+```
+
+TypeScript는 단일 상속만 지원한다. 하나의 부모 클래스만 `extends` 할 수 있다.
+
+**해결책이 없을까?**
+
+```ts
+// 방법 1: 코드 복붙? ❌
+class ExpressPremiumOrder extends Order {
+  // ExpressOrder의 코드 복사
+  // PremiumPackagingOrder의 코드 복사
+  // → 코드 중복, 유지보수 악몽
+}
+
+// 방법 2: 깊은 상속? ❌
+class ExpressPremiumOrder extends ExpressOrder {
+  // PremiumPackagingOrder의 코드만 추가
+  // → 상속 계층이 복잡해짐
+}
+```
+
+### 상속의 3가지 한계
+
+**1. 다중 `상속` 불가능**
+
+TypeScript는 다중 `상속`을 지원하지 않는다. 다이아몬드 문제(Diamond Problem) 때문이다.
+
+```
+        Order
+       /     \
+ Express   Premium
+       \     /
+   ExpressPremium ← getInfo는 누구 것을 써야 하나?
+```
+
+양쪽 부모 모두 같은 메서드를 오버라이드했다면 어느 것을 사용해야 할까?
+
+### 다중 상속이 가능한 언어는?
+
+Python 같은 언어는 다중 `상속`을 지원한다:
+
+```python
+class ExpressOrder(Order):
+    def get_info(self):
+        return f"[특급배달] {super().get_info()}"
+
+class PremiumPackagingOrder(Order):
+    def get_info(self):
+        return f"[프리미엄포장] {super().get_info()}"
+
+# Python은 다중 상속 가능!
+class ExpressPremiumOrder(ExpressOrder, PremiumPackagingOrder):
+    pass
+
+order = ExpressPremiumOrder("맘스터치", 12000, ["싸이버거"])
+print(order.get_info())  # 어느 get_info가 호출될까? 🤔
+```
+
+**다이아몬드 문제 시각화:**
+
+```
+        Order
+      (get_info)
+       /      \
+ExpressOrder  PremiumPackaging
+ (get_info)    (get_info)
+       \        /
+    ExpressPremium
+   (어느 것을 호출?)
+```
+
+양쪽 부모 모두 `get_info`를 구현했다. `ExpressPremiumOrder`는 어느 것을 상속받아야 할까?
+
+Python은 MRO(Method Resolution Order)라는 규칙으로 해결하지만, 복잡하고 예측하기 어렵다. TypeScript와 Java는 아예 **다중 `상속`을 금지**했다. 혼란을 원천 차단하는 것이다.
+
+이것이 Composition이 필요한 또 다른 이유다. 다중 `상속`의 복잡함 없이 여러 기능을 자유롭게 조합할 수 있다.
+
+**2. 수직적 관계의 복잡도**
+
+```
+Order
+├─ ExpressOrder
+│  └─ ExpressPremiumOrder
+│     └─ ExpressPremiumPriorityOrder
+│        └─ ...
+└─ PremiumPackagingOrder
+   └─ ...
+```
+
+`상속` 트리가 깊어질수록:
+
+- 부모 클래스 변경 시 모든 자식 클래스에 영향
+- 어디서 무엇이 정의되었는지 추적 어려움
+- 테스트 및 유지보수 곤란
+
+**3. 경직된 구조**
+
+```ts
+class ExpressOrder extends Order {
+  // 항상 이 방식으로만 특급배달 처리
+}
+```
+
+다른 방식의 특급배달을 사용하려면? 새로운 클래스를 만들어야 한다. 유연성이 부족하다.
+
+`상속`은 강한 결합이다. `ExpressOrder IS-A Order` - 영원히 Order의 일부다. 나중에 다른 부모로 바꾸고 싶어도 불가능하다.
+
+### 실제 시나리오
+
+```ts
+// 요구사항: 다음 4가지 주문이 필요함
+// 1. 기본 주문
+// 2. 특급배달만
+// 3. 프리미엄포장만
+// 4. 특급배달 + 프리미엄포장
+
+// 상속으로는...
+class Order { ... }
+class ExpressOrder extends Order { ... }
+class PremiumPackagingOrder extends Order { ... }
+class ExpressPremiumOrder extends ??? {
+  // 코드 중복 발생
+  // 조합의 경우의 수가 늘어나면 클래스 폭발!
+}
+```
+
+레고 블록을 생각해보자. 레고 블록은 `상속` 관계가 아니다. 블록들을 `조합(Composition)`해서 원하는 모양을 만든다. 바퀴가 필요하면 바퀴 블록을 추가하고, 창문이 필요하면 창문 블록을 추가한다.
+
+이럴 때 필요한 것이 바로 Composition이다!
+
+---
+
+## Composition으로 해결하기
+
+**Favor Composition over Inheritance** - "`상속`보다 조합을 선호하라"
+
+이것은 `객체지향` 설계의 가장 중요한 원칙 중 하나다. Composition은 레고 블록을 조립하듯이, 필요한 기능들을 조합해서 만드는 방식이다.
+
+### 기능별 독립 클래스
+
+```ts
+// 특급배달 서비스
+class ExpressDeliveryService {
+  private fee = 5000;
+
+  applyExpress(price: number): number {
+    console.log('특급배달 적용');
+    return price + this.fee;
+  }
+
+  getDescription(): string {
+    return `[특급배달 +${this.fee}원]`;
+  }
+}
+
+// 프리미엄 포장 서비스
+class PremiumPackagingService {
+  private fee = 3000;
+
+  applyPackaging(price: number): number {
+    console.log('프리미엄 포장 적용');
+    return price + this.fee;
+  }
+
+  getDescription(): string {
+    return `[프리미엄포장 +${this.fee}원]`;
+  }
+}
+```
+
+각 기능을 독립적인 클래스로 분리했다. 주문과 무관하게 동작하며 어디서든 재사용할 수 있다.
+
+### Composition - 특급배달 주문
+
+```ts
+class Order {
+  constructor(
+    private restaurant: string,
+    private basePrice: number,
+    private expressService?: ExpressDeliveryService // 선택적 주입
+  ) {}
+
+  getInfo(): string {
+    let info = `${this.restaurant} - ${this.basePrice}원`;
+    if (this.expressService) {
+      info += ` ${this.expressService.getDescription()}`;
+    }
+    return info;
+  }
+
+  getTotalPrice(): number {
+    let total = this.basePrice;
+    if (this.expressService) {
+      total = this.expressService.applyExpress(total);
+    }
+    return total;
+  }
+}
+```
+
+**Dependency Injection (의존성 주입):**
+
+필요한 서비스를 외부에서 받아온다. 클래스 내부에서 직접 생성하지 않는다.
+
+```ts
+// ❌ DI 없이 - 내부에서 직접 생성
+class Order {
+  private expressService = new ExpressDeliveryService(); // 강한 결합!
+
+  constructor(private restaurant: string, private price: number) {}
+
+  // ExpressDeliveryService에 의존, 다른 서비스로 바꾸려면 코드 수정 필요
+}
+
+// ✅ DI 사용 - 외부에서 주입
+class Order {
+  constructor(
+    private restaurant: string,
+    private price: number,
+    private expressService: ExpressDeliveryService // 외부에서 받음
+  ) {}
+
+  // 어떤 배달 서비스든 주입 가능, 유연함!
+}
+
+// 사용
+const service = new ExpressDeliveryService();
+const order = new Order('맘스터치', 12_000, service); // 외부에서 주입
+```
+
+**Composition (조합):**
+
+`상속`이 아닌 **조합**으로 기능을 추가한다. `Order HAS-A ExpressDeliveryService` - 특급배달 서비스를 **가지고 있다**.
+
+### 모든 조합 가능!
+
+```ts
+// 1. 기본 주문
+const basic = new Order('맘스터치', 12_000);
+console.log(basic.getInfo()); // 맘스터치 - 12_000원
+console.log(basic.getTotalPrice()); // 12_000
+
+// 2. 특급배달만
+const express = new Order('맥도날드', 8_900, new ExpressDeliveryService());
+console.log(express.getInfo()); // 맥도날드 - 8_900원 [특급배달 +5_000원]
+console.log(express.getTotalPrice()); // 13_900
+```
+
+같은 `Order` 클래스로 다양한 조합을 만들 수 있다. 새로운 클래스를 만들 필요가 없다!
+
+### 복수 서비스 조합
+
+```ts
+class Order {
+  constructor(
+    private restaurant: string,
+    private basePrice: number,
+    private expressService?: ExpressDeliveryService,
+    private packagingService?: PremiumPackagingService // 추가
+  ) {}
+
+  getInfo(): string {
+    let info = `${this.restaurant} - ${this.basePrice}원`;
+    if (this.expressService) {
+      info += ` ${this.expressService.getDescription()}`;
+    }
+    if (this.packagingService) {
+      info += ` ${this.packagingService.getDescription()}`;
+    }
+    return info;
+  }
+
+  getTotalPrice(): number {
+    let total = this.basePrice;
+    if (this.expressService) {
+      total = this.expressService.applyExpress(total);
+    }
+    if (this.packagingService) {
+      total = this.packagingService.applyPackaging(total);
+    }
+    return total;
+  }
+}
+```
+
+### 모든 조합 자유롭게!
+
+```ts
+// 1. 기본
+const basic = new Order('맘스터치', 12_000);
+
+// 2. 특급배달만
+const express = new Order('맥도날드', 8_900, new ExpressDeliveryService());
+
+// 3. 프리미엄포장만
+const premium = new Order(
+  '버거킹',
+  10_000,
+  undefined,
+  new PremiumPackagingService()
+);
+
+// 4. 특급배달 + 프리미엄포장 ✨
+const full = new Order(
+  'KFC',
+  15_000,
+  new ExpressDeliveryService(),
+  new PremiumPackagingService()
+);
+
+console.log(full.getInfo());
+// KFC - 15_000원 [특급배달 +5_000원] [프리미엄포장 +3_000원]
+console.log(full.getTotalPrice()); // 23_000
+```
+
+드디어 가능하다! `상속`으로는 불가능했던 다중 기능 조합을 Composition으로 해결했다.
+
+### Composition의 장점
+
+**자유로운 조합:**
+
+레고 블록처럼 필요한 기능을 선택해서 조립한다.
+
+**코드 재사용:**
+
+각 서비스 클래스는 독립적이므로 어디서든 재사용할 수 있다.
+
+**유연성:**
+
+다른 구현으로 쉽게 교체할 수 있다. 런타임에 동작을 변경할 수도 있다.
+
+**테스트 용이:**
+
+각 기능을 독립적으로 테스트할 수 있다. Mock 객체를 주입하기도 쉽다.
+
+Composition은 레고 블록과 같다. 필요한 블록(기능)을 선택해서 조립하면 된다. `상속`은 IS-A(~이다) 관계지만, Composition은 HAS-A(~를 가지고 있다) 관계다. 정체성은 바꾸기 어렵지만 가진 도구는 언제든 바꿀 수 있다.
+
+### 상속 vs Composition 선택 가이드
+
+"그럼 항상 Composition을 써야 하나?"
+
+아니다. 상황에 따라 적절한 방법을 선택해야 한다.
+
+**`상속`을 사용하는 경우:**
+
+**1. 명확한 IS-A 관계**
+
+```ts
+// ✅ Dog IS-A Animal - 개는 동물이다
+class Animal {
+  eat() {
+    console.log('먹는다');
+  }
+}
+class Dog extends Animal {
+  bark() {
+    console.log('멍멍');
+  }
+}
+
+// ✅ Car IS-A Vehicle - 자동차는 탈것이다
+class Vehicle {
+  move() {
+    console.log('이동한다');
+  }
+}
+class Car extends Vehicle {
+  drive() {
+    console.log('운전한다');
+  }
+}
+```
+
+**2. 안정적인 계층 구조**
+
+자주 변경되지 않는 기본 클래스가 있을 때. 예: `Shape` → `Circle`, `Rectangle`
+
+**3. 공통 동작이 많을 때**
+
+부모의 메서드를 그대로 사용하는 경우가 많으면 `상속`이 편하다.
+
+**Composition을 사용하는 경우:**
+
+**1. HAS-A 관계**
+
+```ts
+// ✅ Car HAS-A Engine - 자동차는 엔진을 가진다
+class Car {
+  constructor(private engine: Engine) {}
+}
+
+// ✅ Order HAS-A PaymentMethod - 주문은 결제 수단을 가진다
+class Order {
+  constructor(private payment: PaymentMethod) {}
+}
+```
+
+**2. 여러 기능 조합이 필요**
+
+빠른 배달 + 프리미엄 포장 + 우선 처리... 레고 블록처럼 자유로운 조합이 필요할 때.
+
+**3. 런타임에 동작 변경**
+
+```ts
+// 배달 방식을 실행 중에 바꾸고 싶을 때
+order.setDeliveryOption(new DroneDelivery());
+
+// 결제 수단을 사용자가 선택할 때
+order.setPaymentMethod(new KakaoPayPayment());
+```
+
+**실전 팁:**
+
+기본은 **Composition을 선호**하라. IS-A 관계가 **명확하고 안정적**일 때만 `상속`을 사용한다.
+
+헷갈린다면? "이 클래스를 다른 구현으로 바꾸고 싶을 수 있는가?"를 물어보자. 답이 "예"라면 Composition이다.
+
+---
+
+## Decoupling - Interface로 결합도 낮추기
+
+Composition의 마지막 퍼즐 조각은 `Decoupling (결합도 낮추기)`이다. 현재 문제는 `Order` 클래스가 구체적인 클래스(`ExpressDeliveryService`)에 의존하고 있다는 점이다.
+
+Interface를 사용해서 추상적인 개념에 의존하도록 변경하자. **"구체가 아닌 추상에 의존하라"**
+
+### Interface 정의
+
+```ts
+interface DeliveryOption {
+  applyFee(price: number): number;
+  getDescription(): string;
+}
+
+interface PackagingOption {
+  applyFee(price: number): number;
+  getDescription(): string;
+}
+```
+
+"배달 옵션"과 "포장 옵션"이라는 추상적인 개념만 정의한다. 구체적인 구현은 모른다.
+
+### 주문 클래스 - Interface에만 의존
+
+```ts
+class Order {
+  constructor(
+    private restaurant: string,
+    private basePrice: number,
+    private deliveryOption?: DeliveryOption, // Interface
+    private packagingOption?: PackagingOption // Interface
+  ) {}
+
+  getInfo(): string {
+    let info = `${this.restaurant} - ${this.basePrice}원`;
+    if (this.deliveryOption) {
+      info += ` ${this.deliveryOption.getDescription()}`;
+    }
+    if (this.packagingOption) {
+      info += ` ${this.packagingOption.getDescription()}`;
+    }
+    return info;
+  }
+
+  getTotalPrice(): number {
+    let total = this.basePrice;
+    if (this.deliveryOption) {
+      total = this.deliveryOption.applyFee(total);
+    }
+    if (this.packagingOption) {
+      total = this.packagingOption.applyFee(total);
+    }
+    return total;
+  }
+}
+```
+
+`Order` 클래스는 구체적인 구현을 모른다. `DeliveryOption`에 `applyFee` 메서드만 있으면 OK다.
+
+### 다양한 구현체
+
+```ts
+// 특급배달
+class ExpressDelivery implements DeliveryOption {
+  private fee = 5000;
+
+  applyFee(price: number): number {
+    return price + this.fee;
+  }
+
+  getDescription(): string {
+    return `[특급배달 +${this.fee}원]`;
+  }
+}
+
+// 일반배달
+class StandardDelivery implements DeliveryOption {
+  private fee = 2000;
+
+  applyFee(price: number): number {
+    return price + this.fee;
+  }
+
+  getDescription(): string {
+    return `[일반배달 +${this.fee}원]`;
+  }
+}
+
+// 무료배달
+class FreeDelivery implements DeliveryOption {
+  applyFee(price: number): number {
+    return price;
+  }
+
+  getDescription(): string {
+    return '[무료배달]';
+  }
+}
+
+// 프리미엄 포장
+class PremiumPackaging implements PackagingOption {
+  private fee = 3000;
+
+  applyFee(price: number): number {
+    return price + this.fee;
+  }
+
+  getDescription(): string {
+    return `[프리미엄포장 +${this.fee}원]`;
+  }
+}
+
+// 기본 포장
+class StandardPackaging implements PackagingOption {
+  private fee = 1000;
+
+  applyFee(price: number): number {
+    return price + this.fee;
+  }
+
+  getDescription(): string {
+    return `[기본포장 +${this.fee}원]`;
+  }
+}
+
+// 포장 없음
+class NoPackaging implements PackagingOption {
+  applyFee(price: number): number {
+    return price;
+  }
+
+  getDescription(): string {
+    return '[포장없음]';
+  }
+}
+```
+
+같은 인터페이스, 다른 구현이다. 각각 독립적으로 동작한다.
+
+### 자유로운 조합의 마법
+
+배달 옵션 3가지 × 포장 옵션 3가지 = **총 9가지 조합**이 가능하다!
+
+```ts
+// 1. 특급배달 + 프리미엄포장
+const 맘스터치_특급_프리미엄 = new Order(
+  '맘스터치',
+  12_000,
+  new ExpressDelivery(),
+  new PremiumPackaging()
+);
+console.log(맘스터치_특급_프리미엄.getInfo());
+// 맘스터치 - 12_000원 [특급배달 +5_000원] [프리미엄포장 +3_000원]
+console.log(`총액: ${맘스터치_특급_프리미엄.getTotalPrice()}원`); // 20_000원
+
+// 2. 일반배달 + 포장없음
+const 맥도날드_일반_포장없음 = new Order(
+  '맥도날드',
+  8_900,
+  new StandardDelivery(),
+  new NoPackaging()
+);
+console.log(맥도날드_일반_포장없음.getInfo());
+// 맥도날드 - 8_900원 [일반배달 +2_000원] [포장없음]
+console.log(`총액: ${맥도날드_일반_포장없음.getTotalPrice()}원`); // 10_900원
+
+// 3. 무료배달 + 기본포장
+const 버거킹_무료_기본포장 = new Order(
+  '버거킹',
+  10_000,
+  new FreeDelivery(),
+  new StandardPackaging()
+);
+console.log(버거킹_무료_기본포장.getInfo());
+// 버거킹 - 10_000원 [무료배달] [기본포장 +1_000원]
+console.log(`총액: ${버거킹_무료_기본포장.getTotalPrice()}원`); // 11_000원
+
+// 4. 특급배달 + 포장없음
+const KFC_특급_포장없음 = new Order(
+  'KFC',
+  15_000,
+  new ExpressDelivery(),
+  new NoPackaging()
+);
+console.log(KFC_특급_포장없음.getInfo());
+// KFC - 15_000원 [특급배달 +5_000원] [포장없음]
+console.log(`총액: ${KFC_특급_포장없음.getTotalPrice()}원`); // 20_000원
+```
+
+9가지 조합을 **단 1개의 Order 클래스**로 처리한다! 새로운 옵션이 추가되어도 기존 코드는 수정할 필요가 없다.
+
+### Decoupling의 핵심
+
+**Tight Coupling (강한 결합):**
+
+```ts
+class Order {
+  private delivery = new ExpressDeliveryService(); // ❌
+  // ExpressDeliveryService를 다른 것으로 바꾸려면 코드 수정 필요
+}
+```
+
+**Loose Coupling (느슨한 결합):**
+
+```ts
+class Order {
+  constructor(private delivery: DeliveryOption) {} // ✅
+  // DeliveryOption을 구현한 어떤 클래스든 사용 가능
+}
+```
+
+### DIP (Dependency Inversion Principle)
+
+의존성 역전 원칙: 고수준 모듈은 저수준 모듈에 의존하지 않는다. 둘 다 추상화에 의존해야 한다.
+
+- **고수준 모듈**: `Order` (비즈니스 로직)
+- **저수준 모듈**: `ExpressDelivery`, `StandardDelivery` (구현 세부사항)
+- **추상화**: `DeliveryOption` Interface
+
+```
+Order → DeliveryOption ← ExpressDelivery
+                      ← StandardDelivery
+                      ← FreeDelivery
+```
+
+고수준과 저수준 모두 추상화에 의존한다. Interface는 바로 이런 표준 규격이다.
+
+Decoupling은 "의존하되 구속되지 않는다"는 것이다. USB 포트처럼, 표준 인터페이스만 맞으면 어떤 장치든 꽂을 수 있다.
+
+---
+
+## Abstract Class - 템플릿 메서드 패턴
+
+Abstract Class는 일반 클래스와 Interface의 중간 지점에 있다. Interface처럼 추상 메서드를 가질 수 있고, 일반 클래스처럼 구현된 메서드도 가질 수 있다.
+
+**"공통 로직은 부모에서 구현하고, 변하는 부분만 자식에서 구현하라"**
+
+### 추상 주문 클래스
+
+```ts
+abstract class AbstractOrder {
+  protected status: 'pending' | 'confirmed' | 'delivered' = 'pending';
+
+  constructor(
+    protected restaurant: string,
+    protected basePrice: number,
+    protected items: string[]
+  ) {}
+
+  // 템플릿 메서드 - 알고리즘의 골격
+  processOrder(): void {
+    this.validateOrder(); // 1. 검증 (공통)
+    this.calculatePrice(); // 2. 가격 계산 (변하는 부분)
+    this.confirmOrder(); // 3. 주문 확정 (공통)
+  }
+
+  // 공통 로직 - 구현됨
+  private validateOrder(): void {
+    console.log('주문 유효성 검증 중...');
+    if (this.items.length === 0) {
+      throw new Error('주문 항목이 없습니다');
+    }
+  }
+
+  private confirmOrder(): void {
+    this.status = 'confirmed';
+    console.log('주문 확정 완료!');
+  }
+
+  // 추상 메서드 - 자식이 구현
+  protected abstract calculatePrice(): number;
+
+  // 공통 메서드
+  getOrderInfo(): string {
+    return `${this.restaurant} - ${this.items.join(', ')}`;
+  }
+}
+```
+
+**abstract class 키워드:**
+
+직접 인스턴스화할 수 없다. `new AbstractOrder()` 불가능. 반드시 상속받아서 사용해야 한다.
+
+**abstract 메서드:**
+
+구현 없이 선언만 한다. 자식 클래스가 **반드시** 구현해야 한다.
+
+**템플릿 메서드:**
+
+`processOrder`는 알고리즘의 골격을 정의한다. 일부 단계는 구현하고, 일부 단계는 자식 클래스에 위임한다.
+
+```ts
+// ❌ abstract class를 직접 생성할 수 없음
+// const order = new AbstractOrder('맘스터치', 12_000, ['싸이버거']); // Error!
+
+// ✅ abstract 메서드를 반드시 구현해야 함
+class MyOrder extends AbstractOrder {
+  // calculatePrice를 구현하지 않으면? → 컴파일 에러!
+  // Error: Non-abstract class 'MyOrder' does not implement inherited abstract member 'calculatePrice'
+}
+
+// ✅ 템플릿 메서드 패턴의 장점
+// processOrder()는 항상 같은 순서로 실행됨:
+// 1. validateOrder() (공통)
+// 2. calculatePrice() (자식마다 다름)
+// 3. confirmOrder() (공통)
+// → 순서를 바꾸거나 단계를 빼먹을 수 없음!
+```
+
+### 구체 클래스 - 일반 주문
+
+```ts
+class RegularOrder extends AbstractOrder {
+  protected calculatePrice(): number {
+    console.log(`기본 가격: ${this.basePrice}원`);
+    return this.basePrice;
+  }
+}
+```
+
+### 구체 클래스 - 특급 주문
+
+```ts
+class ExpressOrder extends AbstractOrder {
+  private expressFee = 5000;
+
+  protected calculatePrice(): number {
+    const total = this.basePrice + this.expressFee;
+    console.log(
+      `기본 가격: ${this.basePrice}원 + 특급배달비: ${this.expressFee}원`
+    );
+    return total;
+  }
+
+  override getOrderInfo(): string {
+    return `[특급배달] ${super.getOrderInfo()}`;
+  }
+}
+```
+
+### 구체 클래스 - 프리미엄 주문
+
+```ts
+class PremiumOrder extends AbstractOrder {
+  private packagingFee = 3000;
+  private priorityFee = 2000;
+
+  protected calculatePrice(): number {
+    const total = this.basePrice + this.packagingFee + this.priorityFee;
+    console.log(
+      `기본: ${this.basePrice}원 + 포장: ${this.packagingFee}원 + 우선처리: ${this.priorityFee}원`
+    );
+    return total;
+  }
+
+  override getOrderInfo(): string {
+    return `[프리미엄] ${super.getOrderInfo()}`;
+  }
+}
+```
+
+### 사용 예시
+
+```ts
+const orders = [
+  new RegularOrder('맘스터치', 12_000, ['싸이버거', '감자튀김']),
+  new ExpressOrder('맥도날드', 8_900, ['빅맥세트']),
+  new PremiumOrder('버거킹', 10_000, ['와퍼']),
+];
+
+orders.forEach((order) => {
+  console.log(order.getOrderInfo());
+  order.processOrder();
+  console.log('---');
+});
+```
+
+모든 주문은 동일한 절차(`processOrder`)를 따른다. 하지만 가격 계산 방식은 각자 다르다.
+
+### Abstract Class vs Interface
+
+|                | Abstract Class           | Interface          |
+| -------------- | ------------------------ | ------------------ |
+| 구현           | 구현된 메서드 가능       | 구현 불가 (선언만) |
+| 다중 상속/구현 | 단일 상속만              | 다중 구현 가능     |
+| 생성자         | 가능                     | 불가능             |
+| 필드           | 가능                     | 불가능             |
+| 인스턴스화     | 불가능                   | 불가능             |
+| Access 제어    | public/private/protected | public만           |
+
+**언제 Abstract Class를 사용할까?**
+
+공통 구현이 많을 때다. 코드 중복을 제거하고 일관된 동작을 보장할 수 있다.
+
+**언제 Interface를 사용할까?**
+
+공통 구현이 없을 때다. 다중 구현이 가능하며 더 유연한 구조를 만들 수 있다.
+
+### 템플릿 메서드 패턴의 장점
+
+**코드 중복 제거:**
+
+공통 로직(`validateOrder`, `confirmOrder`)을 부모 클래스에서 한 번만 구현한다.
+
+**알고리즘 구조 통일:**
+
+모든 주문은 동일한 절차를 따른다. 순서를 바꾸거나 단계를 빼먹을 수 없다.
+
+**확장 포인트 명확화:**
+
+"여기만 구현하면 됩니다" - `calculatePrice` 메서드만 구현하면 된다.
+
+Abstract Class는 공통점과 차이점을 명확히 분리한다. 모든 주문은 검증 → 가격계산 → 확정이라는 공통 절차를 따른다. 하지만 가격 계산 방법은 주문마다 다르다. Template Method Pattern은 이런 상황에 완벽하다.
+
+---
+
+## YAGNI - "You Aren't Gonna Need It"
+
+여기까지 읽었다면 `객체지향`의 강력한 패턴들을 모두 익힌 셈이다. Interface, Abstract Class, Composition, Decoupling... 배운 것들을 당장 코드에 적용하고 싶을 것이다.
+
+하지만 실제로 이를 실무에 도입하기 전에 고려해볼 부분이 있다.
+
+**지금 필요하지 않다면, 만들지 마라.**
+
+### 과도한 설계의 함정
+
+```ts
+// ❌ 미래를 위한 "완벽한" 설계
+interface PaymentMethod {
+  processPayment(amount: number): boolean;
+  refund(amount: number): boolean;
+  partialRefund(amount: number, percentage: number): boolean; // 혹시 몰라서
+  schedulePayment(amount: number, date: Date): boolean; // 나중에 필요할 수도
+  getTransactionHistory(): Transaction[]; // 미래를 위해
+  exportToExcel(): string; // 언젠가는 쓸 거야
+  sendEmailReceipt(email: string): void; // 필요할 것 같아
+}
+
+// ✅ 지금 필요한 것만
+interface PaymentMethod {
+  processPayment(amount: number): boolean;
+  refund(amount: number): boolean;
+}
+```
+
+위 예시를 보자. "완벽한" 설계라며 5개의 추가 메서드를 만들어뒀다. 부분 환불? 예약 결제? 엑셀 내보내기? 다 좋아 보인다. 언젠가는 필요할 것 같다.
+
+하지만 **실제로는 사용하지 않는다**. 6개월이 지나도, 1년이 지나도 여전히 기본 결제와 환불만 사용한다.
+
+결과는 어떨까?
+
+- 구현해야 할 코드가 5배 증가했다
+- 테스트해야 할 케이스가 기하급수적으로 늘어났다
+- 사용하지도 않는 코드를 유지보수해야 한다
+- **정작 출시는 늦어졌다**
+
+### 현실의 교훈
+
+```ts
+// 현재 상황: 신용카드 결제만 필요
+class CreditCardPayment implements PaymentMethod {
+  processPayment(amount: number): boolean {
+    // 신용카드 결제 로직
+    return true;
+  }
+}
+
+// ❌ "미래를 위한" 과도한 추상화
+interface PaymentGateway {
+  connect(): Promise<void>;
+  disconnect(): Promise<void>;
+  authenticate(): Promise<Token>;
+  refreshToken(): Promise<Token>;
+  // ... 10개의 메서드
+}
+
+interface PaymentProcessor {
+  /* ... */
+}
+interface PaymentValidator {
+  /* ... */
+}
+interface PaymentLogger {
+  /* ... */
+}
+// 결제 하나에 4개의 인터페이스?!
+
+// ✅ 지금 필요한 것만
+class PaymentService {
+  processPayment(method: PaymentMethod, amount: number): boolean {
+    return method.processPayment(amount);
+  }
+}
+```
+
+이런 경험 없는가? "카카오페이도 추가될 수 있으니까", "네이버페이도 생길지 몰라" 하면서 거대한 구조를 만든다. PaymentGateway, PaymentProcessor, PaymentValidator, PaymentLogger... 4개의 인터페이스에 수십 개의 메서드.
+
+**실제로는 6개월 동안 신용카드만 사용했다.** 허무하다.
+
+### 점진적 리팩토링
+
+그럼 어떻게 해야 할까? 답은 간단하다. **처음에는 단순하게 시작하고, 필요할 때 확장한다.**
+
+**처음에는 단순하게:**
+
+```ts
+// 1단계: 단순한 시작
+class Order {
+  constructor(private price: number) {}
+
+  getTotal(): number {
+    return this.price;
+  }
+}
+```
+
+**필요할 때 확장:**
+
+```ts
+// 2단계: 배달비가 필요해졌을 때
+class Order {
+  constructor(private price: number, private deliveryFee: number = 0) {}
+
+  getTotal(): number {
+    return this.price + this.deliveryFee;
+  }
+}
+```
+
+**더 복잡해지면 리팩토링:**
+
+```ts
+// 3단계: 여러 옵션이 생겼을 때
+class Order {
+  constructor(
+    private price: number,
+    private deliveryOption: DeliveryOption,
+    private packagingOption: PackagingOption
+  ) {}
+
+  getTotal(): number {
+    let total = this.price;
+    total = this.deliveryOption.applyFee(total);
+    total = this.packagingOption.applyFee(total);
+    return total;
+  }
+}
+```
+
+보이는가? 1단계 → 2단계 → 3단계로 자연스럽게 진화한다. 처음부터 3단계를 만들 필요가 없었다. 필요해졌을 때 리팩토링하면 된다.
+
+### 실전 가이드
+
+그럼 언제 패턴을 적용해야 할까? 간단한 기준이 있다.
+
+**언제 패턴을 적용할까?**
+
+- **Interface**: 2개 이상의 구현체가 **실제로 존재**할 때 (예상이 아니라 실제로!)
+- **Abstract Class**: 3개 이상의 자식 클래스가 **실제로 필요**할 때
+- **Composition**: 기능 조합이 **지금 당장** 필요할 때
+- **Singleton**: 전역 인스턴스가 **반드시** 하나여야 할 때
+
+"혹시 필요할지 몰라"는 패턴 적용의 이유가 되지 못한다.
+
+**"혹시 몰라서" 만들지 마라:**
+
+```ts
+// ❌ 혹시 몰라서
+interface Logger {
+  log(message: string): void;
+  warn(message: string): void;
+  error(message: string): void;
+  debug(message: string): void;
+  trace(message: string): void;
+  fatal(message: string): void;
+}
+
+// ✅ 지금 필요한 것만
+function log(message: string): void {
+  console.log(message);
+}
+
+// 나중에 파일 로깅이 필요하면? 그때 리팩토링하면 됨!
+```
+
+처음부터 6가지 로그 레벨을 만들 필요가 없다. 지금 당장은 간단한 `console.log` 하나면 충분하다. 나중에 파일 로깅이 필요해지면? 그때 Interface를 만들고 리팩토링하면 된다.
+
+### 비즈니스 속도 vs 완벽한 설계
+
+프로덕트는 **살아있는 생명체**다. 요구사항은 계속 변한다. 6개월 전에 "필수"라고 생각했던 기능이 지금은 쓸모없어진 경험, 누구나 있을 것이다.
+
+두 가지 길이 있다:
+
+- **완벽한 설계를 추구하는 길**: 모든 경우의 수를 고려한다 → 설계에 2주 → 구현에 4주 → 테스트에 2주 → **출시가 늦어진다** → 시장 기회를 놓친다
+- **단순하게 시작하는 길**: 필요한 것만 만든다 → 1주 만에 출시 → 사용자 피드백을 받는다 → 실제로 필요한 부분만 개선한다 → **빠르게 성장한다**
+
+**리팩토링은 죄가 아니다.** 오히려 건강한 코드의 증거다. 요구사항이 바뀌면서 코드도 진화하는 것은 자연스러운 일이다.
+
+### 실전에서 중요한 원칙들
+
+개발자 커뮤니티에서 오랫동안 검증된 원칙들이 있다. 이론적인 완벽함보다 실용성을 중시하는 접근법이다:
+
+**YAGNI (You Aren't Gonna Need It)**
+
+- 지금 필요하지 않은 기능은 만들지 않는다
+- "나중에 쓸 수도 있어"는 대부분 쓰이지 않는다
+- 필요해지면 그때 추가해도 늦지 않다
+
+**Rule of Three**
+
+- 같은 코드가 3번 반복되면 추상화를 고려한다
+- 1-2번은 중복을 허용한다 - 섣부른 추상화가 더 위험하다
+- 패턴이 명확해진 후에 리팩토링한다
+
+**KISS (Keep It Simple, Stupid)**
+
+- 단순한 해결책이 대부분의 경우 더 좋다
+- 복잡한 설계는 정말 필요할 때만 도입한다
+- 읽기 쉬운 코드가 좋은 코드다
+
+이 글에서 다룬 패턴들은 **도구 상자**에 가깝다. 모든 도구를 한 번에 써야 한다는 의미가 아니다. 상황에 맞는 적절한 도구를 선택하는 것이 중요하다.
+
+---
+
+## 핵심 정리
+
+### 4가지 핵심 개념
+
+- **`캡슐화`**: `private` 키워드로 내부 데이터를 보호하고 메서드를 통해서만 접근한다. 검증 로직을 중앙화하여 데이터 무결성을 보장한다
+- **`추상화`**: 복잡한 내부 구현을 숨기고 필요한 기능만 노출한다. `Interface`와 `private` 메서드로 단순하고 명확한 API를 제공한다
+- **`상속`**: `extends`로 기존 클래스의 기능을 물려받는다. 공통 로직은 부모에서, 특화 기능은 자식에서 구현한다
+- **`다형성`**: 같은 인터페이스를 구현한 서로 다른 클래스를 동일하게 다룬다. 런타임에 실제 타입에 따라 적절한 메서드가 호출된다
+
+### 실전 패턴
+
+- **Composition over Inheritance**: `상속`보다 조합을 우선한다. 기능 클래스를 주입받아 자유롭게 조합하며 다중 `상속`의 한계를 극복한다
+- **Dependency Injection**: `Interface`를 통해 구현체를 외부에서 주입받는다. 결합도를 낮추고 테스트하기 쉬운 코드를 만든다
+- **Abstract Class**: 공통 로직은 구현하고 변하는 부분만 추상 메서드로 남긴다. Template Method Pattern으로 알고리즘 골격을 정의한다
+
+### 실용주의 원칙
+
+- **YAGNI**: 지금 필요하지 않은 기능은 만들지 않는다. 미래를 위한 추상화는 대부분 쓰이지 않는다
+- **Rule of Three**: 같은 코드가 3번 반복되면 추상화를 고려한다. 1-2번은 중복을 허용하는 것이 섣부른 추상화보다 안전하다
+- **KISS**: 단순한 해결책이 대부분의 경우 더 좋다. 복잡한 설계는 정말 필요할 때만 도입한다
+
+`객체지향`은 강력하지만 만능은 아니다. 비즈니스 가치를 빠르게 전달하는 것이 우선이고, 설계는 필요에 따라 점진적으로 개선해나가면 된다
