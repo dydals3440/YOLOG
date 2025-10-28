@@ -29,7 +29,7 @@ image: '/images/http-content-security-policy/thumbnail.webp'
 
 마치 낯선 사람이 준 USB를 무심코 컴퓨터에 꽂는 것과 같다. 어디서 왔는지 모르는 코드를 실행하면 언제든 문제가 생길 수 있다.
 
-W3C에서는 이를 예방할 수 있는 기술로 [`Content-Security-Policy`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Security-Policy)라는 응답 헤더를 표준으로 정의했다.
+W3C에서는 이를 예방할 수 있는 기술로 [`Content-Security-Policy`](https://developer.mozilla.org/ko/docs/Web/HTTP/Guides/CSP)라는 응답 헤더를 표준으로 정의했다.
 
 CSP를 사용하면 웹 문서의 출처와 다른 곳에서 온 자바스크립트 실행을 차단하고 예상하지 못한 동작을 억제할 수 있다.
 
@@ -132,7 +132,7 @@ Content-Security-Policy: default-src 'self';
 
 - **default-src 'self'**: 기본적으로 현재 출처(`matthew.com`)의 리소스만 허용
 - **[`img-src`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Security-Policy/img-src) \***: 이미지는 모든 출처에서 허용
-- **[`media-src`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Security-Policy/media-src)**: 오디오/비디오는 `example.org`와 `example.net`에서만 허용
+- **[`media-src`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/media-src)**: 오디오/비디오는 `example.org`와 `example.net`에서만 허용
 - **[`script-src`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Security-Policy/script-src)**: 자바스크립트는 `userscripts.example.com`에서만 허용
 
 > **참고 자료**: CSP에 대한 더 자세한 정보는 [MDN - Content Security Policy](https://developer.mozilla.org/ko/docs/Web/HTTP/CSP)에서 확인할 수 있다.
@@ -166,7 +166,7 @@ CSP를 단계적으로 적용하기 위한 방법으로 **Report-Only 모드**�
 
 ## Report-Only 모드 설정하기
 
-[`Content-Security-Policy-Report-Only`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Content-Security-Policy-Report-Only) 응답 헤더를 사용한다:
+[`Content-Security-Policy-Report-Only`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy-Report-Only) 응답 헤더를 사용한다:
 
 ```ts
 res.setHeader(
