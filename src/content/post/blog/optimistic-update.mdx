@@ -1,0 +1,246 @@
+---
+title: 실제 서비스에서 낙관적 업데이트(Optimistic Update)를 활용하여, 유저의 답답함 줄이기
+date: 2025-11-01
+updatedDate: 2025-11-01
+tags:
+  [
+    Tanstack Query,
+    Query Key Factory,
+    Optimistic Update,
+    효율적인 Key 관리,
+    낙관적 업데이트,
+  ]
+category: DEVELOPMENT
+image: "/images/optimistic-update/thumbnail.webp"
+---
+
+---
+
+## 낙관적 업데이트(Optimistic Update)란 무엇인가?
+
+`낙관적 업데이트(Optimistic Update)`는 API 호출과 같은 비동기 작업이 완료되기 전에 사용자 인터페이스(UI)를 먼저 업데이트하여 사용자가 즉각적인 반응을 느낄 수 있도록 사용자 경험(UX)을 향상시키는 기법이다.
+
+낙관적 업데이트를 활용하면 느린 네트워크 환경에서도 애플리케이션의 응답성을 높이며 사용자가 느끼는 속도 측면에서의 답답함을 감소시킬 수 있다.
+
+---
+
+## 왜 낙관적 업데이트를 사용하는가?
+
+1. **빠른 사용자 경험 제공**: 데이터가 서버에 전송되고 처리되기를 기다리지 않고 UI를 즉시 업데이트하여 더 빠른 응답성을 제공한다.
+
+2. **보다 자연스러운 상호작용**: 사용자는 변경 사항이 즉시 반영된다고 느끼므로 더 자연스러운 애플리케이션 사용이 가능하다.
+
+3. **복잡한 상태 관리 간소화**: 상태가 즉시 반영되므로 비동기 작업 동안의 중간 상태를 관리하는 부담이 줄어든다.
+
+---
+
+## 말로는 이해가 안되니, 영상으로!
+
+`낙관적 업데이트`를 사용하지 않은 경우 네트워크가 느릴 때 한 번 테스트를 해보겠다. 네트워크 요청 성공(생성 201) 후 `invalidate`를 통해 다시 todoList를 refetch(200 요청 성공) 하기 이전까지 업데이트가 되지 않는다.
+
+즉 네트워크가 느린 환경에서 사용자는 답답함을 느낄 수 있다.
+
+![낙관적 업데이트를 사용하지 않은 경우 정말 답답해보이죠?](/images/optimistic-update/1.gif)
+
+하지만 이러한 답답함을 완벽하게 해소시켜주는 것이 `Optimistic Update(낙관적 업데이트)`이다.
+`낙관적 업데이트`를 사용하면 네트워크 요청 성공(생성 201) **이전에 먼저 Todo List가 생성**됨을 확인할 수 있다.
+
+![낙관적 업데이트를 사용하니 마음이 편안해졌다.](/images/optimistic-update/2.gif)
+
+네트워크가 느린 환경에서도 빠른 환경인 것처럼 사용자에게 빠른 응답을 제공해주는 것을 확인할 수 있다.
+
+이것이 `Optimistic Update`의 핵심이며 우리는 이제 이를 라이브러리의 힘을 빌려 손쉽게 구현해보고자 한다.
+
+---
+
+## 낙관적 업데이트(Optimistic Update)의 주요 단계
+
+`낙관적 업데이트(Optimistic Update)`는 사용자 경험을 개선하기 위해 서버 요청이 완료되기 전에 로컬 상태를 먼저 업데이트하는 패턴이다.
+
+이 과정은 서버 요청 실패 시의 롤백 전략과 함께 사용된다.
+
+1. 변경 전 상태 저장
+
+- `Optimistic Update`를 수행하기 전 현재 상태를 저장한다.
+- 여기서 말하는 현재 상태란 서버 요청이 실패했을 경우 롤백하기 위한 상태를 의미한다.
+
+2. 낙관적 상태 업데이트
+
+- `queryClient.cancelQueries`
+
+  - 활성 쿼리를 취소하여 기존 쿼리가 실행 중인 상태를 방지한다.
+  - 새 데이터를 수동으로 설정하기 전 현재 쿼리와의 충돌을 방지한다.
+
+- `queryClient.setQueryData`
+
+  - 쿼리 데이터를 수동으로 업데이트하여 UI에 즉시 반영한다.
+  - 서버 응답을 기다리지 않고 사용자가 변경 사항을 즉시 확인할 수 있다.
+
+- 이 `낙관적 업데이트` 작업을 통해 사용자가 변경 사항을 즉시 확인할 수 있다.
+
+3. 서버 요청 수행
+
+- `mutate` 또는 `mutateAsync`를 사용하여 서버로 데이터를 전송한다.
+- 이 단계에서는 실제 요청이 이루어지며 서버와의 동기화 작업이 진행된다.
+
+4. 성공 또는 실패 시 상태 반영
+
+- **성공 시**:
+  - 서버로부터 받은 최신 데이터를 로컬 상태에 반영한다.
+  - `onSuccess` 또는 `onSettled` 콜백을 통해 처리한다.
+- **실패 시**:
+  - 서버 요청이 실패하면 저장된 **변경 전 상태를 롤백**하여 데이터 일관성을 유지한다.
+  - `onError` 콜백에서 처리된다.
+  - 롤백 과정을 통해 사용자 경험을 보호하고 데이터의 신뢰성을 유지한다.
+
+---
+
+## TanstackQuery / QueryKeyFactory를 활용한 낙관적 업데이트 구현
+
+아래 코드는 `@tanstack/react-query`와 `@lukemorales/query-key-factory`를 사용하여 ToDo 리스트의 생성 과정에서 낙관적 업데이트를 구현한 예제다. 주요 내용과 함께 구현 방법을 살펴보자.
+
+### 1. onMutate로 낙관적 업데이트 처리
+
+`onMutate`는 `mutate` 함수가 호출될 때 가장 먼저 실행된다. 이 단계에서 우리는 기존 데이터를 기반으로 UI를 즉시 업데이트하고 업데이트 이전의 데이터를 저장해 두어 필요 시 복원할 수 있다.
+
+```ts
+onMutate: async (newTodo) => {
+  console.log(newTodo);
+  // 1. 기존 쿼리를 취소하여 레이스 컨디션 방지
+  await queryClient.cancelQueries({ queryKey: todoKeys.todos._def });
+
+  // 2. 기존 데이터를 가져와 context에 저장
+  const previousTodos = queryClient.getQueryData<TGetAllTodosResponse>(
+    todoKeys.todos.getAll().queryKey
+  );
+
+  // 3. 쿼리 데이터를 낙관적으로 업데이트
+  queryClient.setQueryData(
+    todoKeys.todos.getAll().queryKey,
+    (oldQueryData: TGetAllTodosResponse) => {
+      return {
+        ...oldQueryData,
+        data: {
+          ...oldQueryData.data,
+          todos: [
+            {
+              ...newTodo,
+              done: false, // 새로 추가된 ToDo는 기본적으로 완료되지 않은 상태
+            },
+            ...oldQueryData.data.todos,
+          ],
+        },
+      };
+    }
+  );
+
+  // 4. 기존 데이터를 반환하여 context로 저장
+  return { previousTodos };
+};
+```
+
+### 2. 에러 발생 시 상태 복구
+
+`onError`는 API 호출이 실패했을 때 실행된다. 이 단계에서 우리는 `onMutate` 단계에서 저장한 이전 데이터를 사용하여 상태를 복원한다.
+
+```ts
+onError: (error, _todo, context) => {
+  console.log(error);
+  queryClient.setQueryData<TGetAllTodosResponse>(
+    todoKeys.todos.getAll().queryKey,
+    context?.previousTodos // 저장된 이전 데이터로 복원
+  );
+};
+```
+
+### 3. 최종 작업 처리
+
+`onSettled`는 작업이 성공하거나 실패한 후 항상 호출된다. 이 단계에서 우리는 쿼리를 무효화하여 서버 데이터를 최신 상태로 동기화한다.
+
+```ts
+onSettled: () => {
+  queryClient.invalidateQueries({
+    queryKey: todoKeys.todos._def,
+  });
+};
+```
+
+---
+
+## ToDo 생성 과정에서의 Optimistic Update 동작 흐름
+
+1. 사용자가 새로운 ToDo를 추가한다.
+2. `onMutate`에서 UI를 즉시 업데이트하고 이전 상태를 저장한다.
+3. 서버로 데이터를 전송한다.
+4. 서버 호출이 실패하면 `onError`에서 상태를 복원한다.
+5. 서버 호출이 성공하거나 실패한 후 `onSettled`에서 쿼리를 무효화하여 최신 데이터를 동기화한다.
+
+---
+
+## 장점과 단점
+
+### 장점
+
+- **빠른 UI 반응**: 사용자 인터페이스가 즉각적으로 반응한다.
+- **유연성**: 사용자 인터페이스와 백엔드 상태를 **독립적으로 관리**할 수 있다.
+
+### 단점
+
+- **에러 처리 복잡성**: 에러가 발생했을 때 상태를 복원해야 하므로 **추가적인 로직이 필요**하다.
+- **데이터 불일치 가능성**: 서버와 클라이언트 간 데이터 불일치가 잠시 발생할 수 있다.
+
+---
+
+## 최적화
+
+1. 적절한 캐싱 키 설계: `Tanstack Query의 쿼리 키`를 체계적으로 설계하여 효율적인 캐싱과 무효화가 가능하도록 한다. (`QueryKeyFactory`를 활용)
+2. 컨텍스트 활용: `onMutate`에서 반환한 데이터를 활용하여 상태 복원을 간단하게 처리한다.
+3. 에러 로깅 및 사용자 피드백: `onError`에서 에러를 로깅하고 사용자에게 적절한 메시지를 표시한다.
+
+---
+
+## 마무리
+
+현재 제가 운영 중인 서비스에는 `낙관적 업데이트(Optimistic Update)`를 적용해볼 수 있는 곳이 많다.
+
+> ex) 좋아요, 댓글, 대댓글, 게시글, 신고
+
+등과 같은 사용자 인터랙션에서 충분히 활용 가능성을 기대할 수 있다.
+
+하지만 현재 서비스에서 `쿼리 키(Query Key)`를 효율적으로 관리하지 못한다고 판단하여 먼저 이를 체계적으로 정리하는 방법을 찾고자 했다.
+
+---
+
+## 쿼리 키 관리의 중요성
+
+이전에 아래의 블로그 글을 작성하며 직접 서버를 구축하고 QueryKeyFactory에 대하여 테스트를 진행한 경험이 있다:
+
+[Tanstack Query 효율적으로 Key 관리해보기](https://www.yolog.co.kr/post/query-key-factory/)
+
+이 과정에서 `QueryKeyFactory`를 활용하여 효율적인 쿼리 키 관리 방법을 익히게 되었다.
+쿼리 키 관리가 개선되면 보다 안정적으로 데이터를 핸들링할 수 있는 기반이 마련된다.
+
+---
+
+## 마치며
+
+낙관적 업데이트는 단순히 UI를 빠르게 보여주는 것을 넘어 사용자가 서비스를 사용하는 경험 자체를 개선하는 강력한 패턴이다. 특히 좋아요, 댓글, 게시글 작성 등 빈번하게 발생하는 사용자 인터랙션에 적용하면 큰 효과를 볼 수 있다.
+
+하지만 무분별하게 모든 곳에 적용하기보다는 사용자 경험에 실질적인 개선이 있는 곳에 선택적으로 적용하는 것이 중요하다. 또한 `QueryKeyFactory`를 활용한 체계적인 쿼리 키 관리가 선행되어야 안정적으로 낙관적 업데이트를 운영할 수 있다.
+
+실제 적용 과정과 롤백 동작은 아래 영상에서 확인할 수 있다:
+
+[Tanstack Query - Optimistic Update를 활용한 UX 개선](https://youtu.be/PKSpvcoShOI?si=ee-B_-v60PRCgqAq)
+
+---
+
+## 핵심 정리
+
+- **낙관적 업데이트란**: API 호출이 완료되기 전에 UI를 먼저 업데이트하여 사용자에게 즉각적인 반응을 제공하는 기법
+- **주요 단계**:
+  - `onMutate`: UI를 즉시 업데이트하고 이전 상태 저장
+  - `onError`: 요청 실패 시 이전 상태로 롤백
+  - `onSettled`: 성공/실패 후 서버 데이터와 동기화
+- **장점**: 빠른 UI 반응과 자연스러운 사용자 경험 제공
+- **단점**: 에러 처리 복잡성과 일시적인 데이터 불일치 가능성
+- **활용 팁**: QueryKeyFactory를 사용한 체계적인 쿼리 키 관리가 안정적인 낙관적 업데이트의 기반이 된다
