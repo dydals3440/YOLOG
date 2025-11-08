@@ -17,7 +17,11 @@
       "Bash(npm outdated:*)",
       "WebSearch",
       "WebFetch(domain:github.com)",
-      "Bash(bun run build:*)"
+      "Bash(bun run build:*)",
+      "Bash(grep:*)",
+      "Bash(/tmp/part1.txt)",
+      "Bash(/tmp/part3.txt)",
+      "mcp__sequential-thinking__sequentialthinking"
     ],
     "deny": [],
     "ask": []

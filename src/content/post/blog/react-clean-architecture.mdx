@@ -1,0 +1,2454 @@
+---
+title: 리액트 클린 아키텍처 - 6개 레이어로 설계하는 유지보수성
+date: 2025-11-09
+updatedDate: 2025-11-09
+tags:
+  [
+    리액트,
+    React,
+    클린 아키텍처,
+    Clean Architecture,
+    프론트엔드 아키텍처,
+    Repository 패턴,
+    Mapper,
+    TanStack Query,
+    Domain,
+    Entity,
+  ]
+category: DEVELOPMENT
+image: "/images/react-clean-architecture/thumbnail.webp"
+---
+
+기획이 바뀔 때마다 10개 이상의 파일을 수정해본 적 있는가? 서버 API 필드명 하나 바뀌었는데 모든 컴포넌트를 고쳐야 했던 경험은?
+
+우리 목표는 장학카드 사용자들이 더 잘 활용할 수 있도록 **사내 SaaS 툴로 기능을 내재화**하는 것이다. 제휴 카드사는 협업 관계이기에 **감사하게도 특정 API들을 제공**받아 사용하고 있지만, 다른 외부 카드사 서비스에 비하면 **아직 API 자체가 빈약**하다.
+
+필요한 API들이 제공되지 않아 있는 API로 비효율적이지만 어떻게든 만들어내거나, 카드사의 일정 기약만 믿고 기다리고 있었다. 일정이 불명확하다 보니 **기획이 자주 바뀌었다**. 여러 API를 조합하고, 불필요한 호출을 반복하고, 데이터 싱크를 맞추는 임시 코드가 쌓여갔다.
+
+팀원들은 잦은 변경에 지쳤다. **변경에 유연한 구조**가 필요했다. 나중에 카드사가 제대로 된 API를 제공하면 빠르게 교체할 수 있도록, **외부 의존성을 격리하는 설계**가 필수였다.
+
+서버나 앱 개발에서는 이러한 문제를 해결하기 위하여 클린 아키텍처로 외부 의존성을 격리한다. 리액트에서 많이 활용하는 방법은 아니지만 가능하다고 판단했고 클린 아키텍처를 도입하면 어느정도 개선할 수 있을 것 같았다고 판단했다.
+
+도입 후 카드사가 제대로 된 API를 제공하면, **`Data` 레이어만 수정**하면 된다. 여러 API를 조합하던 복잡한 로직이 사라진다.
+
+어떻게 이런 변화가 가능했을까? 먼저 기존 방식의 문제점부터 살펴보자.
+
+---
+
+## 기존 방식의 문제점
+
+이런 사례로 한번 이해해보자. 결제 대행사 예치금으로 사용자에게 결제를 처리하는 컴포넌트가 있다.
+
+```ts
+// ❌ 클린 아키텍처를 적용하지 않은 코드
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+
+interface Props {
+  paymentGatewayId: number;
+  userId: number;
+  paymentAmount: number;
+}
+
+export function ProcessPaymentButton({
+  paymentGatewayId,
+  userId,
+  paymentAmount,
+}: Props) {
+  // ❌ 문제 1: API 의존성 - axios가 컴포넌트에 직접 박혀있음
+  const { data: paymentGateway } = useQuery({
+    queryKey: ["paymentGateway", paymentGatewayId],
+    queryFn: async () => {
+      const response = await axios.get(
+        `/api/payment-gateways/${paymentGatewayId}`
+      );
+      return response.data;
+    },
+  });
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: async () => {
+      // ❌ 문제 2: 비즈니스 로직 산재 - 검증 로직이 여러 컴포넌트에 중복
+      if (!paymentGateway) {
+        throw new Error("결제 대행사 정보를 불러올 수 없습니다");
+      }
+
+      // ❌ 문제 3: 서버 응답 의존 - snake_case를 직접 사용
+      if (paymentGateway.wallet_balance <= 0) {
+        throw new Error("예치금 잔액이 부족합니다");
+      }
+
+      if (paymentAmount < 1_000) {
+        throw new Error("최소 결제 금액은 1,000원입니다");
+      }
+
+      // ❌ 문제 1: API 의존성 - axios가 컴포넌트에 직접 박혀있음
+      const response = await axios.post("/api/payments/process", {
+        payment_gateway_id: paymentGatewayId,
+        user_id: userId,
+        payment_amount: paymentAmount,
+      });
+
+      return response.data;
+    },
+    onSuccess: (data) => {
+      // ❌ 문제 3: 서버 응답 의존 - snake_case를 직접 사용
+      alert(`결제 처리 완료! 결제 ID: ${data.payment_id}`);
+    },
+    onError: (error) => {
+      alert(error.message || "결제 처리 실패");
+    },
+  });
+
+  return (
+    <button onClick={() => mutate()} disabled={isPending}>
+      {isPending ? "결제 중..." : "결제 처리"}
+    </button>
+  );
+}
+```
+
+### 문제 1: API 의존성
+
+```ts
+// ❌ axios가 컴포넌트에 직접 박혀있음
+const { data: paymentGateway } = useQuery({
+  queryKey: ["paymentGateway", paymentGatewayId],
+  queryFn: async () => {
+    const response = await axios.get(
+      `/api/payment-gateways/${paymentGatewayId}`
+    );
+    return response.data;
+  },
+});
+
+const response = await axios.post("/api/payments/process", {
+  payment_gateway_id: paymentGatewayId,
+  user_id: userId,
+  payment_amount: paymentAmount,
+});
+```
+
+`axios`가 컴포넌트에 박혀있다. `axios`를 `fetch`로 바꾸려면 모든 컴포넌트를 수정해야 한다. 테스트할 때도 `axios` 모킹, 서버 응답 형식, API 엔드포인트를 모두 알아야 해서 복잡하다.
+
+### 문제 2: 비즈니스 로직 산재
+
+검증 로직이 컴포넌트마다 중복된다. "최소 결제 금액을 바꿔주세요" 요청이 들어오면 모든 컴포넌트를 찾아 수정해야 한다.
+
+### 문제 3: 서버 응답 형식 의존
+
+서버가 기획 변경이나 설계 변동으로 필드명을 바꾸면(예: `payment_gateway_id` → `gateway_id`), 해당 필드를 사용하는 모든 컴포넌트를 찾아서 수정해야 한다.
+
+### 문제 4: 레이어 구분 없음
+
+"훅으로 분리하면 되지 않나?" 맞다. 훅으로 재사용은 해결할 수 있다. 하지만 **어디까지 분리**해야 할까?
+
+```ts
+// ❌ 훅으로만 분리하면 여전히 문제
+function usePaymentProcess() {
+  return useMutation({
+    mutationFn: async (data) => {
+      // 1. 검증 로직 (Domain)
+      if (data.payment_amount < MINIMUM_AMOUNT) throw new Error();
+
+      // 2. API 호출 (Infrastructure)
+      const response = await axios.post("/api/payments", {
+        payment_gateway_id: data.paymentGatewayId, // 3. 서버 형식 (Data)
+        payment_amount: data.payment_amount,
+      });
+
+      return response.data;
+    },
+  });
+}
+```
+
+이 훅은 **비즈니스 로직**(검증), **API 호출**(axios), **서버 형식**(`snake_case`)이 뒤섞여 있다.
+
+- `axios` → `fetch` 변경 시: 훅 수정 필요
+- 최소 금액 규칙 변경 시: 훅 수정 필요
+- 서버 필드명 변경 시: 훅 수정 필요
+- **단위 테스트**: API 모킹 없이 검증 로직만 테스트할 수 없음
+
+훅은 **로직 재사용**만 해결한다. **책임 분리**는 해결하지 못한다. 클린 아키텍처는 각 레이어의 **변경 이유를 분리**한다.
+
+---
+
+![리액트 클린 아키텍처 - 6개 레이어로 역할을 분리해서 변경에 강한 구조 만들기](/images/react-clean-architecture/thumbnail.webp)
+
+## 클린 아키텍처란?
+
+클린 아키텍처는 이런 문제를 해결하기 위한 구조다. 핵심은 **역할을 분리**하는 것이다.
+
+마치 배달 앱을 떠올려보자. 배달 앱에는 다음과 같은 역할이 있다:
+
+- **고객**: 음식을 주문한다
+- **식당**: 음식을 만든다
+- **라이더**: 음식을 배달한다
+- **앱**: 주문을 전달하고 상태를 관리한다
+
+각자의 역할이 명확하고, 서로 독립적이다. 라이더가 바뀌어도 식당은 영향을 받지 않는다. 식당의 메뉴가 바뀌어도 라이더는 상관없다.
+
+클린 아키텍처도 마찬가지다. 코드를 **6개의 레이어**로 나누고, 각 레이어는 명확한 역할을 가진다.
+
+### 6개 레이어 구조
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              Presentation Layer (React)                  │
+│  Components, Pages, Hooks, State (Zustand + TanStack)   │
+└────────────────────┬────────────────────────────────────┘
+                     │ depends on
+┌────────────────────▼────────────────────────────────────┐
+│           Domain Layer (Business Logic)                  │
+│     Use Cases, Entities, Repository Interfaces          │
+└────────────────────▲────────────────────────────────────┘
+                     │ implements
+┌────────────────────┴────────────────────────────────────┐
+│              Data Layer (API Access)                     │
+│    Repository Impl, DTOs, Mappers, Data Sources         │
+└────────────────────┬────────────────────────────────────┘
+                     │ uses
+┌────────────────────▼────────────────────────────────────┐
+│         Infrastructure Layer (External Services)         │
+│            HTTP Client (Axios), Storage                  │
+└─────────────────────────────────────────────────────────┘
+
+              Core Layer (Cross-cutting Concerns)
+          Config, Constants, Utils, Errors, Validators
+            ← 모든 레이어에서 참조 가능
+```
+
+- `DI`: 모든 레이어의 의존성을 조합하고 주입 (Dependency Injection Container)
+- `Infrastructure`: 외부 세계와의 통신 (HTTP 클라이언트, 라이브러리)
+- `Data`: 외부 데이터를 가져와서 내부 형식으로 변환
+- `Domain`: 비즈니스 규칙과 로직 (UI, API 모름)
+- `Presentation`: UI와 상호작용 (Hook, Component)
+- `Core`: 모든 레이어에서 사용하는 공통 기능 (Constants, Utils, Errors, Validators)
+
+핵심은 `Domain`이 **완전히 독립적**이라는 점이다. `Domain`은 UI가 어떻게 생겼는지, API가 어떤 형식인지 전혀 모른다. 오직 **비즈니스 규칙**만 담당한다.
+
+### 의존성 방향
+
+```
+Presentation → Domain ← Data ← Infrastructure
+       ↓          ↓        ↓          ↓
+                  DI (모든 레이어를 조합)
+       ↓          ↓        ↓          ↓
+              Core (모든 레이어가 의존 가능)
+```
+
+의존성은 **항상 안쪽으로** 향한다. `Domain`은 `Core`만 의존하고, 나머지 레이어(`Data`, `Infrastructure`, `Presentation`)는 `Domain`을 의존한다.
+
+`DI` 레이어는 가장 바깥쪽에 위치하여 모든 레이어의 구체적인 구현체를 조합하고 의존성을 주입한다. `Core` 레이어는 공통 유틸리티로, 모든 레이어에서 참조 가능하다.
+
+**핵심 원칙**:
+
+- **Domain은 순수하다**: `Core`를 제외한 어떤 레이어도 import하지 않는다
+- **Repository Interface는 Domain에**: `Data` Layer는 Domain의 interface를 **구현**한다
+- **의존성 역전**: 고수준(`Domain`)이 저수준(`Data`)에 의존하지 않는다
+
+Uncle Bob이 제시한 클린 아키텍처의 공식 다이어그램을 살펴보자:
+
+![Uncle Bob의 클린 아키텍처 다이어그램 - 동심원 구조로 레이어가 나뉘어져 있고, 의존성은 항상 안쪽으로 향한다](/images/react-clean-architecture/clean-architecture.webp)
+
+위 다이어그램에서 핵심은 **의존성 방향**이다. 화살표가 모두 안쪽(중심의 Entities/Use Cases)을 가리킨다. 바깥쪽 레이어(UI, DB, 외부 서비스)는 안쪽을 의존하지만, 안쪽은 바깥을 전혀 모른다. 이것이 바로 **의존성 역전 원칙**이다.
+
+우리 프로젝트는 이 구조를 React 생태계에 맞게 6개 레이어로 재구성했다. 하지만 핵심 철학은 동일하다: `Domain`은 순수하고, 의존성은 항상 안쪽으로 흐른다.
+
+> 💡 더 자세한 내용은 Uncle Bob의 [Clean Architecture 블로그](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)를 참고하자.
+
+이게 왜 중요할까? `Domain`에 비즈니스 로직을 넣으면, UI가 바뀌든 API가 바뀌든 `Domain`은 영향을 받지 않는다. 마치 식당이 메뉴를 바꿔도 라이더가 영향을 받지 않는 것처럼.
+
+개념을 이해했으니, 이제 실제 프로젝트에서 어떻게 구현하는지 보자.
+
+---
+
+## 폴더 구조
+
+실제 프로젝트의 폴더 구조는 다음과 같다.
+
+```
+src/
+├── di/                            # 의존성 주입 (Dependency Injection)
+│   └── DIContainer.ts             # 모든 의존성을 관리하는 컨테이너
+│
+├── core/                          # 모든 레이어에서 참조 가능
+│   ├── constants.ts               # 전역 상수
+│   ├── errors/
+│   │   └── AppError.ts            # 커스텀 에러 클래스
+│   ├── utils/
+│   │   └── formatters.ts          # 공통 포맷팅 함수
+│   └── validators/
+│       └── paymentValidator.ts    # 결제 검증 유틸
+│
+├── infrastructure/
+│   ├── http/
+│   │   ├── httpClient.ts          # HTTP 클라이언트 추상화
+│   │   ├── axiosHttpClient.ts     # Axios 구현체
+│   │   └── fetchHttpClient.ts     # Fetch API 구현체
+│   └── external/
+│       └── analytics.ts            # 외부 라이브러리
+│
+├── data/
+│   ├── datasources/
+│   │   ├── paymentGatewayDataSource.ts   # 결제 대행사 API 호출 (Raw HTTP)
+│   │   └── userDataSource.ts             # 사용자 API 호출 (Raw HTTP)
+│   ├── repositories/
+│   │   ├── PaymentGatewayRepositoryImpl.ts   # PaymentGatewayRepositoryImpl (구현체)
+│   │   └── UserRepositoryImpl.ts             # UserRepositoryImpl (구현체)
+│   ├── dto/
+│   │   ├── paymentGatewayDto.ts  # 결제 대행사 서버 응답 타입
+│   │   └── userDto.ts            # 사용자 서버 응답 타입
+│   └── mappers/
+│       ├── paymentGatewayMapper.ts  # DTO → Entity 변환 함수
+│       └── userMapper.ts            # DTO → Entity 변환 함수
+│
+├── domain/
+│   ├── entities/
+│   │   ├── PaymentGateway.ts     # 결제 대행사 비즈니스 규칙
+│   │   ├── User.ts               # 사용자 비즈니스 규칙
+│   │   └── Admin.ts              # 관리자 비즈니스 규칙
+│   ├── repositories/
+│   │   ├── PaymentGatewayRepository.ts  # 결제 대행사 Repository Interface
+│   │   └── UserRepository.ts            # 사용자 Repository Interface
+│   └── useCases/
+│       ├── processPayment.ts     # 결제 처리
+│       └── processRefund.ts      # 환불 처리
+│
+└── presentation/
+    ├── hooks/
+    │   └── useUserPayments.ts    # 사용자 결제 Hook
+    ├── components/
+    │   └── PaymentButton.tsx     # UI 컴포넌트
+    └── adapters/
+        └── userAdapter.ts        # Entity → UI Type 변환
+```
+
+각 폴더는 명확한 역할을 가진다. 이제 가장 바깥쪽 레이어부터 차례대로 살펴보자.
+
+---
+
+## Core Layer: 공통 기능의 중심
+
+`Core` 레이어는 조금 특별하다. **모든 레이어에서 참조할 수 있는 공통 기능**을 담고 있다. 일반적으로 클린 아키텍처에서는 의존성이 안쪽으로 향하지만, `Core`는 예외다.
+
+왜 필요할까? 상수, 에러, 유틸리티 함수처럼 모든 레이어에서 사용하는 코드를 매번 각 레이어에 중복해서 만들 필요가 있을까? 그렇지 않다. `Core`에 한 번만 정의하고 모든 레이어에서 가져다 쓰면 된다.
+
+### Constants: 전역 상수
+
+```ts
+// core/constants.ts
+export const MIN_PAYMENT_AMOUNT = 1_000; // 최소 결제 금액
+export const MAX_PAYMENT_AMOUNT = 1_000_000; // 최대 결제 금액
+export const CURRENCY_UNIT = "원"; // 통화 단위
+```
+
+### Errors: 커스텀 에러
+
+```ts
+// core/errors/AppError.ts
+export class AppError extends Error {
+  constructor(public code: string, message: string) {
+    super(message);
+    this.name = "AppError";
+  }
+}
+
+export class InsufficientBalanceError extends AppError {
+  constructor() {
+    super("INSUFFICIENT_BALANCE", "잔액이 부족하다");
+  }
+}
+```
+
+### Validators: 검증 로직
+
+```ts
+// core/validators/paymentValidator.ts
+import { MIN_PAYMENT_AMOUNT, MAX_PAYMENT_AMOUNT } from "../constants";
+
+export const validatePaymentAmount = (amount: number): void => {
+  if (amount < MIN_PAYMENT_AMOUNT) {
+    throw new Error(`최소 결제 금액은 ${MIN_PAYMENT_AMOUNT}원입니다`);
+  }
+  if (amount > MAX_PAYMENT_AMOUNT) {
+    throw new Error(`최대 결제 금액은 ${MAX_PAYMENT_AMOUNT}원입니다`);
+  }
+};
+```
+
+### Utils: 공통 유틸리티
+
+```ts
+// core/utils/formatters.ts
+export const formatCurrency = (amount: number): string => {
+  return amount.toLocaleString("ko-KR");
+};
+
+export const formatPayment = (payment: number): string => {
+  return `${formatCurrency(payment)}원`;
+};
+```
+
+`Core` 레이어는 **순수 함수와 상수**만 담는다. 비즈니스 로직이나 외부 의존성을 가지면 안 된다. 그래야 모든 레이어에서 안전하게 사용할 수 있다.
+
+---
+
+## Infrastructure Layer: 외부 세계와의 격리
+
+`Infrastructure` 레이어는 외부 라이브러리나 HTTP 클라이언트를 추상화한다. 왜 필요할까?
+
+만약 `axios`를 직접 쓰다가 `fetch`로 바꾸고 싶다면? 모든 코드를 수정해야 한다. 하지만 추상화해두면 구현체만 바꾸면 된다.
+
+```ts
+// infrastructure/http/httpClient.ts
+export interface HttpClient {
+  get<T>(url: string): Promise<T>;
+  post<T>(url: string, data: unknown): Promise<T>;
+  put<T>(url: string, data: unknown): Promise<T>;
+  delete<T>(url: string): Promise<T>;
+}
+```
+
+이건 **인터페이스**다. 구현체는 따로 만든다.
+
+```ts
+// infrastructure/http/axiosHttpClient.ts
+import axios from "axios";
+import type { HttpClient } from "./httpClient";
+
+export class AxiosHttpClient implements HttpClient {
+  async get<T>(url: string): Promise<T> {
+    const response = await axios.get(url);
+    return response.data;
+  }
+
+  async post<T>(url: string, data: unknown): Promise<T> {
+    const response = await axios.post(url, data);
+    return response.data;
+  }
+
+  // put, delete도 유사하게 구현
+}
+```
+
+이제 `axios`에서 `fetch`로 바꾸고 싶으면? 새로운 구현체만 만들면 된다.
+
+```ts
+// infrastructure/http/fetchHttpClient.ts
+import type { HttpClient } from "./httpClient";
+
+export class FetchHttpClient implements HttpClient {
+  async get<T>(url: string): Promise<T> {
+    const response = await fetch(url);
+    return response.json();
+  }
+
+  async post<T>(url: string, data: unknown): Promise<T> {
+    const response = await fetch(url, {
+      method: "POST",
+      body: JSON.stringify(data),
+      headers: { "Content-Type": "application/json" },
+    });
+    return response.json();
+  }
+
+  // put, delete도 유사하게 구현
+}
+```
+
+나머지 코드는 `HttpClient` 인터페이스만 의존하므로 **아무 영향을 받지 않는다**.
+
+---
+
+## Data Layer: 외부 데이터를 내부 형식으로 변환
+
+`Data` 레이어는 **Domain의 Repository Interface를 구현**하고, **DTO를 Entity로 변환**한다.
+
+**중요한 원칙**:
+
+- **Repository Implementation은 Data에**: Domain의 interface를 `implements`한다
+- **DTO → Entity 변환은 Data의 책임**: Mapper를 통해 변환한다
+- **Domain과 Infrastructure를 연결**: Domain은 "무엇을", Data는 "어떻게"를 담당한다
+
+`Data` 레이어는 4가지 역할을 한다:
+
+1. `Repository Impl`: Domain의 Repository Interface를 구현한다
+2. `DataSource`: API를 호출하고 DTO를 반환한다
+3. `DTO(Data Transfer Object)`: 서버 응답 타입을 정의한다
+4. `Mapper`: DTO를 `Domain`의 `Entity`로 변환한다
+
+### Repository: API 호출 로직
+
+```ts
+// data/repositories/PaymentGatewayRepositoryImpl.ts
+import type { PaymentGatewayRepository } from "@/domain/repositories/PaymentGatewayRepository";
+import type { PaymentGatewayDataSource } from "@/data/datasources/paymentGatewayDataSource";
+import type { PaymentGateway } from "@/domain/entities/PaymentGateway";
+import type { User } from "@/domain/entities/User";
+import { mapPaymentGatewayDtoToDomain } from "@/data/mappers/paymentGatewayMapper";
+import { mapUserDtoToDomain } from "@/data/mappers/userMapper";
+
+export class PaymentGatewayRepositoryImpl implements PaymentGatewayRepository {
+  constructor(private paymentGatewayDataSource: PaymentGatewayDataSource) {}
+
+  async getPaymentGateway(paymentGatewayId: number): Promise<PaymentGateway> {
+    const paymentGatewayDto =
+      await this.paymentGatewayDataSource.getPaymentGateway(paymentGatewayId);
+    return mapPaymentGatewayDtoToDomain(paymentGatewayDto);
+  }
+
+  /**
+   * 결제를 처리하고 업데이트된 사용자 정보를 반환한다.
+   * 서버는 결제 처리 후 변경된 User 정보를 응답으로 보낸다.
+   */
+  async processPayment(
+    paymentGatewayId: number,
+    userId: number,
+    paymentAmount: number
+  ): Promise<User> {
+    const userDto = await this.paymentGatewayDataSource.processPayment(
+      paymentGatewayId,
+      userId,
+      paymentAmount
+    );
+    return mapUserDtoToDomain(userDto);
+  }
+}
+```
+
+```ts
+// data/repositories/UserRepositoryImpl.ts
+import type { UserRepository } from "@/domain/repositories/UserRepository";
+import type { UserDataSource } from "@/data/datasources/userDataSource";
+import type { User } from "@/domain/entities/User";
+import { mapUserDtoToDomain } from "@/data/mappers/userMapper";
+
+export class UserRepositoryImpl implements UserRepository {
+  constructor(private userDataSource: UserDataSource) {}
+
+  async getUser(userId: number): Promise<User> {
+    const userDto = await this.userDataSource.getUser(userId);
+    return mapUserDtoToDomain(userDto);
+  }
+
+  async processPayment(userId: number, paymentAmount: number): Promise<User> {
+    const userDto = await this.userDataSource.processPayment(
+      userId,
+      paymentAmount
+    );
+    return mapUserDtoToDomain(userDto);
+  }
+
+  async convertPoints(userId: number, paymentAmount: number): Promise<User> {
+    const userDto = await this.userDataSource.convertPoints(
+      userId,
+      paymentAmount
+    );
+    return mapUserDtoToDomain(userDto);
+  }
+}
+```
+
+**중요한 원칙**:
+
+- **Repository interface는 `Domain`에, implementation은 `Data`에**: `Domain`은 "어떻게 데이터를 가져올지"는 몰라도 된다
+- **DTO → Entity 변환은 `Repository`의 책임**: `UseCase`는 `Entity`만 받는다
+- **`DataSource`를 통해 데이터를 가져온다**: API 호출은 `DataSource`가 담당한다
+
+그렇다면 `DataSource`는 무엇일까?
+
+### DataSource: 네트워크 통신 담당
+
+`DataSource`는 **API 엔드포인트를 호출하고 DTO를 반환하는 역할**을 한다.
+
+마치 택배 기사가 물건을 배송만 하고 포장을 뜯지 않는 것처럼, `DataSource`는 데이터를 가져오기만 하고 변환하지 않는다.
+
+```ts
+// data/datasources/paymentGatewayDataSource.ts
+import type { HttpClient } from "@/infrastructure/http/HttpClient";
+import type { PaymentGatewayDto } from "@/data/dto/paymentGatewayDto";
+
+export class PaymentGatewayDataSource {
+  constructor(private httpClient: HttpClient) {}
+
+  async getPaymentGateway(
+    paymentGatewayId: number
+  ): Promise<PaymentGatewayDto> {
+    return this.httpClient.get<PaymentGatewayDto>(
+      `/api/payment-gateways/${paymentGatewayId}`
+    );
+  }
+
+  async processPayment(
+    paymentGatewayId: number,
+    userId: number,
+    paymentAmount: number
+  ): Promise<PaymentGatewayDto> {
+    return this.httpClient.post<PaymentGatewayDto>("/api/payments/process", {
+      payment_gateway_id: paymentGatewayId,
+      user_id: userId,
+      payment_amount: paymentAmount,
+    });
+  }
+}
+```
+
+```ts
+// data/datasources/userDataSource.ts
+import type { HttpClient } from "@/infrastructure/http/HttpClient";
+import type { UserDto } from "@/data/dto/userDto";
+
+export class UserDataSource {
+  constructor(private httpClient: HttpClient) {}
+
+  async getUser(userId: number): Promise<UserDto> {
+    return this.httpClient.get<UserDto>(`/api/users/${userId}`);
+  }
+
+  async convertPoints(userId: number, paymentAmount: number): Promise<UserDto> {
+    return this.httpClient.post<UserDto>("/api/users/convert-points", {
+      user_id: userId,
+      payment_amount: paymentAmount,
+    });
+  }
+}
+```
+
+`DataSource`는 3가지 원칙을 따른다:
+
+1. **DTO만 반환한다**: `Entity`가 아닌 `DTO`를 반환한다. 변환은 `Mapper`의 몫이다.
+2. **`HttpClient` 인터페이스에 의존한다**: `axios`나 `fetch`를 직접 사용하지 않는다. `HttpClient` 인터페이스를 통해 HTTP 클라이언트를 추상화한다.
+3. **비즈니스 로직을 포함하지 않는다**: API 호출만 담당한다.
+
+`DataSource`와 `HttpClient`의 관계를 보면, `axios`인지 `fetch`인지는 `DataSource`도 모른다. 이것이 바로 의존성 역전 원칙이다.
+
+백엔드가 바뀌면 어떻게 될까? 처음엔 Spring Boot를 쓰다가 Firebase로 바꾸거나, Nest.js로 전환하거나, Supabase로 마이그레이션한다면? **`DataSource` 덕분에 걱정할 필요가 없다.** `Repository`, `Mapper`, `Entity`는 건드리지 않고 `DataSource`만 교체하면 된다. 이것이 바로 클린 아키텍처의 핵심 장점이다.
+
+### DTO: 서버 응답 타입
+
+서버가 보내는 데이터 형식을 정의한다.
+
+```ts
+// data/dto/paymentGatewayDto.ts
+export interface PaymentGatewayDto {
+  payment_gateway_id: number; // PG사 고유 ID
+  payment_gateway_name: string; // PG사 이름
+  wallet_balance: number; // 예치금 잔액
+  created_at: string; // 생성 시각
+  updated_at: string; // 수정 시각
+}
+
+// data/dto/userDto.ts
+export interface UserDto {
+  user_id: number; // 사용자 고유 ID
+  user_name: string; // 사용자 이름
+  payment_gateway_id: number; // 사용 중인 PG사 ID
+  payment_balance: number; // 결제 잔액
+  wallet_balance: number; // 지갑 잔액
+  created_at: string; // 생성 시각
+  updated_at: string; // 수정 시각
+}
+
+// data/dto/paymentTransactionDto.ts
+export interface PaymentTransactionDto {
+  transaction_id: string; // 거래 고유 ID
+  user_id: number; // 사용자 ID
+  payment_gateway_id: number; // PG사 ID
+  transaction_type: "process" | "convert"; // 거래 유형
+  amount: number; // 거래 금액
+  balance_after: number; // 거래 후 잔액
+  created_at: string; // 거래 시각
+}
+```
+
+> **참고**: 모노레포 환경이라면 `packages/types`처럼 별도 패키지로 분리할 수 있다. 서버가 Swagger 문서를 완전하게 작성했다면 [`openapi-typescript`](https://openapi-ts.dev/)나 [`orval`](https://orval.dev/) 같은 도구로 타입을 자동 생성하는 것을 추천한다. 직접 선언하면 휴먼 에러가 발생할 수 있기 때문이다.
+
+그런데 서버 팀에서 갑자기 "기획이 바뀌어서 `payment_gateway_id` 필드를 `gateway_id`로 변경했습니다"라고 통보하면 어떻게 될까? 기존 방식이라면 해당 필드를 사용하는 모든 컴포넌트를 찾아서 수정해야 한다. 하지만 클린 아키텍처에서는 단 **한 곳**만 고치면 된다. 바로 `Mapper`다.
+
+---
+
+### Mapper: 서버 변경의 충격을 흡수하는 완충재
+
+`Mapper`는 서버와 우리 코드 사이의 **번역기**다. 서버가 `payment_gateway_id`를 보내든 `gateway_id`를 보내든, 우리 코드는 전혀 신경 쓰지 않는다. `Mapper`가 모든 변경을 **한 곳에서 처리**하기 때문이다.
+
+마치 건물의 **면진 구조**와 비슷하다. 지진(서버 변경)이 일어나도 건물 내부(Domain, Presentation)는 흔들리지 않는다. 충격 흡수 장치(Mapper)가 모든 충격을 흡수하기 때문이다.
+
+Mapper는 class가 아닌 **순수 함수**로 구현한다. 상태를 가질 필요가 없고, 단순히 데이터를 변환하는 역할만 하기 때문이다.
+
+```ts
+// data/mappers/paymentGatewayMapper.ts
+import { z } from "zod";
+import { PaymentGateway } from "@/domain/entities/PaymentGateway";
+import type { PaymentGatewayDto } from "@/data/dto/paymentGatewayDto";
+
+// 1. DTO 검증 스키마
+const paymentGatewayDtoSchema = z.object({
+  payment_gateway_id: z.number(),
+  payment_gateway_name: z.string(),
+  wallet_balance: z.number(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+// DTO → Entity 변환 함수
+export function mapPaymentGatewayDtoToDomain(
+  dto: PaymentGatewayDto
+): PaymentGateway {
+  // 1. DTO 검증
+  const validated = paymentGatewayDtoSchema.parse(dto);
+
+  // 2. Entity 생성 (snake_case → camelCase)
+  return new PaymentGateway({
+    id: validated.payment_gateway_id,
+    name: validated.payment_gateway_name,
+    walletBalance: validated.wallet_balance,
+    createdAt: new Date(validated.created_at),
+    updatedAt: new Date(validated.updated_at),
+  });
+}
+
+// Entity → DTO 변환 함수 (API 요청 시)
+export function mapPaymentGatewayDomainToDto(
+  paymentGateway: PaymentGateway
+): PaymentGatewayDto {
+  return {
+    payment_gateway_id: paymentGateway.id,
+    payment_gateway_name: paymentGateway.name,
+    wallet_balance: paymentGateway.walletBalance,
+    created_at: paymentGateway.createdAt.toISOString(),
+    updated_at: paymentGateway.updatedAt.toISOString(),
+  };
+}
+```
+
+```ts
+// data/mappers/userMapper.ts
+import { z } from "zod";
+import { User } from "@/domain/entities/User";
+import type { UserDto } from "@/data/dto/userDto";
+
+const userDtoSchema = z.object({
+  user_id: z.number(),
+  user_name: z.string(),
+  payment_gateway_id: z.number(),
+  payment_balance: z.number(),
+  wallet_balance: z.number(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export function mapUserDtoToDomain(dto: UserDto): User {
+  const validated = userDtoSchema.parse(dto);
+
+  return new User({
+    id: validated.user_id,
+    name: validated.user_name,
+    gatewayId: validated.payment_gateway_id,
+    paymentBalance: validated.payment_balance,
+    walletBalance: validated.wallet_balance,
+    createdAt: new Date(validated.created_at),
+    updatedAt: new Date(validated.updated_at),
+  });
+}
+```
+
+```ts
+// data/mappers/paymentTransactionMapper.ts
+import { z } from "zod";
+import { PaymentTransaction } from "@/domain/entities/PaymentTransaction";
+import type { PaymentTransactionDto } from "@/data/dto/paymentTransactionDto";
+
+const paymentTransactionDtoSchema = z.object({
+  transaction_id: z.string(),
+  user_id: z.number(),
+  payment_gateway_id: z.number(),
+  transaction_type: z.enum(["process", "convert"]),
+  amount: z.number(),
+  balance_after: z.number(),
+  created_at: z.string(),
+});
+
+export function mapPaymentTransactionDtoToDomain(
+  dto: PaymentTransactionDto
+): PaymentTransaction {
+  const validated = paymentTransactionDtoSchema.parse(dto);
+
+  return new PaymentTransaction({
+    id: validated.transaction_id,
+    userId: validated.user_id,
+    paymentGatewayId: validated.payment_gateway_id,
+    type: validated.transaction_type === "process" ? "payment" : "refund",
+    amount: validated.amount,
+    balanceAfter: validated.balance_after,
+    createdAt: new Date(validated.created_at),
+  });
+}
+```
+
+`Mapper` 함수는 다음을 수행한다:
+
+1. **검증**: `Zod`로 DTO의 형식을 검증한다
+2. **필드명 매핑**: 서버 필드(`payment_gateway_id`) → 도메인 필드(`id`)로 변환한다
+3. **네이밍 변환**: `snake_case` → `camelCase`로 변환한다
+4. **타입 변환**: `string` → `Date`처럼 타입을 변환한다
+5. **Entity 생성**: `Domain`의 `PaymentGateway`, `User`, `PaymentTransaction` Entity를 생성한다
+
+**핵심은 이것이다**: 서버가 `payment_gateway_id` → `gateway_id`로 필드명을 바꾸면?
+
+```ts
+// ✅ Mapper 한 곳만 수정
+export function mapPaymentGatewayDtoToDomain(dto: PaymentGatewayDto): PaymentGateway {
+  return new PaymentGateway({
+-   id: validated.payment_gateway_id,  // 기존
++   id: validated.gateway_id,           // 변경
+    name: validated.payment_gateway_name,
+    walletBalance: validated.wallet_balance,
+    // ...
+  });
+}
+```
+
+`Mapper` 함수 **딱 1줄**만 고치면 된다. `Presentation`, `Domain`, `UseCase` 레이어는 전혀 수정하지 않아도 된다. 도입부에서 언급한 "10개 파일 수정 → 1개 파일 수정"이 바로 이것이다.
+
+---
+
+## Domain Layer: 비즈니스 규칙의 중심
+
+`Domain` 레이어는 클린 아키텍처의 **핵심**이다. UI도 모르고, API도 모르고, 오직 **비즈니스 규칙**만 담당한다.
+
+**중요한 원칙**:
+
+- **Domain은 Core만 import한다**: `Data`, `Infrastructure`, `Presentation` 레이어는 절대 import하지 않는다
+- **Repository Interface는 Domain에 정의한다**: 구현체(`Impl`)는 `Data` Layer에 위치한다
+
+`Domain`은 3가지로 구성된다:
+
+1. `Entity`: 비즈니스 규칙을 담은 객체
+2. `Repository Interface`: 데이터 접근 추상화
+3. `UseCase`: 비즈니스 로직의 흐름
+
+### Entity: 비즈니스 규칙
+
+Entity는 비즈니스와 관련된 **모든 규칙**을 담는다. 결제 대행사 시스템에는 `PaymentGateway`와 `User` Entity가 있다.
+
+#### PaymentGateway Entity
+
+`PaymentGateway` Entity는 결제 대행사의 예치금과 결제 처리 규칙을 담당한다.
+
+```ts
+// domain/entities/PaymentGateway.ts
+interface PaymentGatewayProps {
+  id: number;
+  name: string;
+  walletBalance: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export class PaymentGateway {
+  private readonly _id: number;
+  private readonly _name: string;
+  private readonly _walletBalance: number;
+  private readonly _createdAt: Date;
+  private readonly _updatedAt: Date;
+
+  static readonly MIN_PAYMENT_AMOUNT = 1_000;
+  static readonly MAX_PAYMENT_AMOUNT = 1_000_000;
+
+  constructor(props: PaymentGatewayProps) {
+    this._id = props.id;
+    this._name = props.name;
+    this._walletBalance = props.walletBalance;
+    this._createdAt = props.createdAt;
+    this._updatedAt = props.updatedAt;
+
+    // 생성 시점에 필수 검증 수행
+    this.validate();
+  }
+
+  private validate(): void {
+    if (this._id <= 0) throw new Error("결제 대행사 ID는 양수여야 합니다");
+    if (!this._name?.trim()) throw new Error("결제 대행사 이름은 필수입니다");
+    if (this._walletBalance < 0)
+      throw new Error("예치금 잔액은 음수일 수 없습니다");
+  }
+
+  get id() {
+    return this._id;
+  }
+  get name() {
+    return this._name;
+  }
+  get walletBalance() {
+    return this._walletBalance;
+  }
+
+  // 비즈니스 규칙: 예치금 잔액 확인
+  canProcessPayment(amount: number): boolean {
+    return this._walletBalance >= amount;
+  }
+
+  // 사용자 입력 검증 (UseCase에서 호출)
+  static validatePaymentAmount(amount: number): void {
+    if (amount < this.MIN_PAYMENT_AMOUNT) {
+      throw new Error(`최소 결제 금액은 ${this.MIN_PAYMENT_AMOUNT}원입니다`);
+    }
+    if (amount > this.MAX_PAYMENT_AMOUNT) {
+      throw new Error(`최대 결제 금액은 ${this.MAX_PAYMENT_AMOUNT}원입니다`);
+    }
+  }
+
+  static validateDepositAmount(amount: number): void {
+    if (amount <= 0) {
+      throw new Error("충전 금액은 0원보다 커야 합니다");
+    }
+  }
+}
+```
+
+**Validation 전략**
+
+| 패턴                   | 목적                         | 호출 시점               |
+| ---------------------- | ---------------------------- | ----------------------- |
+| `private validate()`   | Entity의 필수 불변 규칙 검증 | Entity 생성 시 자동     |
+| `static validateXXX()` | 사용자 입력 사전 검증        | UseCase에서 명시적 호출 |
+
+**핵심**: Constructor validation은 잘못된 데이터로 Entity가 생성되는 것을 원천 차단한다. Entity를 받는 모든 코드가 "이 객체는 유효하다"고 신뢰할 수 있다
+
+---
+
+#### User Entity
+
+`User` Entity는 사용자의 결제 내역과 지갑 잔액 관리 규칙을 담당한다.
+
+```ts
+// domain/entities/User.ts
+interface UserProps {
+  id: number;
+  name: string;
+  gatewayId: number;
+  paymentBalance: number; // 결제 잔액
+  walletBalance: number; // 지갑 잔액
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export class User {
+  private readonly _id: number; // 사용자 고유 ID
+  private readonly _name: string; // 사용자 이름
+  private readonly _gatewayId: number; // PG사 ID
+  private _paymentBalance: number; // 결제 잔액
+  private _walletBalance: number; // 지갑 잔액
+  private readonly _createdAt: Date; // 등록 시각
+  private _updatedAt: Date; // 업데이트 시각
+
+  constructor(props: UserProps) {
+    this._id = props.id;
+    this._name = props.name;
+    this._gatewayId = props.gatewayId;
+    this._paymentBalance = props.paymentBalance;
+    this._walletBalance = props.walletBalance;
+    this._createdAt = props.createdAt;
+    this._updatedAt = props.updatedAt;
+  }
+
+  // Getter
+  get id() {
+    return this._id;
+  }
+  get name() {
+    return this._name;
+  }
+  get gatewayId() {
+    return this._gatewayId;
+  }
+  get paymentBalance() {
+    return this._paymentBalance;
+  }
+  get walletBalance() {
+    return this._walletBalance;
+  }
+  get createdAt() {
+    return this._createdAt;
+  }
+  get updatedAt() {
+    return this._updatedAt;
+  }
+
+  // 비즈니스 규칙: 결제 금액 검증
+  static validatePaymentAmount(amount: number): void {
+    if (amount <= 0) {
+      throw new Error("결제 금액은 0원보다 커야 합니다");
+    }
+  }
+
+  // 비즈니스 규칙: 환불 가능 여부
+  canRefund(amount: number, minRefundAmount: number): boolean {
+    return this._paymentBalance >= amount && amount >= minRefundAmount;
+  }
+
+  // 비즈니스 규칙: 지갑 잔액 사용 가능 여부
+  canUseWallet(amount: number): boolean {
+    return this._walletBalance >= amount;
+  }
+}
+```
+
+### 잔액 필드 상세 설명
+
+`paymentBalance`는 환불 가능한 금액, `walletBalance`는 환불받아 적립된 예치금이다. 10,000원 결제 → 5,000원 환불하면, `paymentBalance`: 5,000원 (차감), `walletBalance`: 5,000원 (적립)으로 **현금 결제 금액**과 **예치금**을 구분한다.
+
+---
+
+**PaymentTransaction Entity:**
+
+결제 거래 내역을 관리하는 Entity이다.
+
+```ts
+// domain/entities/PaymentTransaction.ts
+type TransactionType = "payment" | "refund"; // payment: 결제, refund: 환불
+
+interface PaymentTransactionProps {
+  id: string;
+  userId: number;
+  gatewayId: number;
+  type: TransactionType;
+  amount: number;
+  balanceAfter: number;
+  createdAt: Date;
+}
+
+export class PaymentTransaction {
+  private readonly _id: string; // 거래 고유 ID (UUID, 중복 방지용 식별자)
+  private readonly _userId: number; // 거래를 수행한 사용자 ID
+  private readonly _gatewayId: number; // 거래를 처리한 결제 대행사 ID
+  private readonly _type: TransactionType; // 거래 유형 (payment: 결제, refund: 환불)
+  private readonly _amount: number; // 거래 금액
+  private readonly _balanceAfter: number; // 거래 후 잔액 (이 거래 이후 남은 사용자 잔액)
+  private readonly _createdAt: Date; // 거래 발생 시각
+
+  constructor(props: PaymentTransactionProps) {
+    this._id = props.id;
+    this._userId = props.userId;
+    this._gatewayId = props.gatewayId;
+    this._type = props.type;
+    this._amount = props.amount;
+    this._balanceAfter = props.balanceAfter;
+    this._createdAt = props.createdAt;
+  }
+
+  // Getter들
+  get id(): string {
+    return this._id; // 거래 조회, 영수증 출력 등에 사용
+  }
+
+  get userId(): number {
+    return this._userId; // 사용자별 거래 내역 필터링에 사용
+  }
+
+  get gatewayId(): number {
+    return this._gatewayId; // PG사별 거래 통계, 필터링에 사용
+  }
+
+  get type(): TransactionType {
+    return this._type; // 거래 유형 표시 (결제/환불 아이콘, 색상 구분 등)
+  }
+
+  get amount(): number {
+    return this._amount; // 거래 금액 표시, 통계 계산에 사용
+  }
+
+  get balanceAfter(): number {
+    return this._balanceAfter; // 거래 후 잔액 표시, 잔액 변화 추적에 사용
+  }
+
+  get createdAt(): Date {
+    return this._createdAt; // 거래 발생 시각 표시, 거래 내역 시간순 정렬에 사용
+  }
+
+  // 비즈니스 규칙: 결제 거래 생성
+  static createPaymentTransaction(
+    userId: number,
+    gatewayId: number,
+    amount: number,
+    balanceAfter: number
+  ): PaymentTransaction {
+    if (amount <= 0) {
+      throw new Error("결제 금액은 0원보다 커야 합니다");
+    }
+
+    return new PaymentTransaction({
+      id: crypto.randomUUID(), // 고유 ID 생성
+      userId,
+      gatewayId,
+      type: "payment",
+      amount,
+      balanceAfter,
+      createdAt: new Date(),
+    });
+  }
+
+  // 비즈니스 규칙: 환불 거래 생성
+  static createRefundTransaction(
+    userId: number,
+    gatewayId: number,
+    amount: number,
+    balanceAfter: number
+  ): PaymentTransaction {
+    if (amount <= 0) {
+      throw new Error("환불 금액은 0원보다 커야 합니다");
+    }
+
+    return new PaymentTransaction({
+      id: crypto.randomUUID(),
+      userId,
+      gatewayId,
+      type: "refund",
+      amount,
+      balanceAfter,
+      createdAt: new Date(),
+    });
+  }
+}
+```
+
+---
+
+Entity들은 다음과 같은 `비즈니스 규칙(검증 로직)`을 담는다:
+
+**PaymentGateway Entity:**
+
+- **최소 결제 금액**: 100원 이상인지 검증
+- **예치금 잔액 확인**: 결제 가능 여부 검증 (상태 변경 없음)
+- **충전 금액 검증**: 0원 초과인지 검증
+
+**User Entity:**
+
+- **결제 금액 검증**: 0원 초과인지 검증
+- **환불 가능 여부**: 잔액 충분 여부 및 최소 금액 검증 (상태 변경 없음)
+- **지갑 사용 가능 여부**: 지갑 잔액 충분 여부 검증 (상태 변경 없음)
+
+**PaymentTransaction Entity:**
+
+- **거래 내역 생성**: 결제/환불 거래 기록 생성 (factory method)
+- **금액 검증**: 거래 금액이 0보다 큰지 확인
+- **거래 타입**: "process"(결제)와 "convert"(환불) 구분
+- **완전 불변성**: 모든 속성이 readonly, 한 번 생성된 거래는 수정 불가
+
+기획자가 "최소 결제 금액을 2,000원으로 바꿔주세요"라고 하면? `MIN_PAYMENT_AMOUNT` 한 줄만 바꾸면 된다.
+
+```diff
+// domain/entities/PaymentGateway.ts
+- static readonly MIN_PAYMENT_AMOUNT = 1_000;
++ static readonly MIN_PAYMENT_AMOUNT = 2_000;
+```
+
+컴포넌트는 건드릴 필요가 없다.
+
+---
+
+### Entity는 왜 불변인가?
+
+우리 프로젝트는 **서버 상태 관리를 Tanstack Query에게 위임**했다. 만약 Entity class에서도 상태를 관리하면 어떻게 될까?
+
+```ts
+// ❌ Entity가 상태를 직접 변경하면?
+class User {
+  private _balance: number;
+
+  deposit(amount: number) {
+    this._balance += amount; // Entity가 상태 변경
+  }
+}
+
+// 문제: Tanstack Query 캐시와 Entity 상태가 따로 논다!
+// - Entity: _balance = 10000
+// - Tanstack Query 캐시: balance = 5000
+// 어느 것이 진짜인가?
+```
+
+Entity와 Tanstack Query 캐시가 **각자 상태를 관리**하면 불일치가 발생한다. 따라서 Entity는 `readonly`로 만들어 **검증만 담당**하고, 상태는 Tanstack Query가 서버 응답으로만 업데이트한다.
+
+```ts
+// ✅ 프론트엔드 Entity: readonly + 검증 메서드만
+class User {
+  private readonly _balance: number;
+
+  canDeposit(amount: number): boolean {
+    return amount > 0; // 검증만
+  }
+}
+
+// UseCase가 서버에 요청 → Tanstack Query가 캐시 업데이트
+const updatedUser = await userRepository.deposit(user.id, amount);
+```
+
+백엔드는 Entity가 상태를 직접 변경하고 DB에 저장하지만, 프론트엔드는 Tanstack Query가 서버 응답을 통해서만 상태를 업데이트한다.
+| **상태 관리** | ORM | TanStack Query |
+
+---
+
+### Repository Interface: 데이터 접근 추상화
+
+`Domain` Layer는 데이터가 **어디서 오는지** 모른다. HTTP API인지, LocalStorage인지, IndexedDB인지 알 필요가 없다. 단지 "**어떤 데이터가 필요한지**"만 정의한다.
+
+이것이 바로 `Repository Interface`다. `Domain`은 인터페이스만 정의하고, `Data` Layer가 실제 구현을 제공한다.
+
+```ts
+// domain/repositories/PaymentGatewayRepository.ts
+import type { PaymentGateway } from "@/domain/entities/PaymentGateway";
+import type { User } from "@/domain/entities/User";
+
+export interface PaymentGatewayRepository {
+  getPaymentGateway(gatewayId: number): Promise<PaymentGateway>; // Entity 반환
+  processPayment(
+    gatewayId: number,
+    userId: number,
+    paymentAmount: number
+  ): Promise<User>; // Entity 반환
+}
+```
+
+```ts
+// domain/repositories/UserRepository.ts
+import type { User } from "@/domain/entities/User";
+
+export interface UserRepository {
+  getUser(userId: number): Promise<User>;
+  processPayment(userId: number, paymentAmount: number): Promise<User>;
+  processRefund(userId: number, refundAmount: number): Promise<User>;
+}
+```
+
+**핵심은 반환 타입**이다. `Repository Interface`는 `DTO`가 아닌 `Entity`를 반환한다. `Domain`은 `DTO`의 존재조차 모른다.
+
+이렇게 하면:
+
+- **`Domain`은 `Data`를 몰라도 된다**: 의존성 역전 원칙
+- **테스트가 쉬워진다**: Mock Repository를 주입하면 끝
+- **데이터 소스 교체가 자유롭다**: HTTP → LocalStorage로 바꿔도 `Domain`은 모른다
+
+마치 콘센트와 플러그의 관계다. 콘센트(Interface)는 규격만 정의하고, 어떤 전기(데이터)가 들어오든 상관없다.
+
+---
+
+### UseCase: 비즈니스 로직의 흐름
+
+`UseCase`는 여러 `Entity`를 조합해서 **비즈니스 로직**을 수행한다.
+
+```ts
+// domain/useCases/processPayment.ts
+import { PaymentGateway } from "@/domain/entities/PaymentGateway";
+import { User } from "@/domain/entities/User";
+import type { PaymentGatewayRepository } from "@/domain/repositories/PaymentGatewayRepository";
+import type { UserRepository } from "@/domain/repositories/UserRepository";
+
+export class ProcessPaymentUseCase {
+  constructor(
+    private paymentGatewayRepository: PaymentGatewayRepository,
+    private userRepository: UserRepository
+  ) {}
+
+  async execute(
+    gateway: PaymentGateway,
+    userId: number,
+    paymentAmount: number
+  ): Promise<User> {
+    // 1. 입력값 검증
+    PaymentGateway.validatePaymentAmount(paymentAmount);
+
+    if (!gateway.canProcessPayment(paymentAmount)) {
+      throw new Error("예치금 잔액이 부족합니다");
+    }
+
+    // 2. Repository 호출 (서버가 상태 변경)
+    const user = await this.userRepository.processPayment(
+      userId,
+      paymentAmount
+    );
+
+    return user;
+  }
+}
+```
+
+`ProcessPaymentUseCase`는 다음을 수행한다:
+
+1. **입력값 검증**: `PaymentGateway` Entity의 규칙을 사용해 결제 가능 여부를 확인한다
+2. **Repository 호출**: `userRepository.processPayment()`로 서버에 결제 요청을 보내고, 서버가 변경한 최신 상태를 `Entity`로 반환받는다
+
+**중요한 원칙**:
+
+- **`Entity`는 불변이다**: Tanstack Query가 서버 상태를 관리하므로, Entity는 검증만 담당 (상태 중복 방지)
+- **`UseCase`는 `Entity`만 받는다**: `DTO`를 볼 일이 없다
+- **Tanstack Query가 상태를 관리한다**: Entity와 캐시 사이의 불일치를 방지한다
+
+`UseCase`는 **어떤 UI**를 쓰는지, **어떤 HTTP 클라이언트**를 쓰는지 전혀 모른다. 오직 비즈니스 로직만 담당한다.
+
+### 환불 처리 UseCase 예시
+
+결제 금액을 지갑 잔액으로 환불하는 로직도 `UseCase`로 만들 수 있다.
+
+```ts
+// domain/useCases/processRefund.ts
+import { User } from "@/domain/entities/User";
+import { PaymentGateway } from "@/domain/entities/PaymentGateway";
+import type { UserRepository } from "@/domain/repositories/UserRepository";
+
+interface ProcessRefundConfig {
+  minConversionAmount: number; // 최소 환불 금액 (설정 가능)
+}
+
+export class ProcessRefundUseCase {
+  constructor(
+    private userRepository: UserRepository,
+    private config: ProcessRefundConfig
+  ) {}
+
+  async execute(
+    user: User,
+    gateway: PaymentGateway,
+    refundAmount: number
+  ): Promise<User> {
+    // 1. 입력값 검증
+    if (!user.canRefund(refundAmount, this.config.minConversionAmount)) {
+      throw new Error("결제 잔액이 부족하거나 최소 환불 금액 미만입니다");
+    }
+
+    if (!gateway.canProcessPayment(refundAmount)) {
+      throw new Error("결제 대행사 예치금이 부족합니다");
+    }
+
+    // 2. Repository 호출 (서버가 상태 변경)
+    const updatedUser = await this.userRepository.processRefund(
+      user.id,
+      refundAmount
+    );
+
+    return updatedUser;
+  }
+}
+```
+
+환불 처리 로직도 **비즈니스 규칙**(환불 가능 여부, 최소 금액)과 **데이터 처리**(서버 요청)를 분리했다. 최소 환불 금액은 설정으로 주입받아 유연하게 변경할 수 있다.
+
+---
+
+## DI Layer: DI Container로 의존성 관리
+
+지금까지 `Entity`, `Repository`, `UseCase`를 만들었다. 하지만 이 모든 의존성을 어떻게 관리할까?
+
+`UseCase`는 `Repository`가 필요하고, `Repository`는 `DataSource`가 필요하고, `DataSource`는 `HttpClient`가 필요하다. 매번 수동으로 생성하면 코드가 복잡해진다.
+
+이때 **DI Container**를 사용한다. DI Container는 **의존성을 한 곳에서 관리하고, 필요할 때 주입**해준다.
+
+마치 공장에서 제품을 만들 때 필요한 부품을 미리 준비해두는 것과 같다.
+
+```ts
+// di/DIContainer.ts
+import { HttpClient } from "@/infrastructure/http/HttpClient";
+import { PaymentGatewayDataSource } from "@/data/datasources/paymentGatewayDataSource";
+import { UserDataSource } from "@/data/datasources/userDataSource";
+import { PaymentGatewayRepositoryImpl } from "@/data/repositories/PaymentGatewayRepositoryImpl";
+import { UserRepositoryImpl } from "@/data/repositories/UserRepositoryImpl";
+import { ProcessPaymentUseCase } from "@/domain/useCases/processPayment";
+import { ProcessRefundUseCase } from "@/domain/useCases/processRefund";
+import type { PaymentGatewayRepository } from "@/domain/repositories/PaymentGatewayRepository";
+import type { UserRepository } from "@/domain/repositories/UserRepository";
+
+class DIContainer {
+  private static _httpClient: HttpClient;
+  private static _paymentGatewayDataSource: PaymentGatewayDataSource;
+  private static _userDataSource: UserDataSource;
+  private static _paymentGatewayRepository: PaymentGatewayRepository;
+  private static _userRepository: UserRepository;
+
+  static get httpClient() {
+    return (this._httpClient ??= new AxiosHttpClient({
+      baseURL: import.meta.env.VITE_API_URL,
+      timeout: 10_000,
+    }));
+  }
+
+  static get paymentGatewayDataSource() {
+    return (this._paymentGatewayDataSource ??= new PaymentGatewayDataSource(
+      this.httpClient
+    ));
+  }
+
+  static get userDataSource() {
+    return (this._userDataSource ??= new UserDataSource(this.httpClient));
+  }
+
+  static get paymentGatewayRepository() {
+    return (this._paymentGatewayRepository ??= new PaymentGatewayRepositoryImpl(
+      this.paymentGatewayDataSource
+    ));
+  }
+
+  static get userRepository() {
+    return (this._userRepository ??= new UserRepositoryImpl(
+      this.userDataSource
+    ));
+  }
+
+  // UseCases (매번 새로 생성)
+  static get processPaymentUseCase() {
+    return new ProcessPaymentUseCase(
+      this.paymentGatewayRepository,
+      this.userRepository
+    );
+  }
+
+  static get processRefundUseCase() {
+    return new ProcessRefundUseCase(this.userRepository, {
+      minConversionAmount: 1_000,
+    });
+  }
+
+  // 테스트용
+  static setMockRepositories(pgRepo, userRepo) {
+    this._paymentGatewayRepository = pgRepo;
+    this._userRepository = userRepo;
+  }
+}
+
+export default DIContainer;
+```
+
+**전략**: `HttpClient`, `DataSource`, `Repository`는 싱글톤 (`??=`), `UseCase`는 매번 새로 생성, 테스트 시 Mock 주입 가능.
+
+### 왜 싱글톤인가? 메모리 낭비 방지
+
+DI Container 없이 매번 인스턴스를 생성하면 어떻게 될까?
+
+```ts
+// ❌ 안티패턴: 컴포넌트마다 인스턴스 생성
+function useProcessPayment() {
+  const httpClient = new AxiosHttpClient({ ... });  // 인스턴스 1
+  const dataSource = new PaymentDataSource(httpClient);
+  const repository = new PaymentRepositoryImpl(dataSource);
+  const useCase = new ProcessPaymentUseCase(repository);
+  // ...
+}
+
+function useProcessRefund() {
+  const httpClient = new AxiosHttpClient({ ... });  // 인스턴스 2 (중복!)
+  const dataSource = new UserDataSource(httpClient);
+  const repository = new UserRepositoryImpl(dataSource);
+  const useCase = new ProcessRefundUseCase(repository);
+  // ...
+}
+
+// 문제: HttpClient가 컴포넌트마다 생성됨
+// - 10개 컴포넌트 → HttpClient 10개
+// - 메모리 낭비 + 설정 불일치 가능
+```
+
+DI Container는 `??=` (Nullish coalescing assignment)로 **싱글톤**을 구현한다:
+
+```ts
+// ✅ DI Container: 싱글톤으로 1번만 생성
+static get httpClient() {
+  return (this._httpClient ??= new AxiosHttpClient({ ... }));
+  // _httpClient가 없으면 생성, 있으면 기존 것 재사용
+}
+```
+
+**이점**:
+
+- **메모리 효율**: `HttpClient` 1개만 생성, 모든 곳에서 재사용
+- **설정 일관성**: `baseURL`, `timeout` 등 설정이 항상 동일
+- **성능**: 인스턴스 생성 비용 절감
+
+마치 사무실에서 복사기 1대를 여러 사람이 공유하는 것과 같다. 각자 복사기를 사는 것보다 훨씬 효율적이다.
+
+---
+
+## Presentation Layer: UI와 상호작용
+
+`Presentation` 레이어는 사용자와 직접 상호작용한다. 2가지로 구성된다:
+
+1. `Hook`: `Domain`의 `UseCase`를 호출
+2. `Component`: UI를 렌더링
+
+### Hook: UseCase 호출
+
+```ts
+// presentation/hooks/useProcessPayment.ts
+import { useMutation } from "@tanstack/react-query";
+import DIContainer from "@/di/DIContainer";
+import type { PaymentGateway } from "@/domain/entities/PaymentGateway";
+import type { User } from "@/domain/entities/User";
+
+interface ProcessPaymentParams {
+  userId: number;
+  amount: number;
+}
+
+export function useProcessPayment(paymentGateway: PaymentGateway) {
+  return useMutation<User, Error, ProcessPaymentParams>({
+    mutationFn: async ({ userId, amount }: ProcessPaymentParams) => {
+      // DI Container에서 UseCase를 가져온다
+      const processPaymentUseCase = DIContainer.processPaymentUseCase;
+      return await processPaymentUseCase.execute(
+        paymentGateway,
+        userId,
+        amount
+      );
+    },
+  });
+}
+```
+
+`useProcessPayment` Hook은 `DI Container`에서 `UseCase`를 가져온다. 의존성을 외부에서 주입받는 것이 아니라, **중앙 집중식으로 관리**한다.
+
+### Component: UI 렌더링
+
+```ts
+// presentation/components/PaymentButton.tsx
+import { useProcessPayment } from "@/presentation/hooks/useProcessPayment";
+import type { PaymentGateway } from "@/domain/entities/PaymentGateway";
+
+interface PaymentButtonProps {
+  paymentGateway: PaymentGateway;
+  userId: number;
+  paymentAmount: number;
+}
+
+export function PaymentButton({
+  paymentGateway,
+  userId,
+  paymentAmount,
+}: PaymentButtonProps) {
+  const { mutate, isPending, error } = useProcessPayment(paymentGateway);
+
+  const handleClick = () => {
+    mutate(
+      { userId, amount: paymentAmount },
+      {
+        onSuccess: (user) => {
+          alert(`결제 완료! 사용자: ${user.name}`);
+        },
+      }
+    );
+  };
+
+  return (
+    <div>
+      <button onClick={handleClick} disabled={isPending}>
+        {isPending ? "결제 중..." : "결제하기"}
+      </button>
+      {error && <p style={{ color: "red" }}>{error.message}</p>}
+    </div>
+  );
+}
+```
+
+`PaymentButton` 컴포넌트는 **UI만** 담당한다. 비즈니스 로직은 `UseCase`에 위임하고, `UseCase`는 `DI Container`가 제공한다.
+
+### 의존성 주입
+
+"어? `UseCase`를 어디서 가져왔지?"
+
+앞에서 만든 **DI Container**에서 가져온다! Hook에서 `DIContainer.processPaymentUseCase`를 호출하면, 모든 의존성이 자동으로 주입된 `UseCase`를 받을 수 있다.
+
+**왜 DI Container가 중요할까?**
+
+컴포넌트 내부에서 직접 생성하면 **테스트가 매우 어렵다**. 테스트하려면 실제 `HttpClient`를 모킹하거나, 테스트용 서버를 띄워야 한다.
+
+```ts
+// ❌ 나쁜 예시: 컴포넌트 내부에서 생성
+function PaymentButton({ paymentGateway, userId, paymentAmount }: Props) {
+  // 컴포넌트 안에서 직접 생성
+  const httpClient = new AxiosHttpClient();
+  const paymentGatewayRepo = new PaymentGatewayRepositoryImpl(httpClient);
+  const userRepo = new UserRepositoryImpl(httpClient);
+  const useCase = new ProcessPaymentUseCase(paymentGatewayRepo, userRepo);
+
+  const handleProcessPayment = async () => {
+    await useCase.execute(paymentGateway, userId, paymentAmount);
+  };
+  // ...
+}
+
+// 문제점:
+// 1. 실제 API를 호출함 (테스트가 느리고 불안정)
+// 2. Mock으로 바꿀 방법이 없음
+// 3. 네트워크 없으면 테스트 실패
+```
+
+DI Container를 사용하면 **중앙 집중식으로 의존성을 관리**하고, **테스트 시 Mock으로 교체**할 수 있다.
+
+#### 테스트에서 Mock 주입
+
+```ts
+// PaymentButton.test.tsx
+import { test, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, fireEvent, screen } from "@testing-library/react";
+import { PaymentButton } from "./PaymentButton";
+import DIContainer from "@/di/DIContainer";
+import type { PaymentGatewayRepository } from "@/domain/repositories/PaymentGatewayRepository";
+import type { UserRepository } from "@/domain/repositories/UserRepository";
+import { PaymentGateway } from "@/domain/entities/PaymentGateway";
+import { User } from "@/domain/entities/User";
+
+// Mock Repository 생성
+const mockPaymentGatewayRepository: PaymentGatewayRepository = {
+  getPaymentGateway: vi.fn(),
+  processPayment: vi.fn(),
+};
+
+const mockUserRepository: UserRepository = {
+  getUser: vi.fn(),
+  processPayment: vi.fn().mockResolvedValue(
+    new User({
+      id: 1,
+      name: "김사용자",
+      gatewayId: 1,
+      paymentBalance: 1_500, // 결제 후 잔액
+      walletBalance: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+  ),
+  processRefund: vi.fn(),
+};
+
+beforeEach(() => {
+  // 테스트 전에 Mock Repository 주입
+  DIContainer.setMockRepositories(
+    mockPaymentGatewayRepository,
+    mockUserRepository
+  );
+});
+
+afterEach(() => {
+  // 테스트 후 DI Container 초기화
+  DIContainer.reset();
+  vi.clearAllMocks();
+});
+
+test("결제 버튼 클릭 시 UseCase 호출", async () => {
+  const paymentGateway = new PaymentGateway({
+    id: 1,
+    name: "테스트결제사",
+    walletBalance: 100_000,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  render(
+    <PaymentButton
+      paymentGateway={paymentGateway}
+      userId={1}
+      paymentAmount={500}
+    />
+  );
+
+  fireEvent.click(screen.getByText("결제하기"));
+
+  // Mock Repository가 올바르게 호출되었는지 검증
+  await vi.waitFor(() => {
+    expect(mockUserRepository.processPayment).toHaveBeenCalledWith(1, 1_000);
+  });
+});
+```
+
+DI Container 덕분에 **실제 API를 호출하지 않고도** 컴포넌트를 테스트할 수 있다. `setMockRepositories`로 Mock을 주입하고, `reset()`으로 초기화하면 된다.
+
+### Adapter: Entity를 UI에 맞게 가공 (선택)
+
+대부분의 경우 Entity를 그대로 컴포넌트에서 사용하면 된다. 하지만 **복잡한 UI 로직**이나 **여러 Entity를 조합**해야 할 때는 `Adapter`를 사용한다.
+
+`Adapter`는 Entity를 UI에 최적화된 형태로 변환한다. 마치 콘센트 어댑터처럼, Entity(220V)를 UI(110V)에 맞게 변환하는 역할이다.
+
+Adapter는 Mapper와 마찬가지로 class가 아닌 **순수 함수**로 구현한다.
+
+#### 공통 유틸 함수: formatters.ts
+
+여러 Adapter에서 반복 사용되는 포맷팅 로직은 공통 유틸 함수로 분리한다.
+
+```ts
+// presentation/utils/formatters.ts
+
+/**
+ * 결제 금액을 포맷팅
+ * @example formatPayments(500) // "500P"
+ */
+export function formatPayments(payments: number): string {
+  return `${payments.toLocaleString()}P`;
+}
+
+/**
+ * 날짜를 한국 형식으로 포맷팅
+ * @example formatDate(new Date()) // "2025-01-08"
+ */
+export function formatDate(date: Date): string {
+  return date.toLocaleDateString("ko-KR");
+}
+
+/**
+ * 날짜시간을 한국 형식으로 포맷팅
+ * @example formatDateTime(new Date()) // "2025-01-08 15:30"
+ */
+export function formatDateTime(date: Date): string {
+  return date.toLocaleString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+```
+
+#### 언제 Adapter를 쓸까?
+
+다음과 같은 경우에만 `Adapter`를 사용한다:
+
+1. **여러 Entity를 조합**해야 할 때 (User + PaymentGateway)
+2. **복잡한 UI 변환**이 필요할 때 (숫자 → "500P", 날짜 → "2025-01-08")
+3. **Entity를 순수하게 유지**하고 싶을 때 (UI 로직을 Entity에 넣지 않기)
+
+#### Adapter의 3가지 핵심 장점
+
+##### 1. UI 로직 격리
+
+Entity는 **비즈니스 규칙**만 담당하고, UI 표현 로직은 `Adapter`가 담당한다.
+
+```ts
+// ❌ Entity에 UI 로직을 넣으면?
+class User {
+  getDisplayPayments(): string {
+    return `${this.paymentBalance.toLocaleString()}P`; // UI 로직이 Entity에!
+  }
+
+  getDisplayWallet(): string {
+    return `${this.walletBalance.toLocaleString()}원`; // UI 로직이 Entity에!
+  }
+}
+
+// ✅ Adapter 함수로 분리
+export function adaptUserForView(user: User) {
+  return {
+    displayPaymentBalance: formatPayments(user.paymentBalance), // UI 로직은 Adapter에
+    displayWalletBalance: formatCurrency(user.walletBalance),
+  };
+}
+```
+
+이렇게 분리하면 여러 컴포넌트에서 동일한 Adapter 함수를 재사용할 수 있다.
+
+##### 2. Entity 순수성 유지
+
+Entity는 UI를 전혀 모른다. 덕분에 **서버와 프론트엔드에서 동일한 Entity**를 사용할 수 있다.
+
+```ts
+// domain/entities/User.ts (프론트엔드 - 불변 패턴)
+export class User {
+  private readonly _paymentBalance: number; // 불변
+  private readonly _walletBalance: number; // 불변
+
+  // ✅ 비즈니스 규칙만 담당 (검증 로직)
+  canRefund(amount: number, minRefundAmount: number): boolean {
+    return this._paymentBalance >= amount && amount >= minRefundAmount;
+  }
+
+  canUseWallet(amount: number): boolean {
+    return this._walletBalance >= amount;
+  }
+
+  // ❌ 상태 변경 메서드는 없음 (서버가 상태 변경)
+  // processRefundToBalance() 같은 메서드 없음
+}
+```
+
+##### 3. 테스트 용이성
+
+Adapter는 **순수 함수**라서 테스트가 쉽다. 같은 입력을 넣으면 항상 같은 결과가 나오고, 외부 상태를 변경하지 않기 때문이다.
+
+```ts
+import { test, expect } from "vitest";
+import { adaptUserForView } from "@/presentation/adapters/userAdapter";
+
+test("userAdapter는 결제 금액과 지갑 잔액을 포맷팅한다", () => {
+  const user = new User({
+    id: 1,
+    name: "김사용자",
+    gatewayId: 1,
+    paymentBalance: 5_000,
+    walletBalance: 10_000,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  const view = adaptUserForView(user, paymentGateway, 5_000);
+
+  expect(view.displayPaymentBalance).toBe("5,000P");
+  expect(view.displayWalletBalance).toBe("10,000원");
+});
+```
+
+#### 예시 1: 복잡한 UI 변환 - userAdapter
+
+사용자 정보를 UI에 맞게 가공하는 Adapter 함수를 만들어보자.
+
+```ts
+// presentation/adapters/userAdapter.ts
+import type { User } from "@/domain/entities/User";
+import type { PaymentGateway } from "@/domain/entities/PaymentGateway";
+import {
+  formatCurrency,
+  formatPayments,
+  formatDate,
+} from "@/presentation/utils/formatters";
+
+interface UserView {
+  userId: number;
+  userName: string;
+  paymentGatewayName: string;
+  displayPaymentBalance: string; // "5,000P"
+  displayWalletBalance: string; // "10,000원"
+  canProcessRefund: boolean;
+  minConversionMessage: string; // "최소 5,000원부터 전환 가능"
+  lastUpdated: string; // "2025-01-08"
+}
+
+export function adaptUserForView(
+  user: User,
+  paymentGateway: PaymentGateway,
+  minConversionAmount: number
+): UserView {
+  return {
+    userId: user.id,
+    userName: user.name,
+    paymentGatewayName: paymentGateway.name,
+    displayPaymentBalance: formatPayments(user.paymentBalance),
+    displayWalletBalance: formatCurrency(user.walletBalance),
+    canProcessRefund: user.canRefund(user.paymentBalance, minConversionAmount),
+    minConversionMessage: getConversionMessage(minConversionAmount),
+    lastUpdated: formatDate(user.updatedAt),
+  };
+}
+
+function getConversionMessage(minAmount: number): string {
+  return `최소 ${formatCurrency(minAmount)}부터 전환 가능`;
+}
+```
+
+#### 컴포넌트에서 사용하기
+
+컴포넌트는 Adapter로 변환된 데이터를 사용한다.
+
+```ts
+// presentation/components/UserCard.tsx
+export function UserCard({ user, paymentGateway, minConversionAmount }: Props) {
+  const view = adaptUserForView(user, paymentGateway, minConversionAmount);
+
+  return (
+    <div className="user-card">
+      <h3>{view.userName}</h3>
+      <p className="payments">{view.displayPaymentBalance}</p>
+      <p className="wallet">{view.displayWalletBalance}</p>
+    </div>
+  );
+}
+```
+
+#### Adapter를 쓰지 않는 경우
+
+단순한 경우에는 Entity를 그대로 쓴다.
+
+```ts
+// presentation/components/SimpleRefundButton.tsx
+import type { User } from "@/domain/entities/User";
+
+interface Props {
+  user: User;
+  minConversionAmount: number;
+}
+
+export function SimpleRefundButton({ user, minConversionAmount }: Props) {
+  // Adapter 없이 Entity 직접 사용 (간단할 때)
+  return (
+    <button
+      disabled={!user.canRefund(user.paymentBalance, minConversionAmount)}
+    >
+      {user.paymentBalance}P 환불하기
+    </button>
+  );
+}
+```
+
+---
+
+## 전체 결제 처리 Flow: 모든 레이어 통과하기
+
+이제 관리자가 "결제 처리" 버튼을 클릭했을 때 **모든 레이어**를 어떻게 통과하는지 살펴보자.
+
+### 1. 관리자가 버튼 클릭
+
+```ts
+// Presentation Layer: Component
+<button onClick={handleClick}>결제 처리</button>
+```
+
+### 2. Hook이 UseCase 호출
+
+```ts
+// Presentation Layer: Hook
+const transaction = await processPaymentUseCase.execute(
+  gatewayId,
+  userId,
+  paymentAmount
+);
+```
+
+### 3. UseCase가 비즈니스 로직 실행
+
+```ts
+// Domain Layer: UseCase
+PaymentGateway.validatePaymentAmount(amount); // 결제 금액 검증
+gateway.canProcessPayment(amount); // 예치금 잔액 검증
+const transactionDto = await this.paymentRepository.processPayment(
+  gatewayId,
+  userId,
+  amount
+); // API 호출
+```
+
+### 4. Repository가 DataSource 호출
+
+```ts
+// Data Layer: Repository
+return this.paymentDataSource.processPayment(gatewayId, userId, amount);
+```
+
+### 5. DataSource가 API 호출
+
+```ts
+// Data Layer: DataSource
+return this.httpClient.post<PaymentTransactionDto>("/api/payments/process", {
+  gateway_id: gatewayId,
+  user_id: userId,
+  amount,
+});
+```
+
+### 6. HTTP Client가 실제 요청
+
+```ts
+// Infrastructure Layer: HTTP Client
+const response = await axios.post(url, data);
+return response.data;
+```
+
+### 7. 응답이 다시 역순으로 돌아옴
+
+```
+Infrastructure → Data (DataSource) → Data (Repository) → Data (Mapper) → Domain (Entity) → Presentation
+```
+
+```ts
+// Data Layer: Mapper 함수
+const transaction = mapPaymentTransactionDtoToDomain(transactionDto);
+```
+
+### 7. Entity가 컴포넌트로 전달
+
+```ts
+// Presentation Layer: Component
+alert(`결제 처리 완료! 거래 ID: ${transaction.id}`);
+```
+
+### 전체 Flow 요약
+
+```
+👤 관리자 버튼 클릭
+  ↓
+🎨 Presentation: Hook → UseCase 호출
+  ↓
+🧠 Domain: UseCase → 비즈니스 로직 + Repository 호출
+  ↓
+📦 Data: Repository → HTTP Client 호출
+  ↓
+🌐 Infrastructure: HTTP Client → API 요청
+  ↓
+🌐 Infrastructure: 응답 받음 (DTO)
+  ↓
+📦 Data: Mapper 함수 → DTO를 Entity로 변환
+  ↓
+🧠 Domain: Entity 반환
+  ↓
+🎨 Presentation: UI 업데이트
+```
+
+---
+
+## 유지보수가 쉬운 이유: 실무 시나리오
+
+클린 아키텍처의 진짜 강점은 **변경에 강하다**는 점이다. 실제 상황을 살펴보자.
+
+### 시나리오 1: 기획자 - "결제 처리 후 성공 토스트 메시지를 보여주세요"
+
+#### Before (클린 아키텍처 없을 때)
+
+```js
+// ❌ 여러 컴포넌트를 찾아서 각각 수정해야 함
+// components/ProcessPaymentButton.jsx
+const handleClick = async () => {
+  const response = await axios.post("/api/process-payment", data);
+  toast.success("결제를 처리했다"); // ← 추가
+};
+
+// components/QuickPaymentButton.jsx
+const handleQuickPayment = async () => {
+  const response = await axios.post("/api/quick-payment", data);
+  toast.success("빠른 결제를 처리했다"); // ← 추가
+};
+
+// components/RecurringPaymentButton.jsx
+const handleRecurring = async () => {
+  const response = await axios.post("/api/recurring-payment", data);
+  toast.success("정기 결제를 처리했다"); // ← 추가
+};
+```
+
+#### After (클린 아키텍처)
+
+```ts
+// ✅ Hook 1개만 수정하면 모든 컴포넌트에 적용됨
+// presentation/hooks/useProcessPayment.ts
+export function useProcessPayment(
+  gateway: PaymentGateway,
+  processPaymentUseCase: ProcessPaymentUseCase
+) {
+  return useMutation<User, Error, ProcessPaymentParams>({
+    mutationFn: async ({ userId, amount }: ProcessPaymentParams) => {
+      return await processPaymentUseCase.execute(gateway, userId, amount);
+    },
++   onSuccess: () => {
++     toast.success("결제를 처리했다");
++   },
+  });
+}
+```
+
+**변경 범위**: Hook 1개 파일 (모든 결제 처리 버튼에 자동 적용)
+
+---
+
+### 시나리오 2: 서버 - "API 응답 구조가 바뀌었어요"
+
+서버가 `transaction_id` 대신 `id`를 보내기 시작했다.
+
+#### Before (클린 아키텍처 없을 때)
+
+```js
+// ❌ 모든 컴포넌트를 수정해야 함
+// components/ProcessPaymentButton.jsx
+const transactionId = response.data.transaction_id; // ← 여기
+alert(`결제 처리 완료! ID: ${transactionId}`);
+
+// components/PaymentHistory.jsx
+const id = item.transaction_id; // ← 여기도
+
+// components/TransactionDetail.jsx
+const transactionId = transaction.transaction_id; // ← 여기도
+```
+
+#### After (클린 아키텍처)
+
+```diff
+// ✅ Data Layer의 Mapper 함수만 수정
+// data/mappers/paymentTransactionMapper.ts
+  export function mapPaymentTransactionDtoToDomain(dto: PaymentTransactionDto): PaymentTransaction {
+    return new PaymentTransaction({
+-     id: dto.transaction_id,
++     id: dto.id,
+      gatewayId: dto.gateway_id,
+      userId: dto.user_id,
+      amount: dto.amount,
+      // ...
+    });
+  }
+```
+
+**변경 범위**: Data Layer의 Mapper 함수 1개 파일
+
+나머지 코드는 `PaymentTransaction` Entity의 `id` 속성만 쓰므로 **아무 영향을 받지 않는다**.
+
+---
+
+### 시나리오 3: 기획자 - "환불 최소 금액을 5,000원에서 10,000원으로 바꿔주세요"
+
+#### Before (클린 아키텍처 없을 때)
+
+```js
+// ❌ 컴포넌트 곳곳의 if문을 찾아서 수정
+// components/RefundButton.jsx
+if (amount < 5_000) {
+  alert("최소 환불 금액은 5,000원입니다");
+}
+
+// components/RefundForm.jsx
+if (payment < 5_000) {
+  return "최소 5,000원 이상";
+}
+
+// components/PaymentInput.jsx
+<input min={5_000} />;
+```
+
+#### After (클린 아키텍처)
+
+```diff
+// ✅ Domain Layer의 Entity 1줄만 수정
+// domain/entities/User.ts
+- static readonly MIN_REFUND_AMOUNT = 5_000;
++ static readonly MIN_REFUND_AMOUNT = 10_000;
+```
+
+**변경 범위**: Domain Layer의 Entity 1줄
+
+모든 곳에서 `User.MIN_REFUND_AMOUNT`를 참조하므로 **자동으로 적용**된다.
+
+---
+
+### 시나리오 4: 개발자 - "테스트 코드를 작성하고 싶어요"
+
+#### Before (클린 아키텍처 없을 때)
+
+```js
+// ❌ 테스트 복잡함 (API, 서버 응답 형식, 엔드포인트 등 모두 모킹 필요)
+// import { test } from "vitest";
+test("환불 버튼 클릭 시 환불", async () => {
+  // axios 모킹 → 서버 응답 형식 → snake_case 처리 → ...
+  // 비즈니스 로직만 테스트하고 싶은데 API 의존성이 너무 많다
+});
+```
+
+#### After (클린 아키텍처)
+
+```ts
+// ✅ Domain Layer 독립 테스트 가능
+import { test, expect } from "vitest";
+import { User } from "@/domain/entities/User";
+
+test("최소 환불 금액 미만이면 환불 불가", () => {
+  const user = new User({
+    id: 1,
+    name: "김사용자",
+    gatewayId: 1,
+    paymentBalance: 8_000,
+    walletBalance: 0,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  expect(user.canRefund(8_000, 10_000)).toBe(false);
+});
+```
+
+```ts
+// ✅ UseCase 테스트 (Repository 모킹)
+test("예치금 부족 시 에러", async () => {
+  const mockRepository = { processPayment: vi.fn() };
+  const useCase = new ProcessPaymentUseCase(mockRepository);
+  const gateway = new PaymentGateway({
+    id: 1,
+    name: "테스트결제대행사",
+    walletBalance: 3_000,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  await expect(useCase.execute(gateway, 1, 5_000)).rejects.toThrow(
+    "예치금이 부족하다"
+  );
+});
+```
+
+**변경 범위**: 테스트만 추가 (기존 코드 수정 불필요)
+
+---
+
+### 시나리오 5: 기획자 - "예치금 충전 기능을 추가해주세요"
+
+새로운 기능을 추가할 때 클린 아키텍처의 진가가 드러난다.
+
+#### Before (클린 아키텍처 없을 때)
+
+```js
+// ❌ 여러 곳을 수정해야 함
+// components/DepositButton.js
+const handleDeposit = async () => {
+  // 충전 로직을 처음부터 작성
+  if (depositAmount <= 0) {
+    alert("충전 금액은 0보다 커야 합니다");
+    return;
+  }
+
+  const response = await axios.post(`/api/payment-gateways/deposit`, {
+    payment_gateway_id: gatewayId,
+    amount: depositAmount,
+  });
+  // ...
+};
+
+// components/QuickDepositButton.jsx
+// 똑같은 충전 로직 복사...
+
+// components/WalletPage.jsx
+// 또 똑같은 충전 로직 복사...
+```
+
+#### After (클린 아키텍처)
+
+클린 아키텍처에서는 **각 레이어에 필요한 부분만 추가**하면 된다.
+
+```ts
+// UseCase 추가
+export class DepositToGatewayUseCase {
+  async execute(gateway: PaymentGateway, amount: number) {
+    if (amount <= 0 || amount > 10_000_000) {
+      throw new Error("충전 금액은 0원~1,000만원이어야 합니다");
+    }
+    return await this.paymentGatewayRepository.deposit(gateway.id, amount);
+  }
+}
+
+// Hook 추가
+export function useDeposit(gateway, depositUseCase) {
+  return useMutation({
+    mutationFn: ({ amount }) => depositUseCase.execute(gateway, amount),
+    onSuccess: (updated) =>
+      queryClient.setQueryData(["gateway", updated.id], updated),
+  });
+}
+```
+
+**변경 범위**: 각 레이어에 1개 파일씩 추가 (기존 코드 수정 없음). 로직을 복사하지 않고 재사용한다.
+
+---
+
+### 시나리오 6: 개발자 - "결제와 환불을 동시에 누르면 상태가 꼬여요"
+
+실제 서비스에서 자주 발생하는 문제다. 사용자가 "결제" 버튼을 누르고, 응답이 오기 전에 "환불" 버튼을 또 누르면 어떻게 될까?
+
+#### 문제: 클라이언트가 상태를 직접 변경하면 동기화 문제 발생
+
+```ts
+// ❌ Entity가 직접 상태를 변경 → 서버와 불일치
+user.receivePayment(5_000); // 클라이언트: 15,000
+// 서버 응답 (수수료 차감): 14,950 → 상태 불일치!
+```
+
+#### 해결: Entity는 readonly, 서버가 상태 결정
+
+```ts
+// ✅ Entity는 검증만 수행
+class User {
+  private readonly _paymentBalance: number;
+  canRefund(amount: number, minRefundAmount: number): boolean {
+    return this._paymentBalance >= amount && amount >= minRefundAmount;
+  }
+}
+
+// UseCase는 서버 응답만 사용
+const processPaymentUseCase = async (user: User, amount: number) => {
+  PaymentGateway.validatePaymentAmount(amount);
+  return await api.processPayment(user.id, amount);
+};
+```
+
+TanStack Query가 서버 응답으로 캐시를 자동 업데이트한다.
+
+**핵심**: **"Tanstack Query가 상태 관리를 전담한다"**. Entity에서도 상태를 관리하면 Tanstack Query 캐시와 불일치가 발생한다. 따라서 Entity는 불변(`readonly`)으로 만들어 검증만 담당한다.
+
+| 구분               | Mutable Entity (❌)                   | Immutable Entity (✅)               |
+| ------------------ | ------------------------------------- | ----------------------------------- |
+| **상태 관리 주체** | Entity + Tanstack Query (중복)        | Tanstack Query만                    |
+| **상태 불일치**    | Entity와 캐시가 다를 수 있음          | 발생하지 않음 (캐시만 상태 관리)    |
+| **동기화 방식**    | 수동 (서버 응답을 Entity에 반영 필요) | 자동 (Tanstack Query가 캐시 갱신)   |
+| **동시 요청 처리** | Race Condition 발생 가능              | Tanstack Query가 순차 처리          |
+| **디버깅**         | 어디서 상태가 바뀌었는지 추적 어려움  | Tanstack Query DevTools로 추적 쉬움 |
+
+---
+
+### 유지보수 비용 비교
+
+| 변경 사항           | Before (안티패턴)                           | After (클린 아키텍처)                |
+| ------------------- | ------------------------------------------- | ------------------------------------ |
+| 버튼 색상 변경      | 여러 컴포넌트 수정                          | Presentation 레이어만                |
+| API 응답 형식 변경  | 서버에서 변경된 필드명 모든 컴포넌트 수정   | Data 레이어(Mapper)만                |
+| 최소 금액 규칙 변경 | 컴포넌트마다 하드코딩된 검증 로직 수정      | Domain 레이어(Entity) 상수 1줄       |
+| 테스트 코드 작성    | 컴포넌트가 API/전역 상태 의존으로 모킹 복잡 | Domain 레이어 순수 함수 단위 테스트  |
+| 환불 기능 추가      | 여러 컴포넌트에 중복 로직 복사              | 단일 책임에 맞게 레이어별로 추가     |
+| 새 결제 수단 추가   | 전체 컴포넌트에서 분기 처리 추가            | Data 레이어(DataSource/Repository)만 |
+| axios → fetch 변경  | 모든 API 호출 코드 수정                     | Infrastructure 레이어(HttpClient)만  |
+
+---
+
+## 도입 후 기대 효과
+
+우리 팀은 기존 `Feature Based Architecture`에서 `Domain Based Clean Architecture`로 전환했다.
+
+팀원들에게 위에서 설명한 장점들을 정리해서 전달했다: "서버 필드명이 바뀌어도 `Mapper` 1줄만 고치면 된다", "비즈니스 로직이 `Entity`에 모여 있어 테스트가 쉽다", "레이어가 명확해 AI가 정확한 위치에 코드를 생성한다".
+
+특히 우리 서비스는 `Next.js` 기반이라 서버 환경과 클라이언트 환경을 모두 고려해야 했는데, 레이어가 명확할수록 개선과 리팩토링이 훨씬 수월했다.
+
+사실 제일 걱정했던 부분은 내가 이 아키텍처 변경을 주도한 만큼, 기존 코드베이스 전체를 전환해야 한다는 책임감이었다. 하지만 AI Prompt를 활용해 전환했더니 **생각 이상으로 빠르게 성공**했다.
+
+처음엔 팀원들도 "조금 과한 설계 아닌가?" 싶어했지만, 변경이 잦은 우리 서비스 환경(금융사 정책 변경, API 응답 형식 변경)을 고려하면 왜 이 구조가 필요한지 설명했더니 이해하기 시작했다.
+
+### 코드 리뷰가 오히려 더 쉬워질 것이다
+
+파일 개수는 2~3배 늘어나지만, 레이어가 명확하기 때문에 **필요한 부분만 선택적으로 볼 수 있다**. 비즈니스 로직 변경이라면 `Domain/Entity`만 보면 되고, API 변경이라면 `Data/DataSource`만 보면 된다.
+
+특히 **테스트 코드 위주로 리뷰**하는 것이 가능해진다. 구조가 테스트하기 좋게 설계되어 있다 보니, 팀원들이 테스트 코드를 더 많이 작성하게 되었다. 리뷰어는 테스트 코드를 먼저 보고 "이 케이스도 추가하면 좋겠어요", "이 엣지 케이스는 어떻게 처리하나요?" 같은 본질적인 질문을 할 수 있다. 코드 품질이 자연스럽게 높아질 것으로 기대한다.
+
+### AI가 정확한 위치에 코드를 생성한다
+
+아키텍처 구조를 프롬프트에 명확히 작성해두면, AI가 **정확히 어느 레이어에 어떤 코드를 작성해야 하는지** 이해한다. 다음은 실제로 사용하는 AI 프롬프트 예시다:
+
+```
+# CLEAN ARCHITECTURE RULES
+
+## DI Layer (Dependency Injection)
+- MUST: Use singleton pattern (??= operator) for all instances
+- MUST: Provide factory methods (static getters) for dependencies
+- MUST NOT: Contain any business logic
+- MUST NOT: Directly instantiate dependencies outside of getters
+
+## Core Layer (Shared Utilities)
+- MUST: Be pure, reusable utility functions
+- MUST: Have zero dependencies on other layers
+- MUST NOT: Import from Domain, Data, Infrastructure, or Presentation
+- MUST NOT: Contain framework-specific code
+
+## Infrastructure Layer (External Adapters)
+- MUST: Implement port interfaces defined in Domain
+- MUST: Handle all external system communication (HTTP, Storage, etc.)
+- MUST NOT: Know about Domain entities or business rules
+- MUST NOT: Transform data formats (use Data layer Mappers instead)
+
+## Data Layer (Data Access & Transformation)
+- MUST: Implement Repository interfaces from Domain
+- MUST: Use Mapper to convert DTO ↔ Entity
+- MUST: Handle all DTO type definitions
+- MUST NOT: Contain validation or business logic
+- MUST NOT: Skip Mapper and directly pass DTO to Domain
+
+## Domain Layer (Business Logic)
+- MUST: Contain all business rules and validation in Entities
+- MUST: Define Repository interfaces (ports)
+- MUST: Be completely independent (no imports from other layers)
+- MUST NOT: Call APIs or access external systems directly
+- MUST NOT: Import from Data, Infrastructure, or Presentation layers
+
+## Presentation Layer (UI & Hooks)
+- MUST: Use hooks to consume UseCases
+- MUST: Handle UI state and user interactions only
+- MUST NOT: Contain business logic or validation
+- MUST NOT: Call Repository or DataSource directly
+- MUST NOT: Import DTOs (only work with Entities)
+
+---
+
+Example Task:
+"Add minimum payment amount validation logic"
+
+Expected AI Response:
+- File: `src/Domain/Entity/PaymentGateway.ts`
+- Action: Add validation method to Entity class
+- Reason: Business rule MUST be in Domain Layer
+
+Example Task:
+"Server changed response format: payment_id → id"
+
+Expected AI Response:
+- File: `src/Data/Mapper/PaymentGatewayMapper.ts`
+- Action: Update single line in Mapper
+- Reason: DTO transformation MUST happen only in Mapper
+```
+
+폴더 구조가 명확하지 않으면 AI가 어디에 코드를 넣을지 헤매지만, 이렇게 **레이어별 MUST/MUST NOT 규칙**을 명시하면 AI가 **개발자가 의도한 대로, 정해진 틀 내에서 기능을 추가하고 테스트 코드를 작성**할 수 있다. 아키텍처 가이드라인을 벗어나지 않으면서도 빠르게 개발할 수 있는 것이다.
+
+### 장기적으로 기대하는 효과
+
+- **심리적 안정감**: "이거 고치면 어디 터질까" 불안감 소멸. 변경 범위가 명확하므로 배포가 두렵지 않음
+- **온보딩 시간 단축**: 새 팀원이 구조만 이해하면 바로 기여 가능. "이 기능은 어디 있나요?" 질문이 줄어들 것
+- **테스트 커버리지 증가**: `UseCase`는 모킹 없이 테스트 가능. 테스트 작성이 즐거워져서 커버리지가 자연스럽게 높아질 것
+- **AI 활용도 증가**: 테스트 코드가 늘어나니 조금 더 편하게 AI를 활용할 수 있다. "내가 돌린 AI 때문에 기존 코드가 무너지지 않을까?" 하는 걱정 없이 AI를 활용할 수 있는 것이다
+
+### 균형잡힌 평가: 만능은 아니다
+
+클린 아키텍처가 만능은 아니다. **작은 프로젝트**나 **일회성 프로토타입**에는 과할 수 있다. 초기 비용이 크기 때문이다.
+
+하지만 **우리 서비스**처럼 외부 정책 변경이 잦고, 팀원이 여럿이며, 나처럼 프론트엔드와 서버 개발을 함께 하거나 장기 운영이 예정되어 있다면 초기 비용을 감수할 가치가 충분하다.
+
+---
+
+## 핵심 정리
+
+클린 아키텍처를 한 문장으로 정리하면: **역할을 분리해서 변경에 강한 구조를 만드는 것**이다.
+
+### 6개 레이어와 역할
+
+코드를 6개 레이어로 나눠 각자의 책임을 명확히 한다:
+
+- **`DI`** (의존성 주입) - 모든 레이어를 조합하고 주입
+- **`Core`** (공통 기능) - 모든 레이어에서 쓰는 순수 유틸리티
+- **`Infrastructure`** (외부 세계 격리) - HTTP 클라이언트, 스토리지 등 외부 도구 추상화
+- **`Data`** (외부 데이터 변환) - API 호출 + DTO ↔ Entity 변환
+- **`Domain`** (비즈니스 규칙) - 검증 로직, 엔티티, 유스케이스 등 핵심 로직
+- **`Presentation`** (UI 상호작용) - 훅과 컴포넌트로 UI 관리
+
+### 핵심 원칙 3가지
+
+1. **Domain은 완전히 독립** - 다른 레이어를 import하지 않음
+2. **의존성은 항상 안쪽으로** - Presentation → Domain ← Data
+3. **변환은 Mapper가 유일** - DTO와 Entity 사이는 Mapper만 통과
+
+### 언제 도입하면 좋을까?
+
+다음 상황이라면 클린 아키텍처가 빛을 발한다:
+
+- 기획이 자주 바뀌는 서비스
+- 6개월 이상 운영할 프로젝트
+- 테스트 코드가 필요한 경우
+- 프론트엔드와 백엔드를 함께 개발하는 경우
+
+### 실제 유지보수 비용 비교
+
+**API 필드명 변경 시**:
+
+- Before: 10개 파일 수정 (모든 컴포넌트)
+- After: 1개 파일 수정 (Mapper)
+
+**비즈니스 규칙 변경 시**:
+
+- Before: 5개 파일 수정 (중복된 검증 로직)
+- After: 1줄 수정 (Entity 메서드)
+
+**결제 수단 추가 시**:
+
+- Before: 전체 컴포넌트 분기 처리
+- After: Data 레이어만 수정
+
+### 마지막으로
+
+클린 아키텍처는 초기 비용이 있다. 파일이 많아지고 구조가 복잡해 보인다.
+
+하지만 장기적으로는 유리하다:
+
+- 변경에 강하다
+- 테스트가 쉽다
+- AI 활용이 좋다
+- 코드 수정의 두려움이 사라진다
+
+결국 팀 전체의 만족도가 높아진다. "이거 고치면 어디 터질까" 걱정 없이 개발할 수 있는 것, 그게 클린 아키텍처의 가장 큰 가치다.
