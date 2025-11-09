@@ -2419,30 +2419,58 @@ Expected AI Response:
 
 ### 실제 유지보수 비용 비교
 
-**API 필드명 변경 시**:
+글 전체에서 다뤘던 결제 대행사(`PaymentGateway`) 예시로 실제 변경 비용을 비교해보자.
 
-- Before: 10개 파일 수정 (모든 컴포넌트)
-- After: 1개 파일 수정 (Mapper)
+**시나리오 1: API 필드명 변경** (`wallet_balance` → `available_balance`로 변경)
 
-**비즈니스 규칙 변경 시**:
+- **Before (클린 아키텍처 없이)**: `ProcessPaymentButton.tsx`, `PaymentStatusCard.tsx`, `RefundModal.tsx` 등 `response.data.wallet_balance`를 사용하는 10개 컴포넌트를 모두 찾아 수정해야 한다. 하나라도 놓치면 런타임 에러가 발생한다
+- **After (클린 아키텍처 적용)**: `PaymentGatewayMapper.ts` 1개 파일의 매핑 로직만 수정하면 된다. 모든 컴포넌트는 `PaymentGateway` Entity를 사용하므로 영향을 받지 않는다
 
-- Before: 5개 파일 수정 (중복된 검증 로직)
-- After: 1줄 수정 (Entity 메서드)
+```ts
+// data/mappers/paymentGatewayMapper.ts
+export function mapPaymentGatewayDtoToDomain(dto: PaymentGatewayDto) {
+  return new PaymentGateway({
+    // ...
+-   walletBalance: validated.wallet_balance,  // 기존
++   walletBalance: validated.available_balance,  // 변경
+  });
+}
+```
 
-**결제 수단 추가 시**:
+**시나리오 2: 비즈니스 규칙 변경** (최소 결제 금액 1,000원 → 5,000원으로 변경)
 
-- Before: 전체 컴포넌트 분기 처리
-- After: Data 레이어만 수정
+- **Before (클린 아키텍처 없이)**: 검증 로직이 `ProcessPaymentButton.tsx`, `QuickPaymentForm.tsx`, `PaymentAmountInput.tsx` 등 5개 컴포넌트에 중복되어 있다. 각 파일을 찾아 `1_000`을 `5_000`으로 수정해야 한다
+- **After (클린 아키텍처 적용)**: `PaymentGateway.ts` Entity의 `canProcessPayment()` 메서드 **1줄**만 수정하면 된다
 
-### 마지막으로
+```ts
+// domain/entities/PaymentGateway.ts
+canProcessPayment(amount: number): boolean {
+- const MIN_PAYMENT = 1_000;  // 기존
++ const MIN_PAYMENT = 5_000;  // 변경
+  return this._walletBalance >= amount && amount >= MIN_PAYMENT;
+}
+```
+
+**시나리오 3: 외부 API 변경** (결제 대행사 API v1 → v2로 업그레이드)
+
+- **Before (클린 아키텍처 없이)**: API를 호출하는 모든 컴포넌트에서 엔드포인트(`/v1/payments` → `/v2/payments`)와 요청/응답 형식을 수정해야 한다. 각 컴포넌트마다 `fetch` 호출 부분을 찾아 고쳐야 한다
+- **After (클린 아키텍처 적용)**: `PaymentGatewayDataSource.ts`와 `PaymentGatewayMapper.ts`만 수정하면 된다. `Domain`과 `Presentation` 레이어는 API 버전을 알 필요가 없으므로 변경이 필요 없다
+
+이처럼 변경 범위가 명확하고 좁아진다. 마치 물류센터의 **한 구역만 개선**하면 되는 것과 같다.
+
+---
+
+## 마지막으로
 
 클린 아키텍처는 초기 비용이 있다. 파일이 많아지고 구조가 복잡해 보인다.
 
 하지만 장기적으로는 유리하다:
 
-- 변경에 강하다
-- 테스트가 쉽다
-- AI 활용이 좋다
-- 코드 수정의 두려움이 사라진다
+- **변경에 강하다**: API 응답 형식이 바뀌어도 `Mapper`만 수정하면 된다. 컴포넌트를 뒤지며 `response.data.xxx`를 찾아 수정할 필요가 없다
+- **테스트가 쉽다**: `UseCase`는 의존성이 주입되므로 Mock Repository만 전달하면 순수 함수처럼 테스트할 수 있다. "이 함수 테스트하려면 뭘 모킹해야 하지?" 고민이 사라진다
+- **AI 활용이 좋다**: 레이어별 규칙이 명확하므로 프롬프트를 명확하게 작성하면 AI가 정해진 틀 안에서 코드를 생성한다. "AI가 아키텍처를 망가뜨리면 어쩌지?" 걱정 없이 코드 생성을 맡길 수 있다
+- **코드 수정의 두려움이 사라진다**: 변경 범위가 명확하므로 "이거 고치면 어디 터질까?" 걱정 없이 배포할 수 있다
 
-결국 팀 전체의 만족도가 높아진다. "이거 고치면 어디 터질까" 걱정 없이 개발할 수 있는 것, 그게 클린 아키텍처의 가장 큰 가치다.
+결국 팀 전체의 만족도가 높아진다. "이거 고치면 어디 터질까", "기획이 변경되면 어떻게 해야 할까"에 대한 걱정을 완전히 없애지는 못하지만, 어느 정도 줄이며 개발할 수 있는 것.
+
+이것이 견고한 아키텍처의 가장 큰 가치라고 생각한다.
