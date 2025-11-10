@@ -21,7 +21,9 @@
       "Bash(grep:*)",
       "Bash(/tmp/part1.txt)",
       "Bash(/tmp/part3.txt)",
-      "mcp__sequential-thinking__sequentialthinking"
+      "mcp__sequential-thinking__sequentialthinking",
+      "Bash(tree:*)",
+      "mcp__github__search_repositories"
     ],
     "deny": [],
     "ask": []
