@@ -1,7 +1,7 @@
 ---
 title: 리액트 클린 아키텍처 - 6개 레이어로 설계하는 유지보수성
 date: 2025-11-09
-updatedDate: 2025-11-11
+updatedDate: 2025-11-12
 tags:
   [
     리액트,
@@ -19,11 +19,19 @@ category: DEVELOPMENT
 image: "/images/react-clean-architecture/thumbnail.webp"
 ---
 
-우리 팀이 만드는 서비스는 외부 카드사와 협업하여 커스텀 디자인 카드를 제작하고, 이를 관리하는 `사내 SaaS 툴`이다. 문제는 카드사 API가 빈약했다는 점이다. 필요한 API는 제공되지 않고, 있는 API들은 우리 요구사항과 맞지 않았다. 결국 **여러 API를 조합**하거나, **불필요한 호출을 반복**하면서 어떻게든 기능을 만들어냈다.
+우리 팀이 만드는 서비스는 외부 카드사와 협업하여 커스텀 디자인 카드를 제작하고, 이를 관리하는 사내 SaaS 툴이다.
 
-더 큰 문제는 **기획이 자주 바뀌었다**는 점이다. 카드사의 API 개선 일정은 늘 불명확했고, 임시로 만든 코드가 쌓였다. 데이터 싱크를 맞추는 복잡한 로직이 곳곳에 흩어졌다. 팀원들은 잦은 변경에 지쳤고, 나중에 카드사가 제대로 된 API를 제공하면 빠르게 교체할 수 있도록 **외부 의존성을 격리**해야 했다.
+처음엔 "빠르게 작동하는 코드"가 목표였다. 필요한 API가 없으면 여러 API를 조합했고, 데이터 싱크가 안 맞으면 컴포넌트에서 직접 처리했다. 컴포넌트 안에 `fetch` 호출이 늘어났고, 검증 로직이 여기저기 중복됐다.
 
-서버나 앱 개발에서는 클린 아키텍처로 이런 문제를 해결한다. 하지만 리액트에서는 관련 자료가 많지 않았다. `Flutter`, `Kotlin`, `Swift` 같은 객체 지향 프론트엔드 생태계를 참고해 **우리 팀 상황에 맞는 클린 아키텍처**를 만들었다. 결과는 어땠을까? 외부 API가 바뀌어도 **`Data` 레이어만 수정**하면 되는 구조가 만들어졌다. 여러 API를 조합하던 복잡한 로직도 깔끔하게 정리됐다.
+문제는 **외부 카드사 사정으로 API가 갑자기 바뀔 수 있다**는 점이었다. 자주 바뀌지는 않지만, 한 번 바뀌면 파급력이 컸다. 필드명이 바뀌면 `response.data.wallet_balance`를 사용하는 10개 컴포넌트를 모두 찾아 수정해야 했다. 하나라도 놓치면 런타임 에러가 발생했다.
+
+더 큰 문제는 **기획이 계속 바뀐다**는 점이었다. 최소 결제 금액이 1,000원에서 5,000원으로 바뀌면, 검증 로직이 중복된 5개 컴포넌트를 찾아 수정해야 했다.
+
+이런 반복 속에서 우리는 깨달았다. "외부 의존성을 격리하지 않으면, 변경 비용은 계속 늘어난다." 서버나 앱 개발에서는 클린 아키텍처로 이런 문제를 해결한다는 걸 알았지만, 리액트에서는 관련 자료가 많지 않았다.
+
+`Flutter`, `Kotlin`, `Swift` 같은 객체 지향 생태계를 참고해 우리 팀 상황에 맞는 클린 아키텍처를 만들었다. 결과는 어땠을까?
+
+외부 API가 바뀌어도 **`Mapper` 1개 파일만 수정**하면 되는 구조가 만들어졌다. 비즈니스 규칙이 바뀌어도 **`Entity` 메서드 1줄만 수정**하면 됐다. 여러 API를 조합하던 복잡한 로직도 `UseCase`로 깔끔하게 정리됐다.
 
 어떻게 이런 변화가 가능했을까? 먼저 기존 방식의 문제점부터 살펴보자.
 
@@ -31,7 +39,7 @@ image: "/images/react-clean-architecture/thumbnail.webp"
 
 ## 기존 방식의 한계점
 
-이런 사례로 한번 이해해보자. 결제 대행사 예치금으로 사용자에게 결제를 처리하는 컴포넌트가 있다.
+이런 사례로 한 번 이해해보자. 결제 대행사 예치금으로 사용자에게 결제를 처리하는 컴포넌트가 있다.
 
 ```ts
 // 클린 아키텍처를 적용하지 않은 코드
@@ -104,73 +112,306 @@ export function ProcessPaymentButton({
 
 ### 한계 1: HTTP 클라이언트 교체가 어렵다
 
+프로젝트 초기에는 `axios`를 사용했다. 그런데 번들 크기를 줄이기 위해 `fetch`로 바꾸기로 했다고 가정해보자.
+
+**현재 구조 (`axios` 직접 사용)**:
+
 ```ts
-// axios를 컴포넌트에서 직접 사용
-const { data: paymentGateway } = useQuery({
-  queryKey: ["paymentGateway", paymentGatewayId],
+// PaymentGatewayList.tsx
+const { data } = useQuery({
+  queryKey: ["paymentGateway", id],
   queryFn: async () => {
-    const response = await axios.get(
-      `/api/payment-gateways/${paymentGatewayId}`
-    );
+    const response = await axios.get(`/api/payment-gateways/${id}`);
     return response.data;
   },
 });
 
-const response = await axios.post("/api/payments/process", {
-  payment_gateway_id: paymentGatewayId,
-  user_id: userId,
-  payment_amount: paymentAmount,
+// PaymentForm.tsx
+const mutation = useMutation({
+  mutationFn: async (data) => {
+    const response = await axios.post("/api/payments/process", data);
+    return response.data;
+  },
 });
+
+// TransactionHistory.tsx
+const { data } = useQuery({
+  queryKey: ["transactions"],
+  queryFn: async () => {
+    const response = await axios.get("/api/transactions");
+    return response.data;
+  },
+});
+
+// 실제로는 10개 이상의 컴포넌트에서 axios를 직접 사용
 ```
 
-`axios`를 직접 사용하고 있다. 만약 `fetch`나 다른 HTTP 클라이언트로 바꾸고 싶다면, 해당 코드를 사용하는 모든 곳을 찾아 수정해야 한다. 테스트할 때도 `axios` 모킹, 서버 응답 형식, API 엔드포인트를 모두 알아야 해서 복잡하다.
+`axios`를 `fetch`로 바꾸려면 어떻게 해야 할까?
+
+**문제점**:
+
+- `axios`를 사용하는 모든 컴포넌트를 찾아야 함 (10개 이상)
+- 각 컴포넌트마다 에러 처리 방식이 다름 (`axios`는 자동으로 에러 던짐, `fetch`는 수동 확인)
+- 테스트 코드도 모두 수정 필요 (`axios` 모킹 → `fetch` 모킹)
+
+**실제 변경 시 작업량**:
+
+```ts
+// AS-IS (axios)
+const response = await axios.post("/api/payments", data);
+return response.data; // 자동으로 JSON 파싱됨
+
+// TO-BE (fetch)
+const response = await fetch("/api/payments", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(data),
+});
+
+if (!response.ok) {
+  throw new Error("Network response was not ok"); // 에러 처리 직접 추가
+}
+
+return await response.json(); // JSON 파싱 직접 호출
+```
+
+이런 변경을 10개 이상의 파일에서 반복해야 한다. 놓치는 곳이 생기면 런타임 에러가 발생한다.
+
+**핵심 문제**: HTTP 클라이언트가 컴포넌트에 직접 결합되어 있어서, 교체 시 전체 코드베이스를 수정해야 한다.
 
 ### 한계 2: 비즈니스 규칙 변경 시 여러 파일 수정
 
-최소 결제 금액 같은 비즈니스 규칙이 여러 컴포넌트에 흩어져 있다. 기획이 바뀌어서 "최소 금액을 1,000원에서 5,000원으로 변경해주세요"라는 요청이 오면, 해당 검증 로직을 사용하는 모든 곳을 찾아서 수정해야 한다.
+결제 시스템의 비즈니스 규칙을 생각해보자. "최소 결제 금액은 1,000원 이상이어야 한다"는 규칙이 있다.
+
+**현재 구조 (규칙이 여러 곳에 흩어짐)**:
+
+```ts
+// PaymentForm.tsx
+const handleSubmit = (amount: number) => {
+  if (amount < 1000) {
+    showError("최소 결제 금액은 1,000원입니다");
+    return;
+  }
+  // ...
+};
+
+// usePaymentValidation.ts
+export function validatePaymentAmount(amount: number) {
+  if (amount < 1000) {
+    throw new Error("최소 결제 금액은 1,000원입니다");
+  }
+}
+
+// PaymentSummary.tsx
+const isValidAmount = paymentAmount >= 1000;
+
+// payment.test.ts
+describe("결제 금액 검증", () => {
+  it("1,000원 미만이면 에러", () => {
+    expect(() => validatePayment(999)).toThrow();
+  });
+});
+```
+
+이제 기획팀에서 요청이 왔다: `"최소 금액을 5,000원으로 변경해주세요"`
+
+**변경해야 할 곳**:
+
+1. `PaymentForm.tsx`: `if (amount < 1000)` → `if (amount < 5000)`
+2. `usePaymentValidation.ts`: `if (amount < 1000)` → `if (amount < 5000)`
+3. `PaymentSummary.tsx`: `paymentAmount >= 1000` → `paymentAmount >= 5000`
+4. `payment.test.ts`: `validatePayment(999)` → `validatePayment(4999)`
+5. 에러 메시지도 모두 수정: "1,000원" → "5,000원"
+
+**문제점**:
+
+- 규칙이 4곳 이상에 흩어져 있음
+- 하나라도 놓치면 검증 로직이 일관되지 않음
+- 나중에 "최소 금액을 결제 수단별로 다르게 해주세요" 요청이 오면? (예: 카드 10,000원, 계좌이체 5,000원)
+- 각 파일을 다시 찾아서 조건문을 추가해야 함
+
+**핵심 문제**: 비즈니스 규칙이 한 곳에 모여 있지 않아서, 규칙 변경 시 영향 범위를 추적하기 어렵다.
 
 ### 한계 3: 서버 응답 형식 변경 시 영향 범위가 넓다
 
-서버가 기획 변경이나 설계 변동으로 필드명을 바꾸면(예: `payment_gateway_id → gateway_id`), 해당 필드를 사용하는 모든 컴포넌트를 찾아서 수정해야 한다.
+서버 API의 응답 형식이 바뀔 수 있다. 백엔드 팀에서 "필드명을 camelCase로 통일하겠습니다"라고 공지했다고 가정하자.
+
+**변경 내용**:
+
+```ts
+// AS-IS (서버 응답)
+{
+  "payment_gateway_id": "pg_001",
+  "payment_amount": 10000,
+  "user_id": "user_123"
+}
+
+// TO-BE (서버 응답)
+{
+  "paymentGatewayId": "pg_001",
+  "paymentAmount": 10000,
+  "userId": "user_123"
+}
+```
+
+**현재 구조 (서버 형식을 직접 사용)**:
+
+```ts
+// PaymentGatewayList.tsx
+const { data: gateway } = useQuery({
+  queryKey: ["paymentGateway", id],
+  queryFn: async () => {
+    const response = await axios.get(`/api/payment-gateways/${id}`);
+    return response.data; // 서버 형식 그대로 사용
+  },
+});
+
+return <div>{gateway.payment_gateway_id}</div>; // ❌ 깨짐
+
+// PaymentForm.tsx
+const mutation = useMutation({
+  mutationFn: async (data) => {
+    await axios.post("/api/payments/process", {
+      payment_gateway_id: data.gatewayId, // ❌ 필드명 불일치
+      payment_amount: data.amount,
+      user_id: data.userId,
+    });
+  },
+});
+
+// TransactionHistory.tsx
+const transactions = data.map((tx) => ({
+  id: tx.payment_gateway_id, // ❌ 깨짐
+  amount: tx.payment_amount,
+}));
+
+// usePaymentSummary.ts
+const total = payments.reduce((sum, p) => sum + p.payment_amount, 0); // ❌ 깨짐
+```
+
+**변경해야 할 곳**:
+
+1. 모든 컴포넌트에서 `payment_gateway_id` → `paymentGatewayId` 찾아 수정
+2. API 요청 시 서버가 기대하는 형식으로 변환
+3. 타입 정의 파일 (`types/payment.ts`) 수정
+4. 테스트 코드의 mock 데이터 모두 수정
+
+**문제점**:
+
+- 서버 응답을 직접 사용하는 모든 곳을 찾아야 함
+- TypeScript를 쓰더라도 `any` 타입이면 런타임에 에러 발생
+- 서버 형식과 클라이언트 형식이 섞여 있어서 추적 어려움
+
+**핵심 문제**: 서버와 클라이언트 사이에 변환 레이어가 없어서, 서버 변경이 전체 코드베이스에 직접 영향을 준다.
 
 ### 한계 4: 책임이 명확히 분리되지 않는다
 
 "훅으로 분리하면 되지 않나?" 맞다. 훅으로 재사용은 해결할 수 있다. 하지만 **어디까지 분리**해야 할까?
 
+**훅으로 분리한 경우**:
+
 ```ts
-// 훅으로만 분리하면 여전히 한계가 있다
+// usePaymentProcess.ts
 function usePaymentProcess() {
   return useMutation({
     mutationFn: async (data) => {
-      // 1. 검증 로직 (Domain)
-      if (data.payment_amount < MINIMUM_AMOUNT) throw new Error();
+      // ❶ 비즈니스 로직 (Domain)
+      if (data.payment_amount < 1000) {
+        throw new Error("최소 결제 금액은 1,000원입니다");
+      }
 
-      // 2. API 호출 (Infrastructure)
+      // ❷ API 호출 (Infrastructure)
       const response = await axios.post("/api/payments", {
-        payment_gateway_id: data.paymentGatewayId, // 3. 서버 형식 (Data)
-        payment_amount: data.payment_amount,
+        // ❸ 서버 형식 변환 (Data)
+        payment_gateway_id: data.paymentGatewayId,
+        payment_amount: data.paymentAmount,
+        user_id: data.userId,
       });
 
-      return response.data;
+      return response.data; // ❹ 서버 응답 그대로 반환
     },
   });
 }
 ```
 
-이 훅은 **비즈니스 로직**(검증), **API 호출**(axios), **서버 형식**(`snake_case`)이 뒤섞여 있다.
+이 훅은 **4가지 책임**이 뒤섞여 있다:
 
-- `axios` → `fetch` 변경 시: 훅 수정 필요
-- 최소 금액 규칙 변경 시: 훅 수정 필요
-- 서버 필드명 변경 시: 훅 수정 필요
-- **단위 테스트**: API 모킹 없이 검증 로직만 테스트하기 어려움
+- ❶ 비즈니스 규칙 (최소 금액 검증)
+- ❷ 통신 방식 (`axios`)
+- ❸ 데이터 변환 (snake_case ↔ camelCase)
+- ❹ 서버 응답 처리
 
-훅은 **로직 재사용**을 해결한다. **책임 분리**도 할 수 있지만, 클린 아키텍처처럼 명확하게 분리하기는 쉽지 않다. 클린 아키텍처는 각 레이어의 **변경 이유를 명시적으로 분리**해서 이런 어려움을 극복한다.
+**변경 시나리오별 영향**:
+
+| 변경 사항                  | 수정해야 할 곳   | 테스트 영향                          |
+| -------------------------- | ---------------- | ------------------------------------ |
+| `axios` → `fetch`          | 훅 내부 수정     | API 모킹 방식 변경                   |
+| 최소 금액 규칙 변경        | 훅 내부 수정     | 비즈니스 로직 테스트도 API 모킹 필요 |
+| 서버 필드명 변경           | 훅 내부 수정     | mock 데이터 형식 변경                |
+| 결제 수단별 다른 최소 금액 | 훅 전체 리팩토링 | 모든 테스트 영향                     |
+
+**훅 분리의 한계**:
+
+```ts
+// 비즈니스 로직만 테스트하고 싶어도...
+describe("결제 금액 검증", () => {
+  it("1,000원 미만이면 에러", async () => {
+    // ❌ axios 모킹 필요
+    // ❌ 서버 응답 형식 알아야 함
+    // ❌ API 엔드포인트 알아야 함
+
+    mockAxios.post.mockRejectedValue(new Error("..."));
+
+    const { result } = renderHook(() => usePaymentProcess());
+    await result.current.mutate({ payment_amount: 999 });
+
+    // 검증 로직만 테스트하고 싶은데, 인프라 전체를 모킹해야 함
+  });
+});
+```
+
+**클린 아키텍처와의 차이**:
+
+클린 아키텍처는 각 책임을 **레이어로 명시적 분리**한다:
+
+```ts
+// Domain Layer (순수 비즈니스 로직)
+class PaymentAmount {
+  validate() {
+    if (this.value < 1000) throw new Error("최소 결제 금액은 1,000원입니다");
+  }
+}
+
+// Use Case Layer (시나리오)
+class ProcessPaymentUseCase {
+  async execute(amount: PaymentAmount) {
+    amount.validate(); // 검증만 호출
+    return await this.repository.save(...); // 저장은 위임
+  }
+}
+
+// Infrastructure Layer (axios, fetch 등)
+class HttpPaymentRepository {
+  async save(payment) {
+    return await axios.post(...); // 통신 방식 격리
+  }
+}
+```
+
+**차이점**:
+
+- **훅**: 로직 재사용 ✅, 책임 분리 △
+- **클린 아키텍처**: 로직 재사용 ✅, 책임 분리 ✅, 변경 이유 명시 ✅
+
+훅으로도 충분히 잘 설계할 수 있다. 하지만 클린 아키텍처는 **왜 분리하는지**, **어디까지 분리하는지**를 명확히 제시한다. 프로젝트가 커질수록 이 명확성이 큰 차이를 만든다.
 
 ---
 
 리액트 프로젝트에서 클린 아키텍처를 어떻게 구현할까? 6개 레이어로 역할을 분리한 구조를 살펴보자:
 
 ![리액트 클린 아키텍처 - 6개 레이어로 역할을 분리해서 변경에 강한 구조 만들기](/images/react-clean-architecture/thumbnail.webp)
+
+이 다이어그램처럼 각 레이어는 명확한 역할을 가지고, 의존성은 항상 안쪽으로 향한다. 각 레이어가 독립적으로 존재하면서도 서로 협력하는 구조다.
 
 ## 클린 아키텍처란?
 
@@ -437,7 +678,7 @@ src/
 
 ---
 
-이제 각 레이어의 역할과 실제 코드를 살펴보자. 가장 바깥쪽 레이어부터 차례대로 깊이 들어가보자.
+이제 각 레이어의 역할과 실제 코드를 살펴보자.
 
 ---
 
@@ -673,7 +914,7 @@ export class PaymentGatewayRepositoryImpl implements PaymentGatewayRepository {
 }
 ```
 
-### Data가 Domain에 의존하는 것은 DI 위반이 아니다
+### Data가 Domain에 의존하는 것은 의존성 역전 원칙(DIP) 위반이 아니다
 
 코드를 보면 `PaymentGatewayRepositoryImpl`이 Domain의 인터페이스를 import한다:
 
@@ -681,10 +922,10 @@ export class PaymentGatewayRepositoryImpl implements PaymentGatewayRepository {
 import type { PaymentGatewayRepository } from "@/domain/repositories/PaymentGatewayRepository";
 ```
 
-이게 DI 위반 아닌가? **아니다!**
+이게 의존성 역전 원칙(DIP) 위반 아닌가? **아니다!**
 
-- ❌ DI 위반: `구체 클래스`에 의존
-- ✅ DI 준수: `인터페이스`에 의존
+- ❌ DIP 위반: `구체 클래스`에 의존
+- ✅ DIP 준수: `인터페이스`에 의존
 
 Data Layer는 Domain의 `인터페이스`를 구현하는 것이므로 정상이다.
 
@@ -1040,6 +1281,7 @@ export function mapPaymentTransactionDtoToDomain(
     id: validated.transaction_id,
     userId: validated.user_id,
     paymentGatewayId: validated.payment_gateway_id,
+    // 서버의 "process" → 도메인의 "payment"로 매핑 (용어 통일)
     type: validated.transaction_type === "process" ? "payment" : "refund",
     amount: validated.amount,
     balanceAfter: validated.balance_after,
@@ -1215,8 +1457,8 @@ interface UserProps {
   id: number;
   name: string;
   gatewayId: number;
-  paymentBalance: number; // 결제 잔액
-  walletBalance: number; // 지갑 잔액
+  paymentBalance: number; // 결제 대행사에서 관리하는 사용자의 예치금 잔액
+  walletBalance: number; // 사용자 개인 지갑의 환불 가능 잔액
   createdAt: Date;
   updatedAt: Date;
 }
@@ -1225,8 +1467,8 @@ export class User {
   private readonly _id: number; // 사용자 고유 ID
   private readonly _name: string; // 사용자 이름
   private readonly _gatewayId: number; // PG사 ID
-  private _paymentBalance: number; // 결제 잔액
-  private _walletBalance: number; // 지갑 잔액
+  private _paymentBalance: number; // 결제 대행사에서 관리하는 사용자의 예치금 잔액
+  private _walletBalance: number; // 사용자 개인 지갑의 환불 가능 잔액
   private readonly _createdAt: Date; // 등록 시각
   private _updatedAt: Date; // 업데이트 시각
 
@@ -1404,26 +1646,7 @@ export class PaymentTransaction {
 
 ---
 
-Entity들은 다음과 같은 `비즈니스 규칙(검증 로직)`을 담는다:
-
-**PaymentGateway Entity:**
-
-- **최소 결제 금액**: 100원 이상인지 검증
-- **예치금 잔액 확인**: 결제 가능 여부 검증 (상태 변경 없음)
-- **충전 금액 검증**: 0원 초과인지 검증
-
-**User Entity:**
-
-- **결제 금액 검증**: 0원 초과인지 검증
-- **환불 가능 여부**: 잔액 충분 여부 및 최소 금액 검증 (상태 변경 없음)
-- **지갑 사용 가능 여부**: 지갑 잔액 충분 여부 검증 (상태 변경 없음)
-
-**PaymentTransaction Entity:**
-
-- **거래 내역 생성**: 결제/환불 거래 기록 생성 (factory method)
-- **금액 검증**: 거래 금액이 0보다 큰지 확인
-- **거래 타입**: "process"(결제)와 "convert"(환불) 구분
-- **완전 불변성**: 모든 속성이 readonly, 한 번 생성된 거래는 수정 불가
+Entity들은 앞서 설명한 `비즈니스 규칙(검증 로직)`을 담는다. 생성자에서 필수 불변 규칙을 검증하고, 정적 메서드로 사용자 입력을 사전 검증하는 Validation 전략을 따른다.
 
 기획자가 "최소 결제 금액을 2,000원으로 바꿔주세요"라고 하면? `MIN_PAYMENT_AMOUNT` 한 줄만 바꾸면 된다.
 
@@ -1473,8 +1696,12 @@ class User {
 const updatedUser = await userRepository.deposit(user.id, amount);
 ```
 
-백엔드는 Entity가 상태를 직접 변경하고 DB에 저장하지만, 프론트엔드는 Tanstack Query가 서버 응답을 통해서만 상태를 업데이트한다.
-| **상태 관리** | `ORM` | `TanStack Query` |
+백엔드 Entity는 상태 변경 메서드를 가지며(Mutable), Repository가 변경된 Entity를 DB에 저장한다. 반면 프론트엔드 Entity는 불변(Immutable)이고, Tanstack Query가 서버 응답으로 상태를 업데이트한다.
+
+| 환경               | Entity 특성 | 상태 관리             | 영속성                 |
+| ------------------ | ----------- | --------------------- | ---------------------- |
+| 백엔드 (ORM)       | Mutable     | Entity가 상태 변경    | Repository가 DB 저장   |
+| 프론트엔드 (React) | Immutable   | TanStack Query가 관리 | 서버 응답으로 업데이트 |
 
 ---
 
@@ -2411,7 +2638,7 @@ Infrastructure → Data (DataSource) → Data (Repository) → Data (Mapper) →
 const transaction = mapPaymentTransactionDtoToDomain(transactionDto);
 ```
 
-### 7. Entity가 컴포넌트로 전달
+### 8. Entity가 컴포넌트로 전달
 
 ```ts
 // Presentation Layer: Component
@@ -2703,33 +2930,7 @@ user.receivePayment(5_000); // 클라이언트: 15,000
 
 #### 해결: Entity는 readonly, 서버가 상태 결정
 
-```ts
-// ✅ Entity는 검증만 수행
-class User {
-  private readonly _paymentBalance: number;
-  canRefund(amount: number, minRefundAmount: number): boolean {
-    return this._paymentBalance >= amount && amount >= minRefundAmount;
-  }
-}
-
-// UseCase는 서버 응답만 사용
-const processPaymentUseCase = async (user: User, amount: number) => {
-  PaymentGateway.validatePaymentAmount(amount);
-  return await api.processPayment(user.id, amount);
-};
-```
-
-TanStack Query가 서버 응답으로 캐시를 자동 업데이트한다.
-
-**핵심**: **"Tanstack Query가 상태 관리를 전담한다"**. Entity에서도 상태를 관리하면 Tanstack Query 캐시와 불일치가 발생한다. 따라서 Entity는 불변(`readonly`)으로 만들어 검증만 담당한다.
-
-| 구분               | Mutable Entity (❌)                   | Immutable Entity (✅)               |
-| ------------------ | ------------------------------------- | ----------------------------------- |
-| **상태 관리 주체** | Entity + Tanstack Query (중복)        | Tanstack Query만                    |
-| **상태 불일치**    | Entity와 캐시가 다를 수 있음          | 발생하지 않음 (캐시만 상태 관리)    |
-| **동기화 방식**    | 수동 (서버 응답을 Entity에 반영 필요) | 자동 (Tanstack Query가 캐시 갱신)   |
-| **동시 요청 처리** | Race Condition 발생 가능              | Tanstack Query가 순차 처리          |
-| **디버깅**         | 어디서 상태가 바뀌었는지 추적 어려움  | Tanstack Query DevTools로 추적 쉬움 |
+앞서 설명한 것처럼, Entity는 불변(`readonly`)으로 만들어 **검증만 담당**하고, Tanstack Query가 서버 응답으로 상태를 관리한다. 이렇게 하면 Entity와 캐시의 불일치가 발생하지 않는다.
 
 ---
 
@@ -2767,7 +2968,10 @@ TanStack Query가 서버 응답으로 캐시를 자동 업데이트한다.
 
 ### AI가 정확한 위치에 코드를 생성한다
 
-아키텍처 구조를 프롬프트에 명확히 작성해두면, AI가 **정확히 어느 레이어에 어떤 코드를 작성해야 하는지** 이해한다. 다음은 실제로 사용하는 AI 프롬프트 예시다:
+아키텍처 구조를 프롬프트에 명확히 작성해두면, AI가 **정확히 어느 레이어에 어떤 코드를 작성해야 하는지** 이해한다.
+
+<details>
+<summary>전체 AI 프롬프트 예시 펼쳐보기</summary>
 
 ```
 # CLEAN ARCHITECTURE RULES
@@ -2830,6 +3034,8 @@ Expected AI Response:
 - Reason: DTO transformation MUST happen only in Mapper
 ```
 
+</details>
+
 폴더 구조가 명확하지 않으면 AI가 어디에 코드를 넣을지 헤매지만, 이렇게 **레이어별 MUST/MUST NOT 규칙**을 명시하면 AI가 **개발자가 의도한 대로, 정해진 틀 내에서 기능을 추가하고 테스트 코드를 작성**할 수 있다. 아키텍처 가이드라인을 벗어나지 않으면서도 빠르게 개발할 수 있는 것이다.
 
 ### 장기적으로 기대하는 효과
@@ -2868,14 +3074,115 @@ Expected AI Response:
 2. **의존성은 항상 안쪽으로** - Presentation → Domain ← Data
 3. **변환은 Mapper가 유일** - DTO와 Entity 사이는 Mapper만 통과
 
-### 언제 도입하면 좋을까?
+### 핵심 원칙
 
-다음 상황이라면 클린 아키텍처가 빛을 발한다:
+우리 프로젝트에 적용한 클린 아키텍처의 핵심 원칙은 다음과 같다:
 
-- 기획이 자주 바뀌는 서비스
-- 6개월 이상 운영할 프로젝트
-- 테스트 코드가 필요한 경우
-- 프론트엔드와 백엔드를 함께 개발하는 경우
+#### 1. Domain은 완전히 독립
+
+`Domain` 레이어는 다른 레이어를 import하지 않는다. `axios`, `react`, `tanstack-query` 같은 외부 의존성도 없다. 순수한 TypeScript만으로 비즈니스 규칙을 표현한다.
+
+이렇게 하면 Domain 로직을 백엔드로 옮기거나, 다른 프레임워크로 포팅할 때 그대로 재사용할 수 있다.
+
+#### 2. Entity가 비즈니스 규칙을 담는다
+
+검증 로직, 계산 로직, 상태 변경 규칙은 모두 Entity에 있다. 컴포넌트는 Entity 메서드만 호출하면 된다.
+
+```ts
+// domain/entities/PaymentGateway.ts
+canProcessPayment(amount: number): boolean {
+  const MIN_PAYMENT = 5_000;
+  return this._walletBalance >= amount && amount >= MIN_PAYMENT;
+}
+```
+
+비즈니스 규칙이 바뀌면 Entity만 수정하면 된다. 컴포넌트를 뒤질 필요가 없다.
+
+#### 3. Mapper가 유일한 변환 지점
+
+서버 응답(DTO)과 도메인 객체(Entity) 사이의 변환은 오직 Mapper만 담당한다.
+
+```ts
+// data/mappers/paymentGatewayMapper.ts
+export function mapPaymentGatewayDtoToDomain(dto: PaymentGatewayDto) {
+  return new PaymentGateway({
+    walletBalance: validated.wallet_balance, // snake_case → camelCase
+  });
+}
+```
+
+API 필드명이 바뀌면 Mapper만 수정하면 된다. 10개 컴포넌트를 찾아 수정할 필요가 없다.
+
+#### 4. DataSource가 외부 API를 격리
+
+`axios.get()`, `axios.post()` 같은 HTTP 호출은 DataSource에만 있다.
+
+```ts
+// data/dataSources/paymentGatewayDataSource.ts
+async getPaymentGateway(id: number): Promise<PaymentGatewayDto> {
+  const response = await this.httpClient.get(`/api/payment-gateways/${id}`);
+  return response.data;
+}
+```
+
+카드사 API 버전이 v1에서 v2로 바뀌어도 DataSource만 수정하면 된다. Domain과 Presentation은 영향을 받지 않는다.
+
+#### 5. Repository가 데이터 접근을 추상화
+
+UseCase는 "어디서 데이터를 가져오는지" 모른다. 그저 Repository 인터페이스만 안다.
+
+```ts
+// domain/repositories/paymentGatewayRepository.interface.ts
+export interface PaymentGatewayRepository {
+  getById(id: number): Promise<PaymentGateway>;
+}
+```
+
+나중에 서버 API 대신 IndexedDB나 LocalStorage에서 데이터를 가져오도록 바꿀 수 있다. UseCase는 수정할 필요가 없다.
+
+#### 6. UseCase가 비즈니스 흐름을 조율
+
+여러 Repository를 조합해서 하나의 비즈니스 흐름을 완성하는 건 UseCase의 역할이다.
+
+```ts
+// domain/useCases/processPayment.ts
+export class ProcessPaymentUseCase {
+  async execute(request: ProcessPaymentRequest) {
+    const gateway = await this.gatewayRepo.getById(request.gatewayId);
+    const user = await this.userRepo.getById(request.userId);
+
+    if (!gateway.canProcessPayment(request.amount)) {
+      throw new Error("결제 불가");
+    }
+
+    return this.transactionRepo.create(...);
+  }
+}
+```
+
+이 로직은 Presentation(컴포넌트)에 있으면 안 된다. UI는 "언제 실행할지"만 결정하고, "어떻게 실행하는지"는 UseCase에 맡긴다.
+
+#### 7. Presentation은 UI만 담당
+
+컴포넌트는 "무엇을 보여줄지"만 안다. 비즈니스 로직은 UseCase에 위임한다.
+
+```ts
+export function ProcessPaymentButton() {
+  const { execute, isPending } = useProcessPayment();
+
+  return (
+    <button onClick={execute} disabled={isPending}>
+      {isPending ? "결제 중..." : "결제 처리"}
+    </button>
+  );
+}
+```
+
+버튼이 눌렸을 때 "무슨 일이 일어나는지"는 컴포넌트가 모른다. 그래서 비즈니스 규칙이 바뀌어도 컴포넌트는 수정할 필요가 없다.
+
+---
+
+이 7가지 원칙이 "변경에 강한 구조"를 만든다.
 
 ### 실제 유지보수 비용 비교
 
@@ -2924,12 +3231,22 @@ canProcessPayment(amount: number): boolean {
 
 클린 아키텍처는 초기 비용이 있다. 파일이 많아지고 구조가 복잡해 보인다.
 
-하지만 장기적으로는 유리하다:
+하지만 이건 **"코드를 예쁘게 정리하기 위한 것"이 아니다.** 클린 아키텍처의 진짜 목적은 **변화에 강한 구조**를 만드는 것이다.
 
-- **변경에 강하다**: API 응답 형식이 바뀌어도 `Mapper`만 수정하면 된다. 컴포넌트를 뒤지며 `response.data.xxx`를 찾아 수정할 필요가 없다
-- **테스트가 쉽다**: `UseCase`는 의존성이 주입되므로 Mock Repository만 전달하면 순수 함수처럼 테스트할 수 있다. "이 함수 테스트하려면 뭘 모킹해야 하지?" 고민이 사라진다
-- **AI 활용이 좋다**: 레이어별 규칙이 명확하므로 프롬프트를 명확하게 작성하면 AI가 정해진 틀 안에서 코드를 생성한다. "AI가 아키텍처를 망가뜨리면 어쩌지?" 걱정 없이 코드 생성을 맡길 수 있다
+### 우리가 얻은 것
+
+- **변경에 강하다**: API 필드명이 바뀌어도 `Mapper`만 수정하면 된다. 컴포넌트를 뒤지며 `response.data.xxx`를 찾아 수정할 필요가 없다
+- **테스트가 쉽다**: `UseCase`는 의존성이 주입되므로 Mock Repository만 전달하면 순수 함수처럼 테스트할 수 있다
+- **AI 활용이 좋다**: 레이어별 규칙이 명확하므로 AI가 정해진 틀 안에서 코드를 생성한다
 - **코드 수정의 두려움이 사라진다**: 변경 범위가 명확하므로 "이거 고치면 어디 터질까?" 걱정 없이 배포할 수 있다
+
+### 핵심은 "실용"이다
+
+> "코드는 작품이 아니라 도구다."
+
+깨끗한 구조는 코드의 아름다움을 위한 것이 아니라, **더 나은 협업과 더 빠른 변화를 위한 투자**다.
+
+처음부터 완벽한 구조를 만들 필요는 없다. 작동하는 초안에서 출발해 점진적으로 다듬으면 된다. "이 컴포넌트가 너무 많은 걸 알고 있다"고 느껴질 때, "API가 바뀌면 여러 곳을 수정해야 한다"고 느껴질 때, 그때 레이어를 분리하면 된다.
 
 결국 팀 전체의 만족도가 높아진다. "이거 고치면 어디 터질까", "기획이 변경되면 어떻게 해야 할까"에 대한 걱정을 완전히 없애지는 못하지만, 어느 정도 줄이며 개발할 수 있는 것.
 

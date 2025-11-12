@@ -114,7 +114,7 @@ fs.stat(filepath, (err, stat) => {
   const modified = stat.mtime;
 
   // Last-Modified 헤더에 수정 시간을 담아 응답한다
-  res.setHeader('Last-Modified', modified.toUTCString());
+  res.setHeader("Last-Modified", modified.toUTCString());
 });
 ```
 
@@ -243,6 +243,7 @@ Node.js 등 실행 가능한 코드로 동작을 보여준다.
 ```
 
 **중요**:
+
 - `:::note` 블록은 **사용하지 않는다**
 - 일반 마크다운 헤딩(`## 핵심 정리`)을 사용한다
 - 가독성이 더 좋고 유지보수가 쉽다
