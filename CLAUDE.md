@@ -55,7 +55,7 @@
 ✅ `동일 출처 정책(Same-Origin Policy)`
 
 ❌ **"교차 출처 요청 차단"**
-✅ "교차 출처 요청 차단"
+✅ `"교차 출처 요청 차단"`
 
 ❌ **Access-Control-Allow-Origin**
 ✅ `Access-Control-Allow-Origin`
@@ -69,6 +69,25 @@
 - 따옴표 포함 문구 → 백틱(`)
 - 괄호 포함 용어 → 백틱(`)
 - 강조하고 싶은 일반 단어/문장 → 볼드체(\*\*)
+- **백틱과 볼드체는 혼합 불가** → `**text**` (❌) / `text` (✅)
+
+```markdown
+❌ **Presentation → Application → Domain**
+✅ `Presentation → Application → Domain`
+
+❌ **기본적으로 3계층 구조(`Domain - Data - Presentation`)**
+✅ **기본적으로 3계층 구조**(`Domain - Data - Presentation`)
+
+❌ **`Cache-Control` 헤더**
+✅ `Cache-Control` 헤더
+
+❌ **"이 데이터가 유효한가?"**
+✅ `"이 데이터가 유효한가?"`
+
+설명: 백틱 안에 볼드체를 넣거나, 볼드체 안에 백틱을 넣지 않는다.
+따옴표가 포함된 문구는 백틱만 사용한다.
+강조할 단어와 기술 용어를 구분해서 나란히 배치한다.
+```
 
 ### 2. 코드 블록
 

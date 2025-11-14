@@ -23,7 +23,13 @@
       "Bash(/tmp/part3.txt)",
       "mcp__sequential-thinking__sequentialthinking",
       "Bash(tree:*)",
-      "mcp__github__search_repositories"
+      "mcp__github__search_repositories",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:docs.tosspayments.com)",
+      "WebFetch(domain:api.iamport.kr)",
+      "WebFetch(domain:docs.stripe.com)",
+      "WebFetch(domain:velog.io)",
+      "WebFetch(domain:stripe.com)"
     ],
     "deny": [],
     "ask": []
