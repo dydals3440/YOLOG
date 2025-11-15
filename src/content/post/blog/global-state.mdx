@@ -1,0 +1,1008 @@
+---
+title: "React 전역 상태 관리 완벽 가이드: Context API vs Zustand vs Jotai"
+date: 2025-11-15
+updatedDate: 2025-11-15
+tags:
+  [
+    React,
+    상태관리,
+    Global State,
+    Context API,
+    Zustand,
+    Jotai,
+    Props Drilling,
+    성능최적화,
+  ]
+category: DEVELOPMENT
+image: "/images/global-state/thumbnail.webp"
+---
+
+React 애플리케이션을 만들다 보면 상태 관리가 점점 복잡해진다. 처음엔 [`useState`](https://react.dev/reference/react/useState) 몇 개면 충분했는데, 어느새 props를 5단계씩 내려 전달하고 있는 자신을 발견한다. Context API를 쓰면 간단할 것 같은데 성능 문제가 걱정된다. Zustand? Jotai? Redux? 선택지는 너무 많고, 각각 어떤 차이가 있는지 명확하지 않다.
+
+이 글에서는 **왜** 전역 상태가 필요한지부터 시작해서, 각 라이브러리가 **내부적으로 어떻게 동작**하길래 성능 차이가 나는지까지 깊이 있게 다룬다. 원리를 이해하면 프로젝트에 맞는 현명한 선택을 할 수 있다.
+
+---
+
+## 상태의 세 가지 종류
+
+본격적으로 시작하기 전에, 상태를 세 가지로 구분하는 것이 중요하다.
+
+`로컬 상태(Local State)`
+한 컴포넌트 안에서만 사용하는 상태다. 마치 개인 수첩에 적어둔 메모와 같다. 다른 사람(컴포넌트)이 볼 필요가 없다.
+
+```ts
+function LoginForm() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  // email, password는 이 폼에서만 필요
+}
+```
+
+`전역 상태(Global State)`
+여러 컴포넌트가 공유하는 상태다. 회사 공지 게시판처럼, 누구나 볼 수 있고 수정하면 모두에게 반영된다.
+
+```ts
+// 장바구니는 헤더, 상품 목록, 결제 페이지에서 모두 필요
+const cart = useCartStore((state) => state.cart);
+```
+
+`서버 상태(Server State)`
+API에서 가져온 데이터다. 이건 조금 특별한데, 우리가 완전히 통제할 수 없다. 다른 사용자가 바꿀 수도 있고, 네트워크가 느릴 수도 있다.
+
+```ts
+// 사용자 목록은 서버에서 가져온 데이터
+const { data: users } = useQuery(["users"], fetchUsers);
+```
+
+이 글에서는 **로컬 상태**와 **전역 상태**에 집중한다. 서버 상태는 다음 글에서 자세히 다루겠다.
+
+---
+
+## Local State로만 관리하면 뭐가 문제일까?
+
+가장 간단한 방법부터 시작해보자. `useState`로 모든 상태를 관리하면 안 될까?
+
+```ts
+function App() {
+  const [user, setUser] = useState(null);
+
+  return (
+    <div>
+      <Header user={user} />
+      <Dashboard user={user} />
+      <Footer user={user} />
+    </div>
+  );
+}
+```
+
+문제없어 보인다. 하지만 컴포넌트 트리가 깊어지면 상황이 달라진다.
+
+---
+
+## Props Drilling - CEO의 메시지가 인턴에게 전달되는 과정
+
+실제 앱의 컴포넌트 구조를 보자.
+
+```ts
+function App() {
+  return <Parent name="매튜" />;
+}
+
+// Parent는 name을 사용하지 않는다
+function Parent({ name }: { name: string }) {
+  return <Child name={name} />;
+}
+
+// Child도 name을 사용하지 않는다
+function Child({ name }: { name: string }) {
+  return <GrandChild name={name} />;
+}
+
+// 드디어 실제로 name을 사용한다
+function GrandChild({ name }: { name: string }) {
+  return <div>Hello {name}</div>;
+}
+```
+
+이것이 바로 **Prop Drilling**이다.
+
+`name`을 실제로 사용하는 건 `GrandChild`뿐인데, `Parent`와 `Child`는 단지 전달만 한다. 마치 할아버지가 손자에게 메시지를 전달하려고 아버지를 거쳐야 하는 상황과 같다. 아버지는 메시지 내용에 관심도 없는데, 그냥 아래로 전달만 해야 한다.
+
+**문제는 무엇일까?**
+
+1. **불필요한 의존성**: `Parent`, `Child`는 `name`을 전혀 사용하지 않는데 props로 받아야 한다
+2. **재사용 불가능**: `Child`를 다른 곳에서 쓰려면? `name` props를 무조건 전달해야 한다
+3. **타입 변경 시 폭탄 돌리기**: `name` 타입이 바뀌면 모든 중간 컴포넌트를 수정해야 한다
+4. **코드 가독성 저하**: 이 컴포넌트가 실제로 뭘 사용하는지 한눈에 안 들어온다
+
+그렇다면 어떻게 해결할까? 바로 전역 상태의 등장 배경이다.
+
+---
+
+## Context API - React의 내장 해결책
+
+[`createContext`](https://react.dev/reference/react/createContext)는 React 16.3에서 추가된 공식 해결책이다. Props Drilling 없이 데이터를 전달할 수 있다.
+
+마치 회사 Slack 채널과 같다. CEO가 전 직원에게 공지할 때 부장을 거치지 않고 바로 메시지를 올린다.
+
+```ts
+import { createContext, useContext, useState } from "react";
+
+interface User {
+  name: string;
+  role: string;
+}
+
+const UserContext = createContext<{
+  user: User | null;
+  setUser: (user: User | null) => void;
+} | null>(null);
+
+export function UserProvider({ children }) {
+  const [user, setUser] = useState<User | null>(null);
+
+  return (
+    <UserContext.Provider value={{ user, setUser }}>
+      {children}
+    </UserContext.Provider>
+  );
+}
+
+export function useUser() {
+  const context = useContext(UserContext);
+  if (!context) {
+    throw new Error("useUser는 UserProvider 안에서만 사용할 수 있다");
+  }
+  return context;
+}
+```
+
+이제 중간 컴포넌트들이 props를 전달할 필요가 없다.
+
+```ts
+function App() {
+  return (
+    <UserProvider>
+      <Dashboard />
+    </UserProvider>
+  );
+}
+
+// Dashboard는 user를 몰라도 된다
+function Dashboard() {
+  return (
+    <div>
+      <Sidebar />
+      <MainContent />
+    </div>
+  );
+}
+
+// UserProfile만 직접 가져간다
+function UserProfile() {
+  const { user } = useUser();
+  return <div>안녕하세요, {user?.name}님</div>;
+}
+```
+
+깔끔하다! Props Drilling 문제가 완벽히 해결됐다.
+
+하지만 여기엔 치명적인 단점이 숨어있다.
+
+---
+
+## Context API의 성능 문제 - 왜 느릴까?
+
+Context API는 편리하지만, 규모가 커지면 성능 문제가 발생한다. **왜 그럴까?** 내부 동작 원리를 이해해야 한다.
+
+### Context의 렌더링 메커니즘
+
+React의 Context는 `구독-발행 패턴(Publish-Subscribe Pattern)`으로 동작한다. 하지만 중요한 차이가 있다.
+
+```ts
+function UserProvider({ children }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  // value 객체가 새로 생성되면, Context를 사용하는 모든 컴포넌트가 재평가된다
+  const value = { user, setUser, theme, setTheme };
+
+  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
+}
+```
+
+**핵심 문제**: `user`나 `theme` 중 **하나만** 바뀌어도 `value` 객체가 새로 생성된다. 그러면 [`useContext`](https://react.dev/reference/react/useContext)를 사용하는 **모든** 컴포넌트가 재렌더링된다.
+
+```ts
+// UserProfile은 user만 사용한다
+function UserProfile() {
+  const { user } = useUser(); // theme도 value에 포함되어 있음
+  return <div>{user?.name}</div>;
+}
+
+// ThemeToggle은 theme만 사용한다
+function ThemeToggle() {
+  const { theme, setTheme } = useUser(); // user도 value에 포함되어 있음
+  return (
+    <button onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
+      {theme} 모드
+    </button>
+  );
+}
+```
+
+**문제 발생 시나리오**:
+
+1. 사용자가 테마를 변경한다 (`light` → `dark`)
+2. `theme` state가 변경되어 `value` 객체가 새로 생성된다
+3. `UserProfile`도 재렌더링된다 (theme을 전혀 사용하지 않는데!)
+4. 반대로 `user`가 변경되면 `ThemeToggle`도 재렌더링된다
+
+### 왜 선택적 구독이 안 될까?
+
+React의 Context는 **값 전체를 하나의 단위로 취급**한다. `value` 객체의 참조가 바뀌면, 그 안의 어떤 속성이 바뀌었는지 상관없이 모든 Consumer가 재평가된다.
+
+마치 우유 한 팩에 여러 가지가 들어있는데, 하나만 상했는지 확인하려면 전체를 다시 검사해야 하는 것과 같다.
+
+### 해결 방법들
+
+1. Context 분리
+
+```ts
+// UserContext와 ThemeContext를 따로 만든다
+const UserContext = createContext<UserContextType | null>(null);
+const ThemeContext = createContext<ThemeContextType | null>(null);
+
+function App() {
+  return (
+    <UserProvider>
+      <ThemeProvider>
+        <Dashboard />
+      </ThemeProvider>
+    </UserProvider>
+  );
+}
+```
+
+하지만 Context가 많아지면 **Provider Hell**이 발생한다.
+
+2. [`useMemo`](https://react.dev/reference/react/useMemo)로 최적화
+
+```ts
+function UserProvider({ children }) {
+  const [user, setUser] = useState<User | null>(null);
+
+  // user나 setUser가 바뀔 때만 value 재생성
+  const value = useMemo(() => ({ user, setUser }), [user]);
+
+  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
+}
+```
+
+도움이 되지만, 근본적인 해결책은 아니다. **value의 어떤 부분이 바뀌었는지 여전히 추적할 수 없다**.
+
+3. 더 나은 대안 - 전문 라이브러리
+
+Context API의 한계는 명확하다. `선택적 구독(Selective Subscription)`이 불가능하다. 전역 상태 관리 라이브러리들은 바로 이 문제를 해결하기 위해 만들어졌다.
+
+---
+
+## Zustand - 간결함과 성능을 동시에
+
+[Zustand](https://zustand.docs.pmnd.rs/)는 독일어로 "상태"를 뜻한다. 2025년 가장 빠르게 성장하는 상태 관리 라이브러리다.
+
+**핵심 철학**: "곰의 필수품(Bear necessities)" - 정말 필요한 기능만 남기고 모두 제거했다.
+
+```ts
+import { create } from "zustand";
+
+interface User {
+  name: string;
+  role: string;
+}
+
+interface UserStore {
+  user: User | null;
+  theme: "light" | "dark";
+  setUser: (user: User | null) => void;
+  setTheme: (theme: "light" | "dark") => void;
+}
+
+export const useUserStore = create<UserStore>((set) => ({
+  user: null,
+  theme: "light",
+  setUser: (user) => set({ user }),
+  setTheme: (theme) => set({ theme }),
+}));
+```
+
+이게 전부다. Provider도 필요 없다.
+
+```ts
+function UserProfile() {
+  const user = useUserStore((state) => state.user);
+  return <div>{user?.name}</div>;
+}
+
+function ThemeToggle() {
+  const theme = useUserStore((state) => state.theme);
+  const setTheme = useUserStore((state) => state.setTheme);
+
+  return (
+    <button onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
+      {theme} 모드
+    </button>
+  );
+}
+```
+
+### Zustand의 내부 동작 원리 - 왜 빠를까?
+
+Zustand가 Context API보다 빠른 이유는 `선택적 구독(Selective Subscription)`이 가능하기 때문이다.
+
+1. Module-level 저장소
+
+Zustand의 store는 **React 컴포넌트 트리 외부**에 존재한다.
+
+```ts
+// store는 모듈 레벨에 생성되어 전역적으로 접근 가능
+const store = createStore((set) => ({
+  user: null,
+  theme: "light",
+  // ...
+}));
+```
+
+이는 Context API와 근본적으로 다르다. Context는 **Provider 컴포넌트 안에** 상태가 있지만, Zustand는 **독립적인 저장소**를 갖는다.
+
+2. Selector 기반 구독
+
+Zustand는 컴포넌트가 **필요한 부분만 선택해서 구독**할 수 있다.
+
+```ts
+// user만 구독 - theme이 바뀌어도 재렌더링 안 됨
+const user = useUserStore((state) => state.user);
+
+// theme만 구독 - user가 바뀌어도 재렌더링 안 됨
+const theme = useUserStore((state) => state.theme);
+```
+
+**내부 구현 원리**:
+
+```ts
+// 단순화한 Zustand 구현 개념
+function create(createState) {
+  let state = createState((partial) => {
+    state = { ...state, ...partial };
+    // 모든 리스너에게 알림
+    listeners.forEach((listener) => listener(state));
+  });
+
+  const listeners = new Set();
+
+  return function useStore(selector) {
+    const [, forceUpdate] = useReducer((c) => c + 1, 0);
+
+    useEffect(() => {
+      const listener = (newState) => {
+        // selector로 선택한 값만 비교
+        const newValue = selector(newState);
+        const oldValue = selector(state);
+
+        // 얕은 비교 - 실제로 변경됐을 때만 리렌더링
+        if (!Object.is(newValue, oldValue)) {
+          forceUpdate();
+        }
+      };
+
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    }, []);
+
+    return selector(state);
+  };
+}
+```
+
+**핵심 포인트**:
+
+- 각 컴포넌트는 **자신이 선택한 값**만 감시한다
+- 상태가 변경되면 **얕은 비교(shallow comparison)**로 실제 변경 여부를 확인한다
+- 변경되지 않은 값을 구독하는 컴포넌트는 **재렌더링되지 않는다**
+
+### 성능 비교: Context API vs Zustand
+
+100개의 컴포넌트가 있고, 각각 다른 상태를 구독한다고 가정하자.
+
+**Context API**:
+
+```ts
+// user 하나만 바뀌어도
+setUser(newUser);
+
+// user를 사용하지 않는 99개 컴포넌트도 재평가된다
+// (실제 재렌더링은 React.memo로 막을 수 있지만, 재평가는 발생)
+```
+
+**Zustand**:
+
+```ts
+// user 하나만 바뀌면
+setUser(newUser);
+
+// user를 구독하는 컴포넌트만 재렌더링된다
+// 나머지 99개는 selector가 다른 값을 반환하지 않으므로 무시
+```
+
+**실제 측정 결과** (커뮤니티 벤치마크):
+
+- Context API: 50개 필드 폼에서 하나 변경 시 ~280ms
+- Zustand: 동일 상황에서 ~45ms (약 **6배 빠름**)
+- 번들 사이즈: Zustand는 **1.2KB**로 Context API보다 작음 (Context는 React 내장)
+
+> 참고: [React 상태 관리 성능 벤치마크](https://github.com/dai-shi/will-this-react-global-state-work-in-concurrent-rendering)
+
+### Zustand의 추가 장점
+
+1. 미들웨어 지원
+
+```ts
+import { persist, devtools } from "zustand/middleware";
+
+export const useUserStore = create<UserStore>()(
+  devtools(
+    persist(
+      (set) => ({
+        user: null,
+        setUser: (user) => set({ user }),
+      }),
+      { name: "user-storage" } // localStorage에 자동 저장
+    )
+  )
+);
+```
+
+2. React 외부에서 사용 가능
+
+```ts
+// 컴포넌트 밖에서도 store에 접근
+const currentUser = useUserStore.getState().user;
+useUserStore.getState().setUser(newUser);
+```
+
+3. 타입 안정성
+
+TypeScript와 완벽하게 통합된다. 타입 추론이 자동으로 동작한다.
+
+---
+
+## Jotai - 원자적 상태의 우아함
+
+[Jotai](https://jotai.org/)는 일본어로 "상태"를 뜻한다. Recoil에서 영감을 받아 만들어졌지만, 더 가볍고 간단하다.
+
+**핵심 철학**: **Bottom-up 원자적(Atomic) 상태 관리** - 필요한 atom만 만들고, 조합해서 사용한다.
+
+```ts
+import { atom } from "jotai";
+
+// 기본 atom
+export const userAtom = atom<User | null>(null);
+export const themeAtom = atom<"light" | "dark">("light");
+
+// 파생 atom - userAtom이 변경되면 자동으로 재계산
+export const isLoggedInAtom = atom((get) => {
+  const user = get(userAtom);
+  return user !== null;
+});
+
+// Write atom - 로직 캡슐화
+export const logoutAtom = atom(
+  null, // read 함수
+  (get, set) => {
+    set(userAtom, null);
+  }
+);
+```
+
+컴포넌트에서 사용하기:
+
+```ts
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+
+function UserProfile() {
+  const [user, setUser] = useAtom(userAtom);
+  const isLoggedIn = useAtomValue(isLoggedInAtom);
+
+  return (
+    <div>
+      {isLoggedIn ? (
+        <p>{user?.name}님</p>
+      ) : (
+        <button onClick={() => setUser({ name: "김철수", role: "admin" })}>
+          로그인
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ThemeToggle() {
+  const [theme, setTheme] = useAtom(themeAtom);
+
+  return (
+    <button onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
+      {theme} 모드
+    </button>
+  );
+}
+```
+
+### Jotai의 내부 동작 원리 - 의존성 그래프
+
+Jotai의 핵심은 `Atom 의존성 그래프`다.
+
+1. Atom은 독립적인 상태 단위
+
+각 atom은 독립적인 상태 조각이다. React의 `useState`처럼 사용할 수 있지만, 전역적으로 공유된다.
+
+```ts
+const countAtom = atom(0);
+const nameAtom = atom("김철수");
+```
+
+2. 파생 Atom은 의존성을 자동 추적
+
+```ts
+const doubleCountAtom = atom((get) => {
+  const count = get(countAtom); // countAtom에 의존
+  return count * 2;
+});
+```
+
+**내부 동작**:
+
+- `doubleCountAtom`을 읽을 때, Jotai는 `countAtom`을 구독한다
+- `countAtom`이 변경되면, `doubleCountAtom`을 구독하는 컴포넌트만 재렌더링된다
+- 다른 atom이 변경되어도 영향 없다
+
+**의존성 그래프 예시**:
+
+```ts
+const userAtom = atom({ name: "김철수", age: 30 });
+
+const userNameAtom = atom(
+  (get) => get(userAtom).name // userAtom.name에만 의존
+);
+
+const userAgeAtom = atom(
+  (get) => get(userAtom).age // userAtom.age에만 의존
+);
+
+// 실제로는 userAtom 전체에 의존하지만, 구조적으로 분리 가능
+```
+
+Jotai는 이 그래프를 통해 **정확히 어떤 컴포넌트가 재렌더링되어야 하는지** 계산한다.
+
+3. Provider로 스코프 분리 (선택적)
+
+```ts
+import { Provider } from "jotai";
+
+function App() {
+  return (
+    <Provider>
+      <Dashboard />
+    </Provider>
+  );
+}
+```
+
+Provider를 사용하면 atom 값을 **특정 컴포넌트 트리에 격리**할 수 있다. 테스트나 SSR에 유용하다.
+
+### Zustand vs Jotai - 언제 무엇을 쓸까?
+
+두 라이브러리 모두 훌륭하지만, 철학이 다르다.
+
+**Zustand: Top-down, 단일 저장소**
+
+```ts
+// 하나의 store에 모든 상태
+const useStore = create((set) => ({
+  user: null,
+  theme: "light",
+  cart: [],
+  notifications: [],
+  // ... 모든 전역 상태가 여기 있음
+}));
+```
+
+**장점**:
+
+- 한눈에 모든 상태를 볼 수 있다
+- 디버깅이 쉽다 (하나의 store만 확인)
+- 러닝 커브가 낮다
+
+**단점**:
+
+- 규모가 커지면 store가 거대해진다
+- 파생 상태를 만들기 다소 번거롭다
+
+**Jotai: Bottom-up, 원자 단위**
+
+```ts
+// 각각 독립적인 atom
+const userAtom = atom(null);
+const themeAtom = atom("light");
+const cartAtom = atom([]);
+const notificationsAtom = atom([]);
+```
+
+**장점**:
+
+- 파생 상태가 간단하다 (atom을 조합)
+- 필요한 것만 import해서 사용
+- React Suspense와 완벽 통합
+
+**단점**:
+
+- atom이 많아지면 관리가 복잡할 수 있다
+- 초보자에게 개념이 다소 생소함
+
+**선택 기준**:
+
+| 상황                     | 추천            |
+| ------------------------ | --------------- |
+| 간단한 전역 상태 몇 개   | Zustand         |
+| 복잡한 파생 상태가 많음  | Jotai           |
+| 팀이 Redux 패턴에 익숙함 | Zustand         |
+| React Suspense 적극 활용 | Jotai           |
+| 번들 크기가 정말 중요함  | Zustand (1.2KB) |
+| 타입 안정성이 최우선     | 둘 다 훌륭함    |
+
+---
+
+## Context API vs Zustand vs Jotai - 성능 비교 정리
+
+지금까지 배운 내용을 정리하자.
+
+### 렌더링 메커니즘 비교
+
+**Context API**:
+
+```ts
+// Provider의 value가 바뀌면
+<UserContext.Provider value={{ user, theme }}>
+
+// useContext를 사용하는 모든 컴포넌트가 재평가된다
+const { user } = useContext(UserContext); // theme이 바뀌어도 재렌더링
+```
+
+**Zustand**:
+
+```ts
+// selector가 반환하는 값이 바뀔 때만 재렌더링
+const user = useUserStore((state) => state.user); // theme 변경 → 재렌더링 안 됨
+const theme = useUserStore((state) => state.theme); // user 변경 → 재렌더링 안 됨
+```
+
+**Jotai**:
+
+```ts
+// 구독한 atom이 변경될 때만 재렌더링
+const [user] = useAtom(userAtom); // themeAtom 변경 → 재렌더링 안 됨
+const [theme] = useAtom(themeAtom); // userAtom 변경 → 재렌더링 안 됨
+```
+
+### 실제 성능 차이 (커뮤니티 벤치마크)
+
+100개 컴포넌트, 각각 다른 상태 구독, 1개 상태 변경 시:
+
+- **Context API**: ~280ms (모든 Consumer 재평가)
+- **Context API + useMemo + 분리**: ~95ms (최적화 후)
+- **Zustand**: ~45ms (selector 기반)
+- **Jotai**: ~40ms (atom 의존성 기반)
+
+**번들 크기**:
+
+- Context API: 0KB (React 내장)
+- Zustand: **1.2KB** gzipped
+- Jotai: **3KB** gzipped
+- Redux Toolkit: ~11KB gzipped
+
+> 참고: [React 상태 관리 성능 벤치마크](https://github.com/dai-shi/will-this-react-global-state-work-in-concurrent-rendering)
+
+### 언제 무엇을 써야 할까?
+
+**Context API를 써도 되는 경우**:
+
+- 상태가 자주 변경되지 않는다 (테마, 언어 설정, 현재 사용자)
+- 소규모 앱 (5개 이하의 전역 상태)
+- 추가 의존성을 원하지 않는다
+
+**Zustand를 써야 하는 경우**:
+
+- 상태가 자주 변경된다 (장바구니, 실시간 알림)
+- 여러 컴포넌트가 다양한 상태를 구독한다
+- 간단한 API를 원한다
+- 번들 크기가 중요하다
+
+**Jotai를 써야 하는 경우**:
+
+- 파생 상태가 많다 (계산된 값, 필터링된 목록)
+- React Suspense를 활용한다
+- Bottom-up 설계를 선호한다
+- 원자 단위로 상태를 관리하고 싶다
+
+---
+
+## 흔한 실수들
+
+실무에서 자주 보는 안티패턴을 피하자.
+
+### 실수 1: 모든 것을 전역으로
+
+```ts
+// ❌ 나쁜 예 - 모달 열림/닫힘도 전역으로
+const useUIStore = create((set) => ({
+  isLoginModalOpen: false,
+  isSignupModalOpen: false,
+  isDeleteConfirmOpen: false,
+  // ... 모든 UI 상태를 전역으로
+}));
+
+// ✅ 좋은 예 - 로컬로 충분한 것은 로컬로
+function LoginButton() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  return (
+    <>
+      <button onClick={() => setIsModalOpen(true)}>로그인</button>
+      {isModalOpen && <LoginModal onClose={() => setIsModalOpen(false)} />}
+    </>
+  );
+}
+```
+
+**원칙**: 상태를 가능한 한 가까운 곳에 둬라. 이를 [`State Colocation`](https://kentcdodds.com/blog/state-colocation-will-make-your-react-app-faster)이라고 한다.
+
+### 실수 2: 서버 상태를 클라이언트 상태처럼
+
+```ts
+// ❌ 나쁜 예 - API 데이터를 useState에 저장
+function ProductList() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((data) => {
+        setProducts(data);
+        setLoading(false);
+      });
+  }, []);
+
+  return loading ? <div>로딩 중...</div> : <ul>{/* ... */}</ul>;
+}
+```
+
+**주의**: [`useEffect`](https://react.dev/reference/react/useEffect)에서 상태를 설정할 때 의존성 배열을 정확히 지정해야 한다.
+
+이 코드의 문제점:
+
+- 캐싱이 없다 (컴포넌트 unmount 시 데이터 소실)
+- 다른 컴포넌트에서 같은 데이터를 중복 요청한다
+- 에러 처리, 재시도, 낙관적 업데이트가 복잡하다
+- **좋아요 버튼을 눌렀는데 UI가 업데이트되지 않는** 버그 발생
+
+```ts
+// ✅ 좋은 예 - TanStack Query 사용
+import { useQuery } from "@tanstack/react-query";
+
+function ProductList() {
+  const { data: products, isLoading } = useQuery({
+    queryKey: ["products"],
+    queryFn: () => fetch("/api/products").then((res) => res.json()),
+  });
+
+  if (isLoading) return <div>로딩 중...</div>;
+  return <ul>{/* ... */}</ul>;
+}
+```
+
+**핵심**: 서버에서 가져온 데이터는 **캐시**다. 우리가 완전히 통제할 수 없다.
+
+### 실수 3: Context를 성능 고려 없이 남발
+
+```ts
+// ❌ 나쁜 예 - 모든 상태를 하나의 Context에
+const AppContext = createContext({
+  user: null,
+  theme: "light",
+  language: "ko",
+  cart: [],
+  notifications: [],
+  sidebar: { isOpen: false },
+  // ... 10개 이상의 상태
+});
+
+// theme만 바뀌어도 user, cart를 사용하는 컴포넌트도 재렌더링
+```
+
+```ts
+// ✅ 좋은 예 - Context 분리 또는 Zustand 사용
+const useAppStore = create((set) => ({
+  user: null,
+  theme: "light",
+  language: "ko",
+  cart: [],
+  // ... selector로 선택적 구독
+}));
+```
+
+### 실수 4: 측정하지 않고 최적화
+
+```ts
+// ❌ 나쁜 예 - 성능 문제도 없는데 과도한 최적화
+const memoizedUser = useMemo(() => user, [user]);
+const memoizedTheme = useMemo(() => theme, [theme]);
+const memoizedCallback = useCallback(() => {}, []);
+// ... 모든 것에 useMemo, useCallback
+```
+
+**원칙**: "조기 최적화는 만악의 근원" - 먼저 측정하고, 문제가 있을 때만 최적화하라.
+
+[React DevTools Profiler](https://react.dev/learn/react-developer-tools)로 측정 후 판단하자.
+
+---
+
+## 2025년 상태 관리 전략
+
+지금까지 배운 내용을 바탕으로 실전 전략을 정리하자.
+
+### 단계별 의사결정 플로우
+
+```
+1. 이 상태를 여러 컴포넌트가 공유하나?
+   NO → useState (로컬 상태)
+   YES → 다음으로
+
+2. 상태가 자주 변경되나? (1초에 여러 번)
+   NO → Context API도 충분
+   YES → 다음으로
+
+3. 파생 상태가 많나? (계산된 값, 필터링)
+   YES → Jotai (원자적 상태 + 의존성 그래프)
+   NO → Zustand (간단한 전역 상태)
+
+4. 서버에서 가져온 데이터인가?
+   YES → TanStack Query (다음 글에서 다룸)
+```
+
+### 프로젝트 규모별 추천
+
+**소규모 프로젝트** (5개 미만 페이지):
+
+- Local: `useState`
+- Global: Context API
+- Server: `useEffect` + `useState` (또는 TanStack Query)
+
+**중규모 프로젝트** (10~20개 페이지):
+
+- Local: `useState`
+- Global: **Zustand** ← 가장 추천
+- Server: **TanStack Query**
+
+**대규모 프로젝트** (50개 이상 페이지):
+
+- Local: `useState`
+- Global: Zustand 또는 Redux Toolkit
+- Server: **TanStack Query** 또는 RTK Query
+
+### 라이브러리 조합 예시
+
+```ts
+// Client State는 Zustand로
+const useUIStore = create((set) => ({
+  sidebar: { isOpen: false },
+  modal: { activeModal: null },
+  theme: "light",
+}));
+
+// Server State는 TanStack Query로
+function ProductList() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["products"],
+    queryFn: fetchProducts,
+  });
+
+  const sidebar = useUIStore((state) => state.sidebar);
+
+  // Server State와 Client State를 함께 사용
+}
+```
+
+**핵심**: 한 가지 라이브러리만 써야 하는 것이 아니다. **목적에 맞게 조합**하는 것이 현명하다.
+
+---
+
+## 마무리 - 서버 상태의 세계로
+
+지금까지 **로컬 상태**와 **전역 상태**를 깊이 있게 다뤘다. Props Drilling 문제부터 시작해서, Context API의 성능 한계, Zustand와 Jotai의 내부 동작 원리까지 살펴봤다.
+
+하지만 실무에서 개발하다 보면 또 다른 문제를 마주한다.
+
+**이런 경험 있지 않나?**
+
+좋아요 버튼을 눌렀다. 네트워크 탭을 보니 API 요청은 성공했다 (`200 OK`). 그런데 UI에는 아무 변화가 없다. 새로고침을 해보니 좋아요가 **취소**되어 있다. 분명히 눌렀는데!
+
+```ts
+// 이렇게 작성했을 것이다
+function LikeButton({ postId }) {
+  const [isLiked, setIsLiked] = useState(false);
+
+  const handleLike = async () => {
+    setIsLiked(true); // 먼저 UI 업데이트
+
+    try {
+      await fetch(`/api/posts/${postId}/like`, { method: "POST" });
+    } catch (error) {
+      setIsLiked(false); // 실패하면 되돌리기
+      // 그런데 성공했는데도 서버 상태와 안 맞는 경우는?
+    }
+  };
+
+  return <button onClick={handleLike}>{isLiked ? "❤️" : "🤍"}</button>;
+}
+```
+
+**문제의 본질**: 지금까지 다룬 상태 관리는 모두 **클라이언트 상태**였다. 우리가 완전히 통제할 수 있는 상태. 테마를 `light`로 설정하면, 다른 요인에 의해 갑자기 `dark`로 바뀌지 않는다.
+
+하지만 **서버 상태**는 다르다:
+
+- 우리가 완전히 통제할 수 없다 (다른 사용자가 바꿀 수 있음)
+- 네트워크 지연이 있다 (비동기)
+- 신선도가 있다 (시간이 지나면 만료됨)
+- 캐싱이 필요하다 (같은 데이터를 반복 요청하면 낭비)
+
+`useState`나 Zustand로 서버 데이터를 관리하려면:
+
+- 수동으로 캐싱 로직을 작성해야 한다
+- 낙관적 업데이트(Optimistic Update)를 직접 구현해야 한다
+- 데이터 동기화(서버 ↔ 클라이언트)를 신경 써야 한다
+- 에러 처리, 재시도, 로딩 상태를 모두 관리해야 한다
+
+**이것이 바로 TanStack Query(React Query), SWR, RTK Query 같은 도구가 필요한 이유다.**
+
+다음 글에서는 **왜 프론트엔드 상태 관리가 "클라이언트 상태"와 "서버 상태"로 나뉘게 되었는지**, 그리고 TanStack Query가 **내부적으로 어떻게 이 문제를 해결하는지** 원리 중심으로 정리해보겠다.
+
+---
+
+## 핵심 정리
+
+**로컬 상태**는 한 컴포넌트에서만 사용한다. 폼 입력값, 모달 열림/닫힘처럼 공유할 필요 없는 상태는 `useState`로 충분하다.
+
+**Props Drilling**은 여러 단계를 거쳐 props를 전달해야 하는 문제다. 중간 컴포넌트가 사용하지도 않는 값을 전달만 하게 된다.
+
+**Context API**는 Props Drilling을 해결하지만, `Provider`의 value가 바뀌면 모든 Consumer가 재평가된다. **선택적 구독이 불가능**하다.
+
+**Zustand**는 **module-level 저장소**와 **selector 기반 구독**으로 성능 문제를 해결한다. 필요한 값만 선택해서 구독하므로, 다른 값이 바뀌어도 재렌더링되지 않는다. 번들 크기 1.2KB로 매우 가볍다.
+
+**Jotai**는 **원자 단위 상태**와 **의존성 그래프**로 파생 상태를 우아하게 관리한다. Bottom-up 방식으로 필요한 atom만 만들고 조합한다. React Suspense와 완벽 통합된다.
+
+**성능 차이**는 렌더링 메커니즘에서 나온다:
+
+- Context API: value 변경 → 모든 Consumer 재평가
+- Zustand: selector 값 변경 → 해당 컴포넌트만 재렌더링
+- Jotai: atom 변경 → 의존하는 컴포넌트만 재렌더링
+
+**선택 기준**:
+
+- 작은 앱, 자주 안 바뀜 → Context API
+- 일반적인 전역 상태 → **Zustand** (가장 추천)
+- 복잡한 파생 상태 → **Jotai**
+- 서버 데이터 → **TanStack Query** (다음 글)
+
+**핵심 원칙**: 가장 간단한 해결책부터 시작하라. `useState` → Context API → Zustand/Jotai 순서로 복잡도를 높여간다. 성능 문제는 **측정 후에** 최적화한다.

@@ -29,7 +29,18 @@
       "WebFetch(domain:api.iamport.kr)",
       "WebFetch(domain:docs.stripe.com)",
       "WebFetch(domain:velog.io)",
-      "WebFetch(domain:stripe.com)"
+      "WebFetch(domain:stripe.com)",
+      "Bash(xxd:*)",
+      "Bash(iconv:*)",
+      "WebFetch(domain:bundlephobia.com)",
+      "WebFetch(domain:zustand.docs.pmnd.rs)",
+      "WebFetch(domain:redux-toolkit.js.org)",
+      "WebFetch(domain:jotai.org)",
+      "mcp__github__get_file_contents",
+      "WebFetch(domain:kentcdodds.com)",
+      "WebFetch(domain:blog.isquaredsoftware.com)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:overreacted.io)"
     ],
     "deny": [],
     "ask": []
