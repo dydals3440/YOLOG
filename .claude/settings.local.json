@@ -40,7 +40,9 @@
       "WebFetch(domain:kentcdodds.com)",
       "WebFetch(domain:blog.isquaredsoftware.com)",
       "WebFetch(domain:medium.com)",
-      "WebFetch(domain:overreacted.io)"
+      "WebFetch(domain:overreacted.io)",
+      "WebFetch(domain:www.joshwcomeau.com)",
+      "WebFetch(domain:shapkarin.me)"
     ],
     "deny": [],
     "ask": []
