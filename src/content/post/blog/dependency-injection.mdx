@@ -49,7 +49,7 @@ image: '/images/dependency-injection/clean-architecture.webp'
 만약 **의존성 주입**을 모른다면, 보통 주문 처리 함수 안에 특정 결제사(예: 토스 페이먼츠) 코드를 직접 박아버린다.
 
 ```ts
-import { tossPayments } from '@tosspayments/sdk';
+import { tossPayments } from '@tosspayments/sdk'; // [!code error]
 
 async function processOrder(amount: number) {
   console.log('주문 처리를 시작합니다.');
@@ -57,7 +57,7 @@ async function processOrder(amount: number) {
   // ❌ 함수 안에서 특정 결제 모듈을 직접 사용 (강한 결합)
   // 이 코드는 평생 토스 페이먼츠만 써야 한다.
   // Stripe로 바꾸려면 이 파일을 뜯어고쳐야 한다.
-  await tossPayments.pay(amount);
+  await tossPayments.pay(amount); // [!code error]
 }
 ```
 
@@ -82,8 +82,9 @@ async function processOrder(amount: number) {
 ```ts
 // ✅ "결제는 이렇게 하는 것이다"라는 규격 정의
 interface PaymentProcessor {
-  pay(amount: number): Promise<void>;
-}
+  // [!code highlight]
+  pay(amount: number): Promise<void>; // [!code highlight]
+} // [!code highlight]
 ```
 
 2. **부품(Implementation) 만들기** : 규격에 맞춰서 실제 부품들을 만든다.
@@ -118,23 +119,23 @@ const mockProcessor: PaymentProcessor = {
 ```ts
 // ⭐️ 핵심: 함수가 PaymentProcessor를 인자로 주입받는다
 async function processOrder(
-  paymentProcessor: PaymentProcessor,
+  paymentProcessor: PaymentProcessor, // [!code highlight]
   amount: number
 ) {
   // 들어온 부품이 뭐든 간에 .pay()만 호출하면 된다.
-  await paymentProcessor.pay(amount);
+  await paymentProcessor.pay(amount); // [!code highlight]
 }
 
 // --- 실제 사용 시점 (조립) ---
 
 // 상황 1: 한국 서비스 런칭할 땐 토스 페이먼츠 사용
-processOrder(tossProcessor, 10000); // "[TossPayments] 10000원 결제 완료"
+processOrder(tossProcessor, 10000); // [!code highlight]
 
 // 상황 2: 해외 서비스 런칭할 땐 Stripe 사용
-processOrder(stripeProcessor, 100); // "[Stripe] $100 결제 완료"
+processOrder(stripeProcessor, 100); // [!code highlight]
 
 // 상황 3: 개발자가 로컬에서 테스트할 땐 가짜 부품 사용
-processOrder(mockProcessor, 5000); // "[TEST] 가짜 결제 성공 (실제 청구 X)"
+processOrder(mockProcessor, 5000); // [!code highlight]
 ```
 
 보다시피 `processOrder` 함수 코드는 단 한 줄도 수정하지 않았는데, 외부에서 무엇을 넣어주느냐(주입하느냐)에 따라 동작이 완전히 달라진다.
@@ -152,10 +153,11 @@ describe('processOrder', () => {
   it('결제 처리가 정상적으로 호출되어야 한다', async () => {
     // 가짜 결제 모듈 생성 (모킹)
     const mockProcessor: PaymentProcessor = {
-      pay: vi.fn(),
-    };
+      // [!code highlight]
+      pay: vi.fn(), // [!code highlight]
+    }; // [!code highlight]
 
-    await processOrder(mockProcessor, 5000);
+    await processOrder(mockProcessor, 5000); // [!code highlight]
 
     // pay 함수가 5000원으로 호출되었는지 검증
     expect(mockProcessor.pay).toHaveBeenCalledWith(5000);
@@ -180,14 +182,14 @@ React에서는 `Context API`를 활용해 `제어의 역전(IoC)`을 구현할 �
 
 ```ts
 // ❌ API 클라이언트를 직접 import - 강한 결합
-import { movieApi } from './api/movie';
+import { movieApi } from './api/movie'; // [!code error]
 
 function MovieDetailPage() {
   const { id } = useParams<{ id: number }>();
 
   const { data: movie } = useQuery({
     queryKey: ['movie', id],
-    queryFn: () => movieApi.getDetail(id),
+    queryFn: () => movieApi.getDetail(id), // [!code error]
   });
 
   return (
@@ -230,18 +232,19 @@ test('서버 에러 시 에러 문구를 보여준다', () => {
 억지로 테스트를 작성할 수는 있다.
 
 ```ts
-import * as movieApiModule from './api/movie';
+import * as movieApiModule from './api/movie'; // [!code error]
 
-vi.mock('./api/movie');
+vi.mock('./api/movie'); // [!code error]
 
 test('영화 제목을 보여준다', async () => {
   vi.mocked(movieApiModule.movieApi.getDetail).mockResolvedValue({
+    // [!code error]
     title: '테스트용 영화',
   });
 
   render(<MovieDetailPage />);
 
-  vi.clearAllMocks();
+  vi.clearAllMocks(); // [!code error]
 });
 ```
 
@@ -279,8 +282,9 @@ test('영화 제목을 보여준다', async () => {
 ```ts
 // types.ts
 interface MovieClientService {
-  getDetail(id: number): Promise<MovieDetail>;
-}
+  // [!code highlight]
+  getDetail(id: number): Promise<MovieDetail>; // [!code highlight]
+} // [!code highlight]
 ```
 
 ---
@@ -292,6 +296,7 @@ interface MovieClientService {
 ```ts
 // MovieClient.ts
 class MovieClient implements MovieClientService {
+  // [!code highlight]
   async getDetail(id: number): Promise<MovieDetail> {
     const response = await fetch(`/api/movies/${id}`);
     return response.json();
@@ -306,14 +311,15 @@ class MovieClient implements MovieClientService {
 의존성을 담을 Context와 Provider를 만든다.
 
 ```ts
-const MovieClientContext = createContext<MovieClientService | null>(null);
+const MovieClientContext = createContext<MovieClientService | null>(null); // [!code highlight]
 
 function useMovieClient(): MovieClientService {
-  const context = use(MovieClientContext);
+  // [!code highlight]
+  const context = use(MovieClientContext); // [!code highlight]
   if (!context) {
     throw new Error('MovieClientProvider가 필요하다');
   }
-  return context;
+  return context; // [!code highlight]
 }
 ```
 
@@ -321,14 +327,16 @@ Provider는 **주입만 담당**하고, 기본값을 직접 생성하지 않는�
 
 ```ts
 function MovieClientProvider({
-  client,
+  client, // [!code highlight]
   children,
 }: {
-  client: MovieClientService;
+  client: MovieClientService; // [!code highlight]
   children: ReactNode;
 }) {
   return (
     <MovieClientContext.Provider value={client}>
+      {' '}
+      // [!code highlight]
       {children}
     </MovieClientContext.Provider>
   );
@@ -345,11 +353,12 @@ function MovieClientProvider({
 // ApiClientProvider.tsx
 function ApiClientProvider({ children }: PropsWithChildren) {
   const movieClient = useState(() => {
-    return new MovieClient();
-  });
+    // [!code highlight]
+    return new MovieClient(); // [!code highlight]
+  }); // [!code highlight]
 
   return (
-    <MovieClientProvider client={movieClient}>{children}</MovieClientProvider>
+    <MovieClientProvider client={movieClient}>{children}</MovieClientProvider> // [!code highlight]
   );
 }
 
@@ -357,6 +366,8 @@ function ApiClientProvider({ children }: PropsWithChildren) {
 function App() {
   return (
     <ApiClientProvider>
+      {' '}
+      // [!code highlight]
       <QueryClientProvider client={queryClient}>
         <Router />
       </QueryClientProvider>
@@ -378,11 +389,11 @@ App.tsx는 래퍼만 사용하면 되므로 더 깔끔해진다.
 ```ts
 function MovieDetailPage() {
   const { id } = useParams<{ id: number }>();
-  const movieClient = useMovieClient(); // Context에서 DI 받기
+  const movieClient = useMovieClient(); // [!code highlight]
 
   const { data: movie } = useQuery({
     queryKey: ['movie', id],
-    queryFn: () => movieClient.getDetail(id),
+    queryFn: () => movieClient.getDetail(id), // [!code highlight]
   });
 
   return (
@@ -409,15 +420,19 @@ describe('MovieDetailPage', () => {
   it('영화 상세 정보를 렌더링한다', async () => {
     // Mock 클라이언트 생성
     const mockClient = {
+      // [!code highlight]
       getDetail: vi.fn().mockResolvedValue({
-        title: '인셉션',
-        overview: '꿈 속의 꿈',
-      }),
-    };
+        // [!code highlight]
+        title: '인셉션', // [!code highlight]
+        overview: '꿈 속의 꿈', // [!code highlight]
+      }), // [!code highlight]
+    }; // [!code highlight]
 
     // 실제 앱과 동일하게 커스텀 Provider 사용
     render(
       <MovieClientProvider client={mockClient}>
+        {' '}
+        // [!code highlight]
         <QueryClientProvider
           client={
             new QueryClient({
@@ -493,17 +508,19 @@ Next.js 같은 프레임워크에서는 서버 컴포넌트와 클라이언트 �
 
 ## 마무리
 
-서비스의 변경이 많아질수록 테스트 코드의 중요성은 점점 더 커지고, 테스트 코드를 잘 작성하는 것은 서비스의 안정성을 높이는 중요한 요소가 된다.
+서비스의 변경 속도가 빨라질수록 테스트 코드는 선택이 아닌 생존 전략이 된다.
 
-실제로 최근에 너무나 서비스의 기획의 변경이 많아서, 어떻게 하면 테스트 코드를 잘 작성할 수 있을까? 라는 고민을 정말 많이하면서 결국에는 지금 우리 상황에 맞는 적절한 리액트 아키텍처에 대한 고민을 많이 하게 되었다.
+이번 리팩토링 과정을 통해, 의존성 주입(DI)이 단순히 테스트를 위한 도구를 넘어 유연하고 지속 가능한 애플리케이션을 만드는 핵심 열쇠임을 다시 한번 확인할 수 있었다.
 
-이러한 고민에 정말 좋은 글들이 많이 있었고, 이를 통해 그래도 고민했던 점들이 하나하나씩 해결되고 개인의 설계에 대한 의문증이 하나씩 사라지고 있는 것 같다.
+물론 완벽한 아키텍처는 존재하지 않는다.
 
-> 물론 아직도 풀리지 못한 궁금증은 너무 많다.
+나 또한 수많은 기술 블로그와 레퍼런스를 탐독하며 우리 팀의 상황에 맞는 최적의 해답을 찾기 위해 부단히 애썼고, 그 과정에서 얻은 인사이트를 이 글에 정리해 보았다.
 
-조금이나마, 나와 같은 고민을 하고 있는 사람들에게도 이 글이 도움이 되었으면 좋겠고 이러한 문제를 효율적으로 해결하신 분들이 있거나 같은 고민을 하고 계시는 분들이 있다면 댓글에 공유해주시면 감사하겠습니다.
+여전히 해결해야 할 과제들은 남아있지만, 적어도 '어제보다 더 나은 코드'를 작성하고 있다는 확신은 생겼다.
 
----
+이 글이 리액트 아키텍처와 테스트 도입을 망설이는 개발자들에게 실질적인 도움이 되기를 바란다.
+
+더 나은 방법에 대한 제언이나 각자의 경험담은 언제나 환영한다.
 
 ### 참고 자료
 
