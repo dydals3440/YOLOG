@@ -125,7 +125,7 @@ utils/user.ts → utils/format.ts → hooks/useIsNewUser.ts → ...
 
 파일을 계속 오가며 확인해야 하는 건 생각보다 큰 인지 부하고 프로젝트가 커질수록 **개발자에게 큰 피로감**을 준다.
 
-관련된 로직은 **한 곳에 응집**되어 있을 수록 **같이 일하는 동료들이 코드를 이해하고 수정하기 쉽다.**
+관련된 로직은 **한 곳에 응집**되어 있을 수록 **같이 일하는 동료들이 코드를 이해하고 수정하기 쉽다.** 하지만 현실에서는 이렇게 파일이 흩어지는 경우가 많다:
 
 ```typescript
 // utils/user.ts
@@ -516,16 +516,17 @@ export function userDto(raw: UserResponse): UserDTO {
 
 ### Data Access 계층 구조
 
-[TanStack Query](https://github.com/TanStack/query) 래퍼를 만들 때, 피처 기반 디렉토리 구조로 관리한다:
+[TanStack Query](https://github.com/TanStack/query) 래퍼를 만들 때, 개인적으로는 아래와 같은 폴더 구조를 선호한다.
+물론 실무에서는 `service 레이어`를 하나 더 추가하는 것을 선호한다.
 
 ```
 src/
 └── features/
     └── user/
         ├── models/
-        │   └── user.model.ts           # API 응답 스키마 (Zod)
+        │   └── user.model.ts           # 프론트엔드 DTO 타입 정의
         ├── repositories/
-        │   └── user.dto.ts             # DTO 변환 로직
+        │   └── user.dto.ts             # 서버 응답 검증 (Zod) + DTO 변환
         └── presentations/
             └── hooks/
                 └── use-user-query.ts   # React Query 훅
@@ -535,22 +536,24 @@ src/
 
 ```typescript
 import { useQuery } from '@tanstack/react-query';
-import { UserResponseSchema } from '@/features/user/models/user.model';
-import { userDto, type UserDTO } from '@/features/user/repositories/user.dto';
+import type { UserDTO } from '@/features/user/models/user.model';
+import {
+  UserResponseSchema,
+  userDto,
+} from '@/features/user/repositories/user.dto';
 
 export function useUserQuery(userId: string) {
   return useQuery({
     queryKey: ['user', userId],
-    queryFn: async (): Promise<UserDTO> => {
+    queryFn: async () => {
       const res = await fetch(`/api/users/${userId}`);
       const json = await res.json();
 
-      // 1. 런타임 검증
-      const decoded = UserResponseSchema.parse(json);
-
-      // 2. DTO 변환
-      return userDto(decoded);
+      // 런타임 검증
+      return UserResponseSchema.parse(json);
     },
+    // DTO 변환
+    select: (data): UserDTO => userDto(data),
   });
 }
 ```
@@ -560,18 +563,10 @@ export function useUserQuery(userId: string) {
 이제 처음에 봤던 Bad 예제가 어떻게 바뀌는지 보자:
 
 ```tsx
-// 파생 로직이 완전히 사라진다!
-const GrandParent = () => {
-  const { data: user } = useUserQuery('123'); // 이미 DTO로 변환됨
-  return <Parent user={user} />;
-};
+const Child = () => {
+  // 필요한 곳에서 바로 호출, 파생 로직 없음!
+  const { data: user } = useUserQuery('123');
 
-const Parent = ({ user }) => {
-  return <Child user={user} />;
-};
-
-const Child = ({ user }) => {
-  // 파생 로직 없음! 이미 다 계산되어 있음
   return (
     <div>
       {user.fullName} {user.balance} {user.isNewUser && '🆕'}
@@ -579,6 +574,10 @@ const Child = ({ user }) => {
   );
 };
 ```
+
+`React Query`의 캐싱 덕분에 어디서든 같은 훅을 호출하면 같은 데이터를 받는다.
+
+`props drilling`도 필요 없다.
 
 DTO + React Query 조합의 장점:
 
