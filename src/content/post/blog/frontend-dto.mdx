@@ -22,17 +22,18 @@ image: '/images/frontend-dto/thumbnail.webp'
 
 `DTO(Data Transfer Object)` - 데이터 전송 객체라고 불리는 이 용어는 백엔드 개발에서는 필수적인 요소이다.
 
-잠재적으로 데이터베이스에 저장되어 있는 날 것, 민감한 데이터를 안전하게 소비할 수 있는 구조로 변환하는 수단 역할을 하기 때문이다.
+잠재적으로 데이터베이스에 저장되어 있는 날것의 민감한 데이터를 안전하게 소비할 수 있는 구조로 변환하는 수단 역할을 하기 때문이다.
 
 이번 글에서는 프론트엔드에서도 DTO가 필요한 이유를 설명한다. 그리고 백엔드의 DTO와 프론트엔드의 DTO는 목적이 다르다는 점도 함께 다룬다.
 
-단, 프론트엔드에서 DTO를 쓰는 이유는 서버와 비슷한 보안을 위한 것이 아니다. 어차피 프론트엔드에서 다루는 데이터는 대부분 Public하다.
+단, 프론트엔드에서 DTO를 쓰는 이유는 서버의 DTO 사용 이유 중 하나인 `보안`을 위한 것이 아니다.
+어차피 프론트엔드에서 다루는 데이터는 대부분 `Public`하게 접근 가능하다.
 
 핵심은 **서버 응답을 프론트엔드가 쓰기 편한 형태로 변환**하는 것이다.
 
 ---
 
-## 잘만든 백엔드 DTO에 프론트엔드 DTO 얹기
+## 잘 만든 백엔드 DTO에 프론트엔드 DTO 얹기
 
 > 백엔드에서 이미 DTO를 만들어서 내려주는데, 프론트엔드에서 또 DTO를 만들라고?
 > `DB Entity` → `Backend DTO` → `Frontend DTO` (???)
@@ -79,9 +80,9 @@ const Child = ({ user, fullName, balance }) => {
 };
 ```
 
-이런 일이 발생한다.
+`Props Drilling` 보다, 상태 파생에 대한 관점으로 해당 코드를 바라봐보자.
 
-물론, 지금 위의 예시처럼 컴포넌트 안에서 상태를 파생(derive)하는 게 무조건 잘못된 건 아니다.
+물론, 지금 위의 예시 코드처럼 컴포넌트 안에서 상태를 파생(derive)하는 게 무조건 잘못된 건 아니다.
 
 다만, **DTO를 사용하기 시작하면 이런 작업을 최소화**할 수 있다. 위 코드를 다시 보면:
 
@@ -255,7 +256,7 @@ JSON.stringify({ a: undefined, b: null });
 
 #### 2. snake_case vs camelCase
 
-API에서는 `created_at`, `is_verified`, `avatar_url` 같은 snake_case를 쓰는데, 프론트엔드 컨벤션은 보통 camelCase다.
+API에서는 `created_at`, `is_verified`, `avatar_url` 같은 **snake_case**를 쓰는데, 프론트엔드 컨벤션은 보통 **camelCase**다.
 
 #### 3. 표시할 때마다 변환 필요
 
@@ -334,11 +335,27 @@ API 필드와 DTO 필드가 일대일로 매칭될 필요는 없다.
 
 API의 `balance_raw`는 서버가 정수로 금액을 다루기 편하게 설계된 것이다. 하지만 컴포넌트에서 매번 `toLocaleString()`을 호출하고 싶지는 않다. DTO에서 `balance: "150,000원"`으로 변환해두면, 컴포넌트는 그냥 `{user.balance}`만 렌더링하면 된다.
 
-타입과 필드 이름은 **사용하는 개발자 관점**으로 짓는 게 유지보수에 좋다.
+적어도 프론트엔드의 DTO 에서 타입과 필드 이름은 **사용하는 유저 입장에서 짓는 게 유지보수에 좋다.**
 
 ### 명목적 타입 (Branded Types)
 
-먼저 ID 타입을 구분하자.
+DTO를 만들 때 흔히 놓치는 부분이 있다. 바로 **ID 타입**이다.
+
+`userId`, `postId`, `orderId` - 타입스크립트 입장에서 이것들은 전부 그냥 `string`이다. 구분이 안 된다.
+
+```ts
+deleteUser(postId); // 🤔 postId를 넣었는데 에러가 안 난다?
+```
+
+실수로 `postId`를 `userId` 자리에 넣어도 컴파일러는 아무 말이 없다. 둘 다 `string`이니까.
+
+문제는 이런 버그가 **런타임에서야 발견**된다는 점이다.
+
+**프론트엔드에서 mutation 작업을 할 때 ID는 캐시의 핵심 키 역할을 한다.**
+
+잘못된 ID가 들어가면 캐시가 꼬이고, 엉뚱한 데이터가 삭제되고, API 요청이 실패한다. 게다가 원인 추적도 어렵다.
+
+DTO에서 ID를 변환할 때 **명목적 타입(Branded Types)**으로 감싸면, 이런 실수를 컴파일 타임에 잡을 수 있다.
 
 ```ts
 // 브랜드 타입 정의
@@ -361,8 +378,8 @@ function deletePost(postId: PostId) {
 
 ```ts
 // ❌ 일반 string - 타입 에러가 안 남
-deleteUser('user-123'); // [!code error]
-deleteUser('post-456'); // [!code error]
+deleteUser('user-123');
+deleteUser('post-456');
 // userId인지 postId인지 구분 불가, 실수로 postId를 넣어도 에러 없음!
 ```
 
@@ -483,19 +500,20 @@ export function userDto(raw: UserResponse): UserDTO {
   };
 
   // 2. role에 따른 구별된 유니온 반환
+  // ts-pattern이 role을 좁혀주므로, 해당 role일 때 필드가 존재함을 보장
   return match(raw.role)
     .with('user', () => ({ ...base, role: 'user' as const }))
     .with('admin', () => ({
       ...base,
       role: 'admin' as const,
-      adminSince: new Date(raw.admin_since!),
+      adminSince: new Date(raw.admin_since!), // admin이면 admin_since 존재
       canBanUsers: true as const,
       canDeletePosts: true as const,
     }))
     .with('moderator', () => ({
       ...base,
       role: 'moderator' as const,
-      moderatedPosts: raw.moderated_posts!,
+      moderatedPosts: raw.moderated_posts!, // moderator면 moderated_posts 존재
       canDeletePosts: true as const,
       canBanUsers: false as const,
     }))
@@ -535,15 +553,15 @@ src/
 ### presentations/hooks/use-user-query.ts
 
 ```typescript
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions } from '@tanstack/react-query';
 import type { UserDTO } from '@/features/user/models/user.model';
 import {
   UserResponseSchema,
   userDto,
 } from '@/features/user/repositories/user.dto';
 
-export function useUserQuery(userId: string) {
-  return useQuery({
+export function userQueryOptions(userId: string) {
+  return queryOptions({
     queryKey: ['user', userId],
     queryFn: async () => {
       const res = await fetch(`/api/users/${userId}`);
@@ -558,14 +576,19 @@ export function useUserQuery(userId: string) {
 }
 ```
 
+`queryOptions`를 사용하면 `useQuery`, `useSuspenseQuery`, `prefetchQuery` 등에서 동일한 옵션을 재사용할 수 있다. 타입 추론도 더 정확해진다.
+
 ### 컴포넌트에서 사용
 
-이제 처음에 봤던 Bad 예제가 어떻게 바뀌는지 보자:
+이제 처음에 봤던 상태의 파생 예제가 어떻게 바뀌는지 보자:
 
 ```tsx
+import { useQuery } from '@tanstack/react-query';
+import { userQueryOptions } from '@/features/user/presentations/hooks/use-user-query';
+
 const Child = () => {
   // 필요한 곳에서 바로 호출, 파생 로직 없음!
-  const { data: user } = useUserQuery('123');
+  const { data: user } = useQuery(userQueryOptions('123'));
 
   return (
     <div>
