@@ -20,19 +20,7 @@
 ✅ 이 방법이 효과적이다.
 ```
 
-### 2. 독자 친화적 설명
-
-독자가 개념을 쉽게 이해하도록 실생활 비유와 예시를 활용한다.
-
-```markdown
-✅ 좋은 예시:
-마치 집 근처 편의점에서 물건을 사는 것과 도매시장까지 가는 것의 차이와 같다.
-
-✅ 좋은 예시:
-우유 유통기한을 확인하는 것과 비슷하다. 제조일자가 같다면 아마 똑같은 우유일 것이다.
-```
-
-### 3. 질문형 문장 활용
+### 2. 질문형 문장 활용
 
 독자의 궁금증을 자극하고 흐름을 자연스럽게 만든다.
 
@@ -71,7 +59,7 @@
 - 강조하고 싶은 일반 단어/문장 → 볼드체(\*\*)
 - **백틱과 볼드체는 혼합 불가** → `**text**` (❌) / `text` (✅)
 - **따옴표와 볼드체도 혼합 불가** → `**"text"**` (❌) / `"text"` 또는 **text** (✅)
-- **볼드체 안에 백틱 포함 불가** → `**함수 내부의 \`username\`**` (❌) / 함수 내부의 \`username\` (✅)
+- **볼드체 안에 백틱 포함 불가** → `**함수 내부의 \`username\`\*\*` (❌) / 함수 내부의 \`username\` (✅)
 
 ```markdown
 ❌ **Presentation → Application → Domain**
@@ -111,8 +99,7 @@
 ### 2. 코드 블록
 
 ````markdown
-✅ 권장 언어 표시: js, ts, html, css, bash, http
-❌ 사용 금지: jsx, tsx
+✅ 권장 언어 표시: js, ts, html, css, bash, http, ts, tsx
 
 # HTTP 응답 예시
 
@@ -152,7 +139,7 @@ fs.stat(filepath, (err, stat) => {
   const modified = stat.mtime;
 
   // Last-Modified 헤더에 수정 시간을 담아 응답한다
-  res.setHeader("Last-Modified", modified.toUTCString());
+  res.setHeader('Last-Modified', modified.toUTCString());
 });
 ```
 

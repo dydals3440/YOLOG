@@ -1,0 +1,644 @@
+---
+title: 리액트에서 DTO가 필요한 이유
+date: 2025-12-14
+updatedDate: 2025-12-14
+tags:
+  [
+    React,
+    TypeScript,
+    DTO,
+    Data Transfer Object,
+    API,
+    프론트엔드 아키텍처,
+    TanStack Query,
+    Zod,
+    ts-pattern,
+  ]
+category: DEVELOPMENT
+image: '/images/frontend-dto/thumbnail.webp'
+---
+
+# 리액트에서 DTO가 필요한 이유
+
+`DTO(Data Transfer Object)` - 데이터 전송 객체라고 불리는 이 용어는 백엔드 개발에서는 필수적인 요소이다.
+
+잠재적으로 데이터베이스에 저장되어 있는 날 것, 민감한 데이터를 안전하게 소비할 수 있는 구조로 변환하는 수단 역할을 하기 때문이다.
+
+이번 글에서는 프론트엔드에서도 DTO가 필요한 이유를 설명한다. 그리고 백엔드의 DTO와 프론트엔드의 DTO는 목적이 다르다는 점도 함께 다룬다.
+
+단, 프론트엔드에서 DTO를 쓰는 이유는 서버와 비슷한 보안을 위한 것이 아니다. 어차피 프론트엔드에서 다루는 데이터는 대부분 Public하다.
+
+핵심은 **서버 응답을 프론트엔드가 쓰기 편한 형태로 변환**하는 것이다.
+
+---
+
+## 잘만든 백엔드 DTO에 프론트엔드 DTO 얹기
+
+> 백엔드에서 이미 DTO를 만들어서 내려주는데, 프론트엔드에서 또 DTO를 만들라고?
+> `DB Entity` → `Backend DTO` → `Frontend DTO` (???)
+
+처음에는 이런 의문이 들 것이다.
+
+> 어차피, 백엔드의 응답들은 대부분 프론트엔드에서 쓰기 좋은 형태로 변환되어 내려오는데, 프론트엔드에서 또 DTO를 만들라고?
+
+물론 간단한 서비스의 경우 그럴 수 있다. 백엔드 DTO는 `"DB 데이터를 API 응답용으로 변환"`한 것이고, 프론트엔드 DTO는 `"API 응답을 UI에서 쓰기 좋게 변환"`하는 것을 목적으로 한다.
+
+엄연히 둘의 목적이 다르다.
+
+특히나 처음 리액트를 배우거나, 무엇인가 이런 설계에 대해 깊게 고민하지 않았더라면 한 번 이상은 **컴포넌트 내부에서 가능한 모든 상태를 처리하려다가 실수**를 저지른다.
+
+### 이런 코드를 본 적 있을 것이다
+
+```tsx
+// API 응답 그대로 사용
+const GrandParent = () => {
+  const { data: user } = useQuery({ queryKey: ['user'], queryFn: fetchUser });
+
+  // 파생 로직 1
+  const fullName = `${user.firstName} ${user.lastName}`;
+
+  return <Parent user={user} fullName={fullName} />;
+};
+
+const Parent = ({ user, fullName }) => {
+  // 파생 로직 2 (또 계산)
+  const balance = `${user.balanceRaw.toLocaleString()}원`;
+
+  return <Child user={user} fullName={fullName} balance={balance} />;
+};
+
+const Child = ({ user, fullName, balance }) => {
+  // 파생 로직 3 (또...)
+  const isNewUser = Date.now() - new Date(user.createdAt).getTime() < 604800000;
+
+  return (
+    <div>
+      {fullName} {balance} {isNewUser && '🆕'}
+    </div>
+  );
+};
+```
+
+이런 일이 발생한다.
+
+물론, 지금 위의 예시처럼 컴포넌트 안에서 상태를 파생(derive)하는 게 무조건 잘못된 건 아니다.
+
+다만, **DTO를 사용하기 시작하면 이런 작업을 최소화**할 수 있다. 위 코드를 다시 보면:
+
+1. `GrandParent` 컴포넌트에서 `fullName`을 파생해서 `Parent`로 넘긴다
+2. `Parent`는 `balance`를 파생해서 `Child`로 넘긴다
+3. `Child`는 `isNewUser`를 또 파생한다
+
+그런데 다른 곳에서도 `fullName`이 필요하다면? `balance`가 필요하다면?
+
+보통은 **재사용 가능한 함수**를 만들거나 **커스텀 훅**을 만들 것이다.
+하지만 파생해야 할 데이터 조각마다 이런 짓을 하기 시작하면:
+
+**1. 수백 개의 유틸 함수가 사방에 흩어진다**
+
+```ts
+// utils/user.ts, utils/format.ts, utils/date.ts, hooks/useIsNewUser.ts...
+```
+
+**2. 함수 이름을 끊임없이 기억해야 한다**
+
+```ts
+// getFullName? getUserName? formatUserName?
+import { ??? } from 'utils/user';
+```
+
+**3. 프로젝트의 가독성과 유지보수성이 망가진다**
+
+```ts
+import { getFullName } from 'utils/user';
+import { formatBalance } from 'utils/format';
+import { isNewUser } from 'utils/date';
+import { useUserStatus } from 'hooks/useUserStatus';
+// ...
+```
+
+**4. 시선의 분산이 개발자를 지치게 한다**
+
+```
+utils/user.ts → utils/format.ts → hooks/useIsNewUser.ts → ...
+```
+
+파일을 계속 오가며 확인해야 하는 건 생각보다 큰 인지 부하고 프로젝트가 커질수록 **개발자에게 큰 피로감**을 준다.
+
+관련된 로직은 **한 곳에 응집**되어 있을 수록 **같이 일하는 동료들이 코드를 이해하고 수정하기 쉽다.**
+
+```typescript
+// utils/user.ts
+export const getFullName = (user: User) => `${user.firstName} ${user.lastName}`;
+
+// utils/format.ts
+export const formatBalance = (raw: number) => `${raw.toLocaleString()}원`;
+
+// hooks/useIsNewUser.ts
+export const useIsNewUser = (createdAt: string) => {
+  return Date.now() - new Date(createdAt).getTime() < 604800000;
+};
+
+// utils/avatar.ts
+export const getAvatarUrl = (user: User) => user.avatar_url ?? '/default.png';
+
+// ... 그리고 이런 파일들이 수십 개 생긴다
+```
+
+---
+
+## 런타임 검증을 고려하자
+
+외부 소스에서 오는 데이터는 런타임에 검증(validate)하면 더 안전한 서비스를 구축할 수 있다. [Zod](https://github.com/colinhacks/zod) 같은 스키마 검증 라이브러리를 사용하면 쉽게 구현할 수 있다.
+
+`OpenAPI 자동 생성 타입`이든, `GraphQL Codegen`이든 마찬가지다. 타입스크립트 타입은 컴파일 타임에만 존재하고, **런타임에는 아무것도 보장하지 않는다.**
+
+단, 주의할 점이 있다. Zod의 `parse()`는 검증 실패 시 `ZodError`를 던지기 때문에, 제대로 핸들링하지 않으면 앱이 깨질 수 있다.
+
+앱을 깨뜨리지 않으려면 `safeParse()`를 사용하거나, 에러 바운더리로 감싸는 것이 좋다.
+
+그럼에도 런타임 검증이 유용한 이유는 **버그가 발생했을 때 원인을 즉시 파악**할 수 있기 때문이다.
+
+- 스키마가 틀렸는지
+- 타입이 문제인지
+- 서버가 특정 상황에서 실패하는지
+
+런타임 체크와 로깅이 갖춰져 있다면, 버그를 잡기가 훨씬 쉬워진다.
+
+---
+
+## API 응답의 문제점들
+
+### schemas.ts - API 응답 정의
+
+```typescript
+import { z } from 'zod';
+
+export const UserResponseSchema = z.object({
+  id: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  email: z.string(),
+
+  // 문제 1: undefined | null 둘 다 가능
+  bio: z.string().nullish(),
+  avatar_url: z.string().nullish(),
+
+  // 문제 2: snake_case
+  created_at: z.string(),
+  is_verified: z.boolean(),
+
+  // 문제 3: 숫자만 저장 (표시할 때마다 포맷 필요)
+  balance_raw: z.number(),
+
+  // 문제 4: role에 따라 다른 필드가 존재
+  role: z.enum(['user', 'admin', 'moderator']),
+  admin_since: z.string().nullish(), // admin만 존재
+  moderated_posts: z.number().nullish(), // moderator만 존재
+});
+
+export type UserResponse = z.infer<typeof UserResponseSchema>;
+```
+
+### 어떤 문제들이 있나?
+
+#### 1. Nullish 값들 (`undefined | null`)
+
+`bio`, `avatar_url`이 `nullish`하다. 즉 `undefined`나 `null`일 수 있다는 뜻인데, 이건 작업하기 정말 귀찮다. 그냥 `null`로 정규화(normalize)하는 게 좋다.
+
+**왜 이런 일이 생기는가?**
+
+Swagger(OpenAPI)에서 필드를 정의할 때 두 가지 속성이 있다:
+
+- `required: false` → 필드가 아예 없을 수 있음 → **undefined**
+- `nullable: true` → 필드는 있지만 값이 null일 수 있음 → **null**
+
+```yaml
+# Swagger 정의 예시
+bio:
+  type: string
+  nullable: true # null 가능
+# required에 bio가 없음  # 필드 자체가 없을 수도 있음
+```
+
+결과적으로 프론트엔드에서는 `string | null | undefined` 타입을 받게 된다. 백엔드 프레임워크마다, 상황마다 어떤 값이 올지 예측하기 어렵다.
+
+**왜 귀찮은가?**
+
+```tsx
+// 😫 undefined와 null 둘 다 체크해야 함
+{
+  user.bio !== undefined && user.bio !== null && <p>{user.bio}</p>;
+}
+
+// 또는 느슨한 비교 사용 (lint 경고 발생할 수 있음)
+{
+  user.bio != null && <p>{user.bio}</p>;
+}
+```
+
+그리고 `JSON.stringify` 동작도 다르다:
+
+```typescript
+JSON.stringify({ a: undefined, b: null });
+// 결과: '{"b":null}'  ← undefined는 아예 사라짐!
+```
+
+이런 불일치가 버그의 원인이 된다. **DTO에서 `?? null`로 정규화**하면:
+
+```tsx
+// 😊 null만 체크하면 됨
+{
+  user.bio && <p>{user.bio}</p>;
+}
+```
+
+#### 2. snake_case vs camelCase
+
+API에서는 `created_at`, `is_verified`, `avatar_url` 같은 snake_case를 쓰는데, 프론트엔드 컨벤션은 보통 camelCase다.
+
+#### 3. 표시할 때마다 변환 필요
+
+`balance_raw`는 숫자만 저장되어 있다. 화면에 표시할 때마다 `toLocaleString() + "원"` 포맷팅을 해야 한다.
+
+#### 4. 조건부 필드
+
+- `admin_since`: admin일 때만 의미 있음
+- `moderated_posts`: moderator일 때만 의미 있음
+
+이런 건 **API에서 쉽게 표현할 수 없고**, 결국 클라이언트에서 `구별된 유니온(Discriminated Unions)`으로 처리해야 한다.
+
+**왜 API에서 표현하기 어려운가?**
+
+API는 보통 이렇게 응답한다:
+
+```json
+// 일반 유저
+{
+  "id": "123",
+  "role": "user",
+  "admin_since": null,
+  "moderated_posts": null
+}
+
+// 관리자
+{
+  "id": "456",
+  "role": "admin",
+  "admin_since": "2024-01-15",
+  "moderated_posts": null
+}
+```
+
+**모든 유저에게 모든 필드가 항상 존재**한다. 일반 유저인데 `admin_since: null`이 있고, admin인데 `moderated_posts: null`이 있다.
+
+**의미의 모호함**: `admin_since: null`이 뭘 의미할까?
+
+- "이 사람은 admin이 아니라서 해당 없음"?
+- "이 사람은 admin인데 아직 날짜가 설정되지 않음"?
+
+API만 보고는 구분이 안 된다.
+
+**타입의 한계**: API 스키마(OpenAPI, GraphQL 등)에서는 이렇게밖에 표현 못한다:
+
+```typescript
+admin_since: string | null;
+moderated_posts: number | null;
+```
+
+"role이 admin일 때만 admin_since가 존재한다"는 **조건부 관계**를 타입으로 표현할 방법이 없다.
+
+**클라이언트의 부담**: 결국 컴포넌트에서 이런 방어 코드가 생긴다:
+
+```tsx
+// 매번 이런 방어 코드를 써야 함
+{
+  user.role === 'admin' && user.admin_since && (
+    <span>Admin since {user.admin_since}</span>
+  );
+}
+```
+
+`role === 'admin'`이면 `admin_since`가 **반드시 있다**는 걸 알지만, 타입 시스템은 모른다. 그래서 `&& user.admin_since`를 또 체크해야 한다.
+
+---
+
+## 해결책: DTO 변환
+
+### 타입 이름은 사용자 관점으로
+
+API 필드와 DTO 필드가 일대일로 매칭될 필요는 없다.
+
+- **API**: 데이터 저장/처리 관점 (`balance_raw: 150000`, `created_at: "2024-01-15T..."`)
+- **DTO**: 사용자가 화면에서 인식하는 형태 (`balance: "150,000원"`, `isNewUser: true`)
+
+API의 `balance_raw`는 서버가 정수로 금액을 다루기 편하게 설계된 것이다. 하지만 컴포넌트에서 매번 `toLocaleString()`을 호출하고 싶지는 않다. DTO에서 `balance: "150,000원"`으로 변환해두면, 컴포넌트는 그냥 `{user.balance}`만 렌더링하면 된다.
+
+타입과 필드 이름은 **사용하는 개발자 관점**으로 짓는 게 유지보수에 좋다.
+
+### 명목적 타입 (Branded Types)
+
+먼저 ID 타입을 구분하자.
+
+```ts
+// 브랜드 타입 정의
+type UserId = string & { readonly __brand: unique symbol }; // [!code highlight]
+type PostId = string & { readonly __brand: unique symbol }; // [!code highlight]
+
+const UserId = (id: string): UserId => id as UserId;
+const PostId = (id: string): PostId => id as PostId;
+
+// 함수는 UserId만 받음
+function deleteUser(userId: UserId) {
+  /* ... */
+} // [!code highlight]
+function deletePost(postId: PostId) {
+  /* ... */
+} // [!code highlight]
+```
+
+왜 필요할까? 일반 `string`을 쓰면 **타입 에러가 발생하지 않는다**:
+
+```ts
+// ❌ 일반 string - 타입 에러가 안 남
+deleteUser('user-123'); // [!code error]
+deleteUser('post-456'); // [!code error]
+// userId인지 postId인지 구분 불가, 실수로 postId를 넣어도 에러 없음!
+```
+
+명목적 타입을 쓰면 **잘못된 ID를 넘기면 컴파일 에러**가 난다:
+
+```ts
+// ✅ 명목적 타입 - 타입 에러로 실수 방지
+deleteUser(UserId('user-123')); // [!code highlight]
+deleteUser(PostId('post-456')); // [!code error]
+// 타입 에러! PostId는 UserId에 할당 불가
+```
+
+캐시를 업데이트할 때 잘못된 ID를 넘겨서 버그를 만드는 일이 생각보다 많다. **타입 레벨에서 버그를 최소화할 수 있다면 해야 한다.**
+
+### 구별된 유니온 (Discriminated Unions)
+
+role에 따라 다른 타입을 정의하자:
+
+```typescript
+type BaseUserDTO = {
+  id: UserId;
+  fullName: string;
+  email: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  createdAt: Date;
+  isVerified: boolean;
+  balance: string; // 이미 "150,000원" 형태로 변환됨
+  isNewUser: boolean;
+};
+
+type RegularUserDTO = BaseUserDTO & {
+  role: 'user';
+};
+
+type AdminDTO = BaseUserDTO & {
+  role: 'admin';
+  adminSince: Date;
+  canBanUsers: true;
+  canDeletePosts: true;
+};
+
+type ModeratorDTO = BaseUserDTO & {
+  role: 'moderator';
+  moderatedPosts: number;
+  canDeletePosts: true;
+  canBanUsers: false;
+};
+
+export type UserDTO = RegularUserDTO | AdminDTO | ModeratorDTO;
+```
+
+이제 컴포넌트에서:
+
+```tsx
+function UserActions({ user }: { user: UserDTO }) {
+  if (user.role === 'admin') {
+    // TypeScript가 adminSince, canBanUsers 존재를 보장
+    return (
+      <>
+        <span>Admin since {user.adminSince.toLocaleDateString()}</span>
+        <BanUserButton />
+      </>
+    );
+  }
+
+  if (user.role === 'moderator') {
+    // TypeScript가 moderatedPosts 존재를 보장
+    return <span>Moderated {user.moderatedPosts} posts</span>;
+  }
+
+  return null; // 일반 유저는 추가 액션 없음
+}
+```
+
+### [ts-pattern](https://github.com/gvergnaud/ts-pattern)으로 매핑
+
+role을 매핑할 때 `ts-pattern`을 사용하면 **모든 케이스를 처리했는지 컴파일 타임에 확인**할 수 있다:
+
+```typescript
+import { match } from 'ts-pattern';
+
+// 새로운 role이 추가되면 exhaustive()가 타입 에러를 발생시킴!
+function mapRole(role: UserResponse['role']) {
+  return match(role)
+    .with('user', () => 'user' as const)
+    .with('admin', () => 'admin' as const)
+    .with('moderator', () => 'moderator' as const)
+    .exhaustive();
+}
+```
+
+---
+
+## 전체 DTO 변환 함수
+
+앞서 설명한 타입들과 패턴들을 모두 조합하면 이런 구조가 된다:
+
+```typescript
+// dto.ts
+import { match } from 'ts-pattern';
+import type { UserResponse } from './schemas';
+import type { UserDTO, BaseUserDTO } from './types';
+import { UserId } from './types';
+
+export function userDto(raw: UserResponse): UserDTO {
+  // 1. 공통 필드 변환 (nullish 정규화, 파생값 계산)
+  const base: BaseUserDTO = {
+    id: UserId(raw.id),
+    fullName: `${raw.firstName} ${raw.lastName}`,
+    email: raw.email,
+    bio: raw.bio ?? null,
+    avatarUrl: raw.avatar_url ?? null,
+    createdAt: new Date(raw.created_at),
+    isVerified: raw.is_verified,
+    balance: `${raw.balance_raw.toLocaleString()}원`,
+    isNewUser: Date.now() - new Date(raw.created_at).getTime() < 604800000,
+  };
+
+  // 2. role에 따른 구별된 유니온 반환
+  return match(raw.role)
+    .with('user', () => ({ ...base, role: 'user' as const }))
+    .with('admin', () => ({
+      ...base,
+      role: 'admin' as const,
+      adminSince: new Date(raw.admin_since!),
+      canBanUsers: true as const,
+      canDeletePosts: true as const,
+    }))
+    .with('moderator', () => ({
+      ...base,
+      role: 'moderator' as const,
+      moderatedPosts: raw.moderated_posts!,
+      canDeletePosts: true as const,
+      canBanUsers: false as const,
+    }))
+    .exhaustive();
+}
+```
+
+핵심은 두 단계다:
+
+1. **공통 필드 변환**: `nullish` 정규화, snake_case → camelCase, 파생값 계산
+2. **구별된 유니온 반환**: `ts-pattern`으로 role별 타입 안전한 분기
+
+---
+
+## React Query와 함께 쓰면
+
+지금까지 설명한 DTO 변환을 React Query와 결합하면 코드가 얼마나 깔끔해지는지 보자.
+
+### Data Access 계층 구조
+
+[TanStack Query](https://github.com/TanStack/query) 래퍼를 만들 때, 피처 기반 디렉토리 구조로 관리한다:
+
+```
+src/
+└── features/
+    └── user/
+        ├── models/
+        │   └── user.model.ts           # API 응답 스키마 (Zod)
+        ├── repositories/
+        │   └── user.dto.ts             # DTO 변환 로직
+        └── presentations/
+            └── hooks/
+                └── use-user-query.ts   # React Query 훅
+```
+
+### presentations/hooks/use-user-query.ts
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+import { UserResponseSchema } from '@/features/user/models/user.model';
+import { userDto, type UserDTO } from '@/features/user/repositories/user.dto';
+
+export function useUserQuery(userId: string) {
+  return useQuery({
+    queryKey: ['user', userId],
+    queryFn: async (): Promise<UserDTO> => {
+      const res = await fetch(`/api/users/${userId}`);
+      const json = await res.json();
+
+      // 1. 런타임 검증
+      const decoded = UserResponseSchema.parse(json);
+
+      // 2. DTO 변환
+      return userDto(decoded);
+    },
+  });
+}
+```
+
+### 컴포넌트에서 사용
+
+이제 처음에 봤던 Bad 예제가 어떻게 바뀌는지 보자:
+
+```tsx
+// 파생 로직이 완전히 사라진다!
+const GrandParent = () => {
+  const { data: user } = useUserQuery('123'); // 이미 DTO로 변환됨
+  return <Parent user={user} />;
+};
+
+const Parent = ({ user }) => {
+  return <Child user={user} />;
+};
+
+const Child = ({ user }) => {
+  // 파생 로직 없음! 이미 다 계산되어 있음
+  return (
+    <div>
+      {user.fullName} {user.balance} {user.isNewUser && '🆕'}
+    </div>
+  );
+};
+```
+
+DTO + React Query 조합의 장점:
+
+- **파생 로직이 한 곳에 집중**: `dto.ts`에서 모든 변환 처리
+- **컴포넌트는 UI에만 집중**: 데이터 가공 로직 제로
+- **타입 안전성**: `UserDTO` 타입으로 자동완성, 오타 방지
+- **재사용성**: 어떤 컴포넌트에서든 같은 형태의 데이터 사용
+
+---
+
+## 캐시 데이터 처리
+
+마지막으로 중요한 포인트.
+
+유저 정보를 수정해서 캐시를 업데이트해야 할 때, **낙관적(optimistic) 데이터를 캐시에 넣을 때도 반드시 이 DTO 함수를 통과시켜야 한다.**
+
+```typescript
+const mutation = useMutation({
+  mutationFn: updateUser,
+  onMutate: async (newData) => {
+    await queryClient.cancelQueries({ queryKey: ['user', newData.id] });
+    const previous = queryClient.getQueryData(['user', newData.id]);
+
+    // 낙관적 데이터도 반드시 DTO 변환!
+    const optimisticRaw = { ...previous, ...newData };
+    queryClient.setQueryData(['user', newData.id], userDto(optimisticRaw));
+
+    return { previous };
+  },
+});
+```
+
+**애플리케이션으로 들어오는 모든 데이터뿐만 아니라 캐시를 조작하는 모든 시점에서도 DTO 변환 로직을 사용해야 데이터의 일관성이 유지된다.**
+
+---
+
+## 핵심 정리
+
+| 문제                     | 해결책                                    |
+| ------------------------ | ----------------------------------------- |
+| `undefined \| null` 혼용 | `null`로 정규화 (`?? null`)               |
+| snake_case vs camelCase  | DTO에서 일괄 변환                         |
+| 매번 파생 로직 반복      | DTO에서 미리 계산 (`fullName`, `balance`) |
+| 조건부 필드              | 구별된 유니온 (Discriminated Unions)      |
+| ID 타입 혼동             | 명목적 타입 (Branded Types)               |
+| 새로운 케이스 누락       | ts-pattern의 `.exhaustive()`              |
+| 컴포넌트마다 중복 파생   | 한 곳에서 변환, 어디서든 사용             |
+
+### DTO를 사용하면:
+
+1. **컴포넌트에서 파생 로직 최소화** - 이미 정제된 데이터를 받음
+2. **타입 안전성 극대화** - 명목적 타입으로 ID 혼동 방지
+3. **유지보수성 향상** - 변환 로직이 한 곳에 집중
+4. **디버깅 용이** - 런타임 검증 + 로깅으로 버그 추적 쉬움
+5. **데이터 일관성** - 캐시 조작 시에도 동일한 변환 적용
+
+**이게 DTO의 전부다.** 이제 컴포넌트에서는 `userDto()`를 통해 이미 파생되고 정리된 데이터를 받게 된다.
+
+---
+
+## 참고자료
+
+- [Branded Types in TypeScript: Stronger Type Safety for Your Codebase](https://medium.com/@gvelosa/branded-types-in-typescript-stronger-type-safety-for-your-codebase-3f2125c28b43)
