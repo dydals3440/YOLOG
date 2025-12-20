@@ -1,0 +1,1120 @@
+---
+title: Tanstack Router를 소개합니다.
+date: 2025-12-20
+updatedDate: 2025-12-20
+tags: [Tanstack Router]
+category: DEVELOPMENT
+image: '/images/tanstack-router/thumbnail.webp'
+---
+
+# Tanstack Router를 소개합니다.
+
+현재 사내에서 원장 선생님 서비스를 개발해야 할 일이 생겼고, 기존에 `react-router-dom`을 사용하고 있으나 이번 기회에 `TanStack Router`를 사용해보았다.
+
+실제로 `TanStack Router`를 활용하면서 유용한 기능들이 많았다. **타입 안전성**, **파일 기반 라우팅**, **검색 파라미터 검증**, **데이터 로딩** 등 현대적인 라우팅 라이브러리가 갖춰야 할 기능들을 모두 갖추고 있다.
+
+이 글에서는 `TanStack Router`의 주요 기능들을 하나씩 살펴보며, 실무에서 어떻게 활용할 수 있는지 정리해본다.
+
+---
+
+## TanStack Router 설치
+
+터미널에 아래 명령어를 통해 설치할 수 있다.
+
+```bash
+# TanStack Router 관련 의존성 설치
+pnpm install @tanstack/react-router @tanstack/react-router-devtools
+pnpm install -D @tanstack/router-plugin
+```
+
+`vite.config.ts`에서 `TanStack Router` 플러그인을 추가한다.
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
+
+export default defineConfig({
+  plugins: [
+    TanStackRouterVite({
+      target: 'react',
+      autoCodeSplitting: true, // 자동 코드 스플리팅 활성화
+    }),
+    react(),
+  ],
+});
+```
+
+---
+
+## Code Based Router
+
+`TanStack Router`는 `Code Based Router`와 `File Based Router` 두 가지 방식을 지원한다. 먼저 코드 기반 라우팅을 간단히 살펴보자.
+
+```tsx
+// main.tsx
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import {
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+  Outlet,
+  Link,
+} from '@tanstack/react-router';
+import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
+
+// 루트 라우트 생성
+const rootRoute = createRootRoute({
+  component: () => (
+    <div className='p-4'>
+      <nav className='flex gap-4 mb-4'>
+        <Link to='/' className='[&.active]:font-bold'>
+          Home
+        </Link>
+        <Link to='/about' className='[&.active]:font-bold'>
+          About
+        </Link>
+      </nav>
+      <Outlet />
+      <TanStackRouterDevtools position='bottom-right' />
+    </div>
+  ),
+});
+
+// 인덱스 라우트
+const indexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: () => <h1>Home</h1>,
+});
+
+// About 라우트
+const aboutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/about',
+  component: () => <h1>About</h1>,
+});
+
+// 라우트 트리 생성
+const routeTree = rootRoute.addChildren([indexRoute, aboutRoute]);
+
+// 라우터 생성
+const router = createRouter({ routeTree });
+
+// 타입 안전성을 위한 모듈 선언
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router;
+  }
+}
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <RouterProvider router={router} />
+  </StrictMode>
+);
+```
+
+위 코드에서 `Register` 인터페이스를 선언하면 `Link` 컴포넌트의 `to` props에서 **타입 안전성**을 확보할 수 있다. 존재하지 않는 경로를 입력하면 TypeScript가 에러를 표시한다.
+
+하지만 코드 기반 라우팅은 경로가 많아지면 관리하기 어렵다. `TanStack Router`에서는 **파일 기반 라우팅**을 권장한다.
+
+---
+
+## File Based Router
+
+파일 기반 라우팅을 사용하면 파일 구조가 곧 라우트 구조가 된다. `src/routes` 폴더를 생성하고 파일을 추가하면 자동으로 라우트가 생성된다.
+
+### 기본 폴더 구조
+
+```
+📦src
+ ┗ 📂routes
+   ┣ 📜__root.tsx          → 루트 레이아웃 (모든 라우트의 부모)
+   ┣ 📜index.tsx           → "/" 경로
+   ┣ 📜about.tsx           → "/about" 경로
+   ┣ 📂settings
+   ┃ ┣ 📜route.tsx         → "/settings" 레이아웃
+   ┃ ┣ 📜index.tsx         → "/settings/" 정확히 매칭
+   ┃ ┣ 📜profile.tsx       → "/settings/profile"
+   ┃ ┗ 📜payment.tsx       → "/settings/payment"
+   ┗ 📂posts
+     ┣ 📜index.tsx         → "/posts"
+     ┗ 📜$postId.tsx       → "/posts/:postId" 동적 경로
+```
+
+`routes/__root.tsx` 파일을 만들면 자동으로 코드가 생성된다.
+
+```tsx
+// routes/__root.tsx
+import { createRootRoute, Outlet, Link } from '@tanstack/react-router';
+import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
+
+export const Route = createRootRoute({
+  component: RootComponent,
+});
+
+function RootComponent() {
+  return (
+    <div className='p-4'>
+      <nav className='flex gap-4 mb-4 border-b pb-4'>
+        <Link to='/' className='[&.active]:font-bold'>
+          Home
+        </Link>
+        <Link to='/about' className='[&.active]:font-bold'>
+          About
+        </Link>
+      </nav>
+      <Outlet />
+      <TanStackRouterDevtools />
+    </div>
+  );
+}
+```
+
+플러그인이 `routeTree.gen.ts` 파일을 자동 생성하고 타입을 제공한다.
+
+### Nesting Routes
+
+중첩 라우트를 만들려면 폴더 구조를 활용한다. `/settings/profile` 경로를 만들어보자.
+
+```tsx
+// routes/settings/profile.tsx
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/settings/profile')({
+  component: RouteComponent,
+});
+
+function RouteComponent() {
+  return <div>Settings Profile</div>;
+}
+```
+
+### index.tsx vs route.tsx
+
+두 파일의 차이점은 무엇일까?
+
+- `index.tsx`: 정확히 해당 경로에만 매칭된다 (`/settings/`)
+- `route.tsx`: 레이아웃 역할을 하며 하위 경로에도 적용된다 (`/settings`, `/settings/profile`, `/settings/payment`)
+
+```tsx
+// routes/settings/route.tsx - 레이아웃 역할
+import { createFileRoute, Link, Outlet } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/settings')({
+  component: SettingsLayout,
+});
+
+function SettingsLayout() {
+  return (
+    <div>
+      <h1>Settings</h1>
+      <nav className='flex gap-4 mb-4 bg-gray-100 p-2'>
+        <Link
+          to='/settings'
+          activeOptions={{ exact: true }} // 정확히 /settings에만 active
+          className='[&.active]:font-bold'
+        >
+          General
+        </Link>
+        <Link to='/settings/profile' className='[&.active]:font-bold'>
+          Profile
+        </Link>
+        <Link to='/settings/payment' className='[&.active]:font-bold'>
+          Payment
+        </Link>
+      </nav>
+      <Outlet />
+    </div>
+  );
+}
+```
+
+```tsx
+// routes/settings/index.tsx - /settings/ 정확히 매칭
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/settings/')({
+  component: () => <div>General Settings</div>,
+});
+```
+
+### Pathless Layout
+
+URL에 영향을 주지 않고 레이아웃만 공유하고 싶다면 언더스코어(`_`) 접두사를 사용한다.
+
+```
+📦routes
+ ┣ 📂_authenticated        → URL에 포함되지 않음
+ ┃ ┣ 📜route.tsx           → 레이아웃만 제공
+ ┃ ┣ 📜dashboard.tsx       → "/dashboard"
+ ┃ ┗ 📜profile.tsx         → "/profile"
+ ┗ 📜login.tsx              → "/login"
+```
+
+```tsx
+// routes/_authenticated/route.tsx
+import { createFileRoute, Outlet, redirect } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/_authenticated')({
+  beforeLoad: async ({ context }) => {
+    if (!context.auth.isAuthenticated) {
+      throw redirect({ to: '/login' });
+    }
+  },
+  component: () => (
+    <div className='authenticated-layout'>
+      <Outlet />
+    </div>
+  ),
+});
+```
+
+`_authenticated` 폴더 안의 `dashboard.tsx`는 `/dashboard` 경로가 되고, `profile.tsx`는 `/profile` 경로가 된다. 폴더명이 URL에 포함되지 않는다.
+
+---
+
+## Ignored Folders
+
+라우트 생성에서 제외하고 싶은 폴더는 `-` 접두사를 사용한다.
+
+```
+📦routes
+ ┣ 📂-components           → 라우트 생성 안 됨
+ ┃ ┣ 📜Button.tsx
+ ┃ ┗ 📜Modal.tsx
+ ┣ 📂-utils                 → 라우트 생성 안 됨
+ ┃ ┗ 📜helpers.ts
+ ┗ 📜index.tsx              → "/" 라우트
+```
+
+`-components`나 `-utils` 폴더는 라우트로 인식되지 않으므로 공통 컴포넌트나 유틸리티를 저장하는 데 활용할 수 있다.
+
+---
+
+## Flat Routes
+
+폴더 없이 점(`.`) 표기법으로 중첩 라우트를 표현할 수 있다.
+
+```
+📦routes
+ ┣ 📜__root.tsx
+ ┣ 📜index.tsx              → "/"
+ ┣ 📜settings.tsx           → "/settings" 레이아웃
+ ┣ 📜settings.profile.tsx   → "/settings/profile"
+ ┣ 📜settings.payment.tsx   → "/settings/payment"
+ ┗ 📜about.tsx              → "/about"
+```
+
+`settings.profile.tsx` 파일은 `/settings/profile` 경로에 매핑된다. 폴더 구조 없이도 중첩 라우트를 만들 수 있어 간단한 프로젝트에서 유용하다.
+
+---
+
+## Dynamic Path Segments
+
+동적 경로 파라미터는 `$` 접두사를 사용한다.
+
+```
+📦routes
+ ┗ 📂posts
+   ┣ 📜index.tsx            → "/posts"
+   ┗ 📜$postId.tsx          → "/posts/:postId"
+```
+
+```tsx
+// routes/posts/$postId.tsx
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/posts/$postId')({
+  component: PostComponent,
+});
+
+function PostComponent() {
+  const { postId } = Route.useParams();
+  return <div>Post ID: {postId}</div>;
+}
+```
+
+여러 개의 동적 파라미터도 사용할 수 있다.
+
+```
+📦routes
+ ┗ 📂users
+   ┗ 📂$userId
+     ┗ 📜$postId.tsx        → "/users/:userId/:postId"
+```
+
+```tsx
+// routes/users/$userId/$postId.tsx
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/users/$userId/$postId')({
+  component: UserPostComponent,
+});
+
+function UserPostComponent() {
+  const { userId, postId } = Route.useParams();
+  return (
+    <div>
+      User: {userId}, Post: {postId}
+    </div>
+  );
+}
+```
+
+---
+
+## Catch All Routes
+
+`$.tsx` 파일을 사용하면 모든 하위 경로를 캡처할 수 있다.
+
+```
+📦routes
+ ┣ 📜index.tsx              → "/"
+ ┗ 📜$.tsx                   → 모든 일치하지 않는 경로
+```
+
+```tsx
+// routes/$.tsx
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/$')({
+  component: CatchAllComponent,
+});
+
+function CatchAllComponent() {
+  const { _splat } = Route.useParams();
+  return (
+    <div>
+      <h1>404 Not Found</h1>
+      <p>경로: /{_splat}</p>
+    </div>
+  );
+}
+```
+
+`_splat` 파라미터로 캡처된 전체 경로에 접근할 수 있다. `/foo/bar/baz` 경로로 접근하면 `_splat`은 `foo/bar/baz`가 된다.
+
+특정 경로 하위의 모든 경로를 캡처할 수도 있다.
+
+```
+📦routes
+ ┗ 📂docs
+   ┣ 📜index.tsx            → "/docs"
+   ┗ 📜$.tsx                 → "/docs/*"
+```
+
+---
+
+## Search Parameters
+
+`TanStack Router`의 강력한 기능 중 하나는 **타입 안전한 검색 파라미터**다.
+
+### 검색 파라미터 검증
+
+`validateSearch`를 사용하면 검색 파라미터를 검증하고 타입을 지정할 수 있다.
+
+```tsx
+// routes/posts.tsx
+import { createFileRoute } from '@tanstack/react-router';
+
+type PostsSearch = {
+  page: number;
+  filter?: string;
+  sort?: 'asc' | 'desc';
+};
+
+export const Route = createFileRoute('/posts')({
+  validateSearch: (search: Record<string, unknown>): PostsSearch => ({
+    page: Number(search.page) || 1,
+    filter: search.filter as string | undefined,
+    sort:
+      search.sort === 'asc' || search.sort === 'desc' ? search.sort : undefined,
+  }),
+  component: PostsComponent,
+});
+
+function PostsComponent() {
+  const { page, filter, sort } = Route.useSearch();
+  return (
+    <div>
+      <p>Page: {page}</p>
+      <p>Filter: {filter || 'none'}</p>
+      <p>Sort: {sort || 'default'}</p>
+    </div>
+  );
+}
+```
+
+### Zod를 활용한 검증
+
+`Zod`와 함께 사용하면 더 강력한 검증이 가능하다.
+
+```tsx
+// routes/products.tsx
+import { createFileRoute } from '@tanstack/react-router';
+import { z } from 'zod';
+
+const productsSearchSchema = z.object({
+  page: z.number().catch(1),
+  category: z.string().optional(),
+  minPrice: z.number().optional(),
+  maxPrice: z.number().optional(),
+  sort: z.enum(['price', 'name', 'date']).catch('date'),
+});
+
+type ProductsSearch = z.infer<typeof productsSearchSchema>;
+
+export const Route = createFileRoute('/products')({
+  validateSearch: (search) => productsSearchSchema.parse(search),
+  component: ProductsComponent,
+});
+
+function ProductsComponent() {
+  const search = Route.useSearch();
+  // search는 ProductsSearch 타입으로 추론됨
+  return <div>Category: {search.category}</div>;
+}
+```
+
+### 검색 파라미터 업데이트
+
+`Link` 컴포넌트나 `useNavigate` 훅으로 검색 파라미터를 업데이트한다.
+
+```tsx
+import { Link, useNavigate } from '@tanstack/react-router';
+import { Route } from './products';
+
+function ProductFilters() {
+  const navigate = useNavigate({ from: Route.fullPath });
+  const search = Route.useSearch();
+
+  return (
+    <div>
+      {/* Link로 업데이트 */}
+      <Link
+        to='/products'
+        search={(prev) => ({ ...prev, page: prev.page + 1 })}
+      >
+        Next Page
+      </Link>
+
+      {/* useNavigate로 업데이트 */}
+      <button
+        onClick={() =>
+          navigate({
+            search: (prev) => ({ ...prev, category: 'electronics' }),
+          })
+        }
+      >
+        Electronics
+      </button>
+
+      {/* 검색 파라미터 초기화 */}
+      <button
+        onClick={() =>
+          navigate({
+            search: { page: 1 },
+          })
+        }
+      >
+        Reset
+      </button>
+    </div>
+  );
+}
+```
+
+---
+
+## Link Component 심화
+
+`Link` 컴포넌트는 다양한 옵션을 제공한다.
+
+### activeOptions
+
+```tsx
+<Link
+  to='/posts'
+  activeOptions={{
+    exact: true, // 정확히 일치할 때만 active
+    includeSearch: true, // 검색 파라미터도 비교
+    includeHash: true, // 해시도 비교
+  }}
+  activeProps={{ className: 'active' }}
+  inactiveProps={{ className: 'inactive' }}
+>
+  Posts
+</Link>
+```
+
+### preload 옵션
+
+사용자가 링크에 마우스를 올리면 미리 데이터를 로드할 수 있다.
+
+```tsx
+<Link
+  to='/posts/$postId'
+  params={{ postId: '123' }}
+  preload='intent' // hover시 프리로드
+  preloadDelay={100} // 100ms 후 프리로드 시작
+>
+  Post 123
+</Link>
+```
+
+---
+
+## Programmatic Navigation
+
+`useNavigate` 훅을 사용하면 프로그래밍 방식으로 페이지를 이동할 수 있다.
+
+```tsx
+import { useNavigate } from '@tanstack/react-router';
+
+function LoginForm() {
+  const navigate = useNavigate();
+
+  const handleSubmit = async (data: LoginData) => {
+    await login(data);
+
+    // 기본 이동
+    navigate({ to: '/dashboard' });
+
+    // 파라미터와 함께 이동
+    navigate({
+      to: '/users/$userId',
+      params: { userId: '123' },
+    });
+
+    // 검색 파라미터와 함께 이동
+    navigate({
+      to: '/products',
+      search: { category: 'electronics', page: 1 },
+    });
+
+    // replace로 히스토리 대체
+    navigate({
+      to: '/dashboard',
+      replace: true,
+    });
+  };
+
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
+`router` 인스턴스를 직접 사용할 수도 있다.
+
+```tsx
+import { useRouter } from '@tanstack/react-router';
+
+function Component() {
+  const router = useRouter();
+
+  const handleClick = () => {
+    // 프로그래밍 방식 이동
+    router.navigate({ to: '/about' });
+
+    // 뒤로 가기
+    router.history.back();
+
+    // 앞으로 가기
+    router.history.forward();
+  };
+}
+```
+
+---
+
+## Context
+
+라우터 전역에서 데이터를 공유하려면 Context를 사용한다. 인증 정보, API 클라이언트 등을 전달하는 데 유용하다.
+
+```tsx
+// routes/__root.tsx
+import { createRootRouteWithContext, Outlet } from '@tanstack/react-router';
+
+interface RouterContext {
+  auth: {
+    isAuthenticated: boolean;
+    user: User | null;
+  };
+  queryClient: QueryClient;
+}
+
+export const Route = createRootRouteWithContext<RouterContext>()({
+  component: RootComponent,
+});
+
+function RootComponent() {
+  return <Outlet />;
+}
+```
+
+```tsx
+// main.tsx
+import { createRouter, RouterProvider } from '@tanstack/react-router';
+import { routeTree } from './routeTree.gen';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
+
+const router = createRouter({
+  routeTree,
+  context: {
+    auth: undefined!, // 나중에 Provider에서 주입
+    queryClient,
+  },
+});
+
+function App() {
+  const auth = useAuth(); // 인증 상태 훅
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} context={{ auth, queryClient }} />
+    </QueryClientProvider>
+  );
+}
+```
+
+자식 라우트에서 컨텍스트에 접근한다.
+
+```tsx
+// routes/_authenticated/dashboard.tsx
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/_authenticated/dashboard')({
+  beforeLoad: ({ context }) => {
+    // context.auth, context.queryClient 사용 가능
+    console.log('User:', context.auth.user);
+  },
+  component: DashboardComponent,
+});
+
+function DashboardComponent() {
+  const { auth } = Route.useRouteContext();
+  return <div>Welcome, {auth.user?.name}</div>;
+}
+```
+
+---
+
+## Loader Function
+
+`loader` 함수를 사용하면 라우트가 렌더링되기 전에 데이터를 미리 로드할 수 있다.
+
+### 기본 사용법
+
+```tsx
+// routes/posts/$postId.tsx
+import { createFileRoute } from '@tanstack/react-router';
+
+async function fetchPost(postId: string) {
+  const response = await fetch(`/api/posts/${postId}`);
+  if (!response.ok) throw new Error('Failed to fetch post');
+  return response.json();
+}
+
+export const Route = createFileRoute('/posts/$postId')({
+  loader: async ({ params }) => {
+    const post = await fetchPost(params.postId);
+    return { post };
+  },
+  component: PostComponent,
+});
+
+function PostComponent() {
+  const { post } = Route.useLoaderData();
+  return (
+    <article>
+      <h1>{post.title}</h1>
+      <p>{post.content}</p>
+    </article>
+  );
+}
+```
+
+### loader에서 검색 파라미터와 컨텍스트 사용
+
+```tsx
+export const Route = createFileRoute('/products')({
+  validateSearch: (search) => ({
+    page: Number(search.page) || 1,
+    category: search.category as string | undefined,
+  }),
+  loader: async ({ search, context }) => {
+    const products = await context.queryClient.fetchQuery({
+      queryKey: ['products', search],
+      queryFn: () => fetchProducts(search.page, search.category),
+    });
+    return { products };
+  },
+  component: ProductsComponent,
+});
+```
+
+### 병렬 데이터 로딩
+
+여러 데이터를 병렬로 로드하려면 `Promise.all`을 사용한다.
+
+```tsx
+export const Route = createFileRoute('/dashboard')({
+  loader: async ({ context }) => {
+    const [user, notifications, stats] = await Promise.all([
+      fetchUser(context.auth.user.id),
+      fetchNotifications(),
+      fetchStats(),
+    ]);
+    return { user, notifications, stats };
+  },
+  component: DashboardComponent,
+});
+```
+
+### Pending UI
+
+데이터 로딩 중 표시할 UI를 지정한다.
+
+```tsx
+export const Route = createFileRoute('/posts')({
+  loader: async () => {
+    const posts = await fetchPosts();
+    return { posts };
+  },
+  pendingComponent: () => <div>Loading posts...</div>,
+  pendingMs: 200, // 200ms 후에 pending UI 표시
+  pendingMinMs: 500, // 최소 500ms 동안 pending UI 유지
+  component: PostsComponent,
+});
+```
+
+---
+
+## Error Handling
+
+### errorComponent
+
+데이터 로딩이나 렌더링 중 에러가 발생하면 `errorComponent`가 표시된다.
+
+```tsx
+export const Route = createFileRoute('/posts/$postId')({
+  loader: async ({ params }) => {
+    const post = await fetchPost(params.postId);
+    return { post };
+  },
+  errorComponent: ({ error, reset }) => (
+    <div className='error'>
+      <h2>Error occurred</h2>
+      <p>{error.message}</p>
+      <button onClick={reset}>Try again</button>
+    </div>
+  ),
+  component: PostComponent,
+});
+```
+
+### Not Found 처리
+
+존재하지 않는 리소스에 대해 `notFound()` 함수를 사용한다.
+
+```tsx
+import { createFileRoute, notFound } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/posts/$postId')({
+  loader: async ({ params }) => {
+    const post = await fetchPost(params.postId);
+    if (!post) {
+      throw notFound();
+    }
+    return { post };
+  },
+  notFoundComponent: () => (
+    <div>
+      <h2>Post not found</h2>
+      <p>The post you're looking for doesn't exist.</p>
+    </div>
+  ),
+  component: PostComponent,
+});
+```
+
+### 전역 에러 처리
+
+루트 라우트에서 전역 에러 처리를 설정할 수 있다.
+
+```tsx
+// routes/__root.tsx
+export const Route = createRootRoute({
+  errorComponent: ({ error }) => (
+    <div className='global-error'>
+      <h1>Something went wrong</h1>
+      <pre>{error.message}</pre>
+    </div>
+  ),
+  notFoundComponent: () => (
+    <div className='not-found'>
+      <h1>404</h1>
+      <p>Page not found</p>
+    </div>
+  ),
+  component: RootComponent,
+});
+```
+
+---
+
+## Code Splitting
+
+`TanStack Router`는 자동 코드 스플리팅을 지원한다.
+
+### 자동 코드 스플리팅
+
+`vite.config.ts`에서 `autoCodeSplitting`을 활성화하면 각 라우트가 자동으로 별도 청크로 분리된다.
+
+```ts
+// vite.config.ts
+TanStackRouterVite({
+  autoCodeSplitting: true,
+}),
+```
+
+### 수동 코드 스플리팅
+
+더 세밀한 제어가 필요하면 `.lazy.tsx` 파일을 사용한다.
+
+```tsx
+// routes/posts.tsx - 라우트 설정만 포함
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/posts')({
+  validateSearch: (search) => ({
+    page: Number(search.page) || 1,
+  }),
+  loader: async ({ search }) => {
+    const posts = await fetchPosts(search.page);
+    return { posts };
+  },
+});
+```
+
+```tsx
+// routes/posts.lazy.tsx - 컴포넌트만 포함
+import { createLazyFileRoute } from '@tanstack/react-router';
+
+export const Route = createLazyFileRoute('/posts')({
+  component: PostsComponent,
+  pendingComponent: () => <div>Loading...</div>,
+  errorComponent: ({ error }) => <div>Error: {error.message}</div>,
+});
+
+function PostsComponent() {
+  const { posts } = Route.useLoaderData();
+  return <div>{/* ... */}</div>;
+}
+```
+
+---
+
+## Preloading
+
+사용자가 링크에 마우스를 올리면 미리 데이터를 로드하여 페이지 전환을 빠르게 한다.
+
+### 전역 프리로드 설정
+
+```tsx
+const router = createRouter({
+  routeTree,
+  defaultPreload: 'intent', // hover시 프리로드
+  defaultPreloadStaleTime: 0, // 항상 새로운 데이터 로드
+});
+```
+
+### 라우트별 프리로드 설정
+
+```tsx
+export const Route = createFileRoute('/posts/$postId')({
+  loader: async ({ params, preload }) => {
+    // preload가 true면 프리로딩 중
+    const post = await fetchPost(params.postId);
+    return { post };
+  },
+  // 프리로드된 데이터가 30초 동안 유효
+  staleTime: 30_000,
+});
+```
+
+### 수동 프리로드
+
+```tsx
+import { useRouter } from '@tanstack/react-router';
+
+function Component() {
+  const router = useRouter();
+
+  const handleMouseEnter = () => {
+    router.preloadRoute({
+      to: '/posts/$postId',
+      params: { postId: '123' },
+    });
+  };
+
+  return <div onMouseEnter={handleMouseEnter}>Hover me</div>;
+}
+```
+
+---
+
+## Caching
+
+`TanStack Router`는 로더 데이터를 캐싱하여 불필요한 요청을 줄인다.
+
+### 캐시 설정
+
+```tsx
+const router = createRouter({
+  routeTree,
+  defaultPreloadStaleTime: 30_000, // 30초 동안 프리로드 데이터 유지
+  defaultGcTime: 5 * 60 * 1000, // 5분 동안 캐시 유지
+});
+```
+
+### 라우트별 캐시 설정
+
+```tsx
+export const Route = createFileRoute('/posts')({
+  loader: async () => {
+    const posts = await fetchPosts();
+    return { posts };
+  },
+  staleTime: 60_000, // 1분 동안 데이터가 fresh
+  gcTime: 5 * 60_000, // 5분 동안 캐시 유지
+  component: PostsComponent,
+});
+```
+
+`TanStack Query`와 함께 사용하면 더 강력한 캐싱을 구현할 수 있다.
+
+```tsx
+export const Route = createFileRoute('/posts')({
+  loader: async ({ context }) => {
+    await context.queryClient.ensureQueryData({
+      queryKey: ['posts'],
+      queryFn: fetchPosts,
+      staleTime: 60_000,
+    });
+  },
+  component: PostsComponent,
+});
+
+function PostsComponent() {
+  const { data: posts } = useQuery({
+    queryKey: ['posts'],
+    queryFn: fetchPosts,
+  });
+  // ...
+}
+```
+
+---
+
+## Protecting Routes
+
+인증이 필요한 라우트를 보호하려면 `beforeLoad`를 사용한다.
+
+### 단일 라우트 보호
+
+```tsx
+import { createFileRoute, redirect } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/dashboard')({
+  beforeLoad: async ({ context, location }) => {
+    if (!context.auth.isAuthenticated) {
+      throw redirect({
+        to: '/login',
+        search: {
+          redirect: location.href,
+        },
+      });
+    }
+  },
+  component: DashboardComponent,
+});
+```
+
+### 레이아웃 라우트로 여러 라우트 보호
+
+Pathless Layout을 사용하면 여러 라우트를 한 번에 보호할 수 있다.
+
+```
+📦routes
+ ┣ 📂_authenticated
+ ┃ ┣ 📜route.tsx          → 인증 체크 및 레이아웃
+ ┃ ┣ 📜dashboard.tsx      → "/dashboard" (보호됨)
+ ┃ ┣ 📜profile.tsx        → "/profile" (보호됨)
+ ┃ ┗ 📜settings.tsx       → "/settings" (보호됨)
+ ┗ 📜login.tsx             → "/login" (공개)
+```
+
+```tsx
+// routes/_authenticated/route.tsx
+import { createFileRoute, Outlet, redirect } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/_authenticated')({
+  beforeLoad: async ({ context, location }) => {
+    if (!context.auth.isAuthenticated) {
+      throw redirect({
+        to: '/login',
+        search: { redirect: location.href },
+      });
+    }
+  },
+  component: () => <Outlet />,
+});
+```
+
+### 로그인 후 리다이렉트
+
+```tsx
+// routes/login.tsx
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/login')({
+  validateSearch: (search) => ({
+    redirect: search.redirect as string | undefined,
+  }),
+  component: LoginComponent,
+});
+
+function LoginComponent() {
+  const navigate = useNavigate();
+  const { redirect: redirectUrl } = Route.useSearch();
+
+  const handleLogin = async (credentials: Credentials) => {
+    await login(credentials);
+    navigate({ to: redirectUrl || '/dashboard' });
+  };
+
+  return <LoginForm onSubmit={handleLogin} />;
+}
+```
+
+---
+
+## 핵심 정리
+
+- **파일 기반 라우팅**: `src/routes` 폴더 구조가 곧 라우트 구조다
+- **타입 안전성**: `Register` 인터페이스로 전체 앱에서 타입 안전한 네비게이션
+- **동적 경로**: `$`로 시작하는 파일명으로 동적 파라미터 정의
+- **검색 파라미터**: `validateSearch`로 타입 안전한 쿼리스트링 처리
+- **데이터 로딩**: `loader`로 렌더링 전 데이터 페칭, `useLoaderData`로 접근
+- **에러 처리**: `errorComponent`, `notFoundComponent`로 에러 UI 정의
+- **코드 스플리팅**: `autoCodeSplitting`으로 자동 분할, `.lazy.tsx`로 수동 분할
+- **프리로딩**: `preload="intent"`로 hover시 미리 로드
+- **라우트 보호**: `beforeLoad`와 `redirect`로 인증 처리
+- **컨텍스트**: `createRootRouteWithContext`로 전역 데이터 공유
