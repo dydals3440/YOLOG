@@ -1,0 +1,636 @@
+---
+title: useState 스냅샷, 배칭, 불변성 한 번에 정리
+date: 2025-12-22
+updatedDate: 2025-12-22
+tags: [리액트, React, useState, Hooks, 상태관리, State, Immer]
+category: DEVELOPMENT
+image: "/images/react-hooks-useState/thumbnail.webp"
+---
+
+# useState 스냅샷, 배칭, 불변성 한 번에 정리
+
+버튼을 눌렀는데 화면이 안 바뀐다? `console.log` 값은 왜 항상 한 박자 느릴까? 같은 `setState`를 세 번 호출했는데 왜 한 번만 반영될까?
+
+이런 경험이 있다면 `useState`의 동작 원리를 제대로 이해하지 못했을 가능성이 높다. 이번 글에서는 단순한 사용법이 아닌, useState를 사용할 때 마주치는 다양한 문제와 그 원인, 해결 방법을 깊이 있게 다뤄보겠다.
+
+해당 블로그 내용을 바탕으로 [useState 영상 강의](https://youtu.be/fgjsQoTHcnE?si=-N3xe5-bfGH3iUuF)로 간단하게 아래의 내용을 설명했으니 영상을 선호하는 분들은 참고하면 좋겠다.
+
+---
+
+## 문제 1. useState를 사용하지 않았을 때
+
+먼저, 왜 useState를 활용해야 하는지부터 이야기해보자.
+
+```tsx {4-6}
+function App() {
+  let count = 0;
+
+  const handleIncrease = () => {
+    count++;
+    console.log(count); // 1 → 2 → 3 → ... (클릭마다 증가)
+  };
+
+  return (
+    <>
+      <button onClick={handleIncrease}>증가</button>
+      <h1>카운트: {count}</h1> {/* 항상 0 */}
+    </>
+  );
+}
+```
+
+증가 버튼을 클릭하면 화면에 0 → 1 → 2 → ... 이렇게 숫자가 증가할 것 같다. 하지만 실제로는 `console.log(count)` 값은 증가하지만, 화면에는 값이 업데이트되지 않는다.
+
+이유는 간단하다. 리액트는 **상태(state)를 기준으로 리렌더링**이 일어난다. `count`를 상태로 선언한 것이 아닌 단순한 로컬 변수로 선언했기 때문에 리액트는 값이 바뀌었다는 것을 알 수 없고, 화면이 업데이트되지 않는 것이다.
+
+---
+
+## useState 사용 방법
+
+[`useState`](https://react.dev/reference/react/useState)는 컴포넌트에 state 변수를 추가할 수 있는 React Hook이다.
+
+```tsx
+const [state, setState] = useState(initialState);
+```
+
+### 1. 매개변수: initialState
+
+useState는 매개변수로 `initialState`를 받는다. 이름 그대로 초기 상태를 정의하는 것이다. 기본형 데이터든, 참조형 데이터든 어떤 유형의 값이든 지정할 수 있다.
+
+함수를 `initialState`로 전달하면 동작 방식이 살짝 다르다. 이는 아래에서 자세히 설명하겠다.
+
+### 2. 반환값
+
+useState는 정확히 두 개의 값을 가진 배열을 반환한다.
+
+1. **state**: 현재 상태를 반환한다. 첫 번째 렌더링 중에는 `initialState`로 정의된다.
+2. **setState**: state를 다른 값으로 업데이트하고, 리렌더링을 트리거하는 setter 함수다.
+
+---
+
+## 해결 1. useState 활용하기
+
+위에서 발생했던 문제는 useState를 활용하면 손쉽게 해결할 수 있다.
+
+```tsx {2,5}
+import { useState } from "react";
+
+function App() {
+  const [count, setCount] = useState(0);
+
+  const handleIncrease = () => {
+    setCount(count + 1);
+    console.log(count);
+  };
+
+  return (
+    <>
+      <button onClick={handleIncrease}>증가</button>
+      <h1>카운트: {count}</h1>
+    </>
+  );
+}
+```
+
+이제 버튼을 클릭하면 화면에 증가된 값이 바로 반영된다.
+
+### 잠깐, console.log 값이 이상하다?
+
+눈치가 빠른 분이라면 뭔가 이상함을 느꼈을 것이다. 화면에는 분명 10이 보이는데, `console.log(count)`의 결과는 9다. 항상 한 박자 느리다. 이건 버그가 아니라 React의 상태 관리 방식 때문이다.
+
+### State는 스냅샷처럼 동작한다
+
+`setCount`를 호출해도 현재 실행 중인 함수 내의 `count` 값은 변하지 않는다.
+
+```tsx {2-4,7}
+const handleIncrease = () => {
+  console.log(count); // 0
+  setCount(count + 1); // "다음 렌더링에서 1로 바꿔줘"라고 요청
+  console.log(count); // 여전히 0
+
+  setTimeout(() => {
+    console.log(count); // 1초 후에도 여전히 0
+  }, 1000);
+};
+```
+
+왜 이럴까? set 함수는 현재 state를 변경하는 게 아니라, **다음 렌더링에서 반환할 값을 예약**하는 것이기 때문이다.
+
+쉽게 말해 이벤트 핸들러가 실행되는 시점에 `count`는 이미 **스냅샷**으로 찍혀있다. 그래서 그 함수 안에서 아무리 `setCount`를 호출해도, 이미 찍힌 스냅샷 값(count = 0)은 바뀌지 않는다.
+
+### Batching: 여러 업데이트를 묶어서 처리
+
+여기서 한 가지 더 알아야 할 개념이 있다. 바로 **Batching**이다.
+
+```tsx {2-4}
+const handleClick = () => {
+  setCount(count + 1);
+  setFlag(true);
+  setName("Matthew");
+  // 3번의 setState → 리렌더링 3번? ❌
+  // React가 묶어서 → 리렌더링 1번! ✅
+};
+```
+
+React는 여러 개의 state 업데이트를 하나로 묶어서(batch) 한 번만 리렌더링한다. 매번 setState마다 DOM을 업데이트하면 성능이 떨어지기 때문이다.
+
+React 17까지는 이벤트 핸들러 안에서만 batching이 동작했다. 하지만 React 18부터는 **Automatic Batching** 덕분에 `setTimeout`, `Promise`, `fetch` 등 어디서 호출하든 자동으로 batching이 된다.
+
+```tsx
+// React 17: 2번 렌더링
+// React 18: 1번 렌더링 (Automatic Batching)
+setTimeout(() => {
+  setCount((c) => c + 1);
+  setFlag((f) => !f);
+}, 1000);
+```
+
+---
+
+## 문제 2. 숫자가 3 증가할 것 같지만...
+
+위 내용을 잘 이해했다면 아래 코드의 문제점을 파악할 수 있을 것이다.
+
+```tsx {5-7}
+import { useState } from "react";
+
+function App() {
+  const [count, setCount] = useState(0);
+
+  const handleIncrease = () => {
+    setCount(count + 1); // 0 + 1 = 1
+    setCount(count + 1); // 0 + 1 = 1
+    setCount(count + 1); // 0 + 1 = 1
+  };
+
+  return (
+    <>
+      <button onClick={handleIncrease}>증가</button>
+      <h1>카운트: {count}</h1> {/* 클릭 후: 1 (3이 아님!) */}
+    </>
+  );
+}
+```
+
+증가 버튼을 한 번 클릭하면 카운트가 3이 될 것 같지만, 실제로는 1밖에 증가하지 않는다.
+
+세 번의 `setCount` 모두 같은 스냅샷(`count = 0`)을 기준으로 계산하기 때문에 `0 + 1 = 1`이 세 번 적용될 뿐이다.
+
+---
+
+## 해결 2. 업데이터 함수 사용하기
+
+useState의 setter 타입을 보면 값뿐만 아니라 **업데이터 함수**도 전달할 수 있다.
+
+```ts
+type SetStateAction<S> = S | ((prevState: S) => S);
+```
+
+업데이터 함수를 사용하면 이전 state를 기반으로 다음 state를 계산할 수 있다.
+
+```tsx {2-4}
+const handleIncrease = () => {
+  setCount((prev) => prev + 1); // 0 → 1
+  setCount((prev) => prev + 1); // 1 → 2
+  setCount((prev) => prev + 1); // 2 → 3
+};
+```
+
+React는 업데이터 함수를 큐에 넣고, 다음 렌더링 중에 순서대로 호출한다.
+
+1. `prev => prev + 1`은 대기 중인 state로 0을 받고 1을 반환한다.
+2. `prev => prev + 1`은 대기 중인 state로 1을 받고 2를 반환한다.
+3. `prev => prev + 1`은 대기 중인 state로 2를 받고 3을 반환한다.
+
+이제 대기 중인 다른 업데이트가 없으므로, React는 3을 현재 state로 저장하게 된다.
+
+변수명은 `count`보다 이전 값임을 명확히 하기 위해 `prev`를 붙이는 것을 개인적으로 선호한다.
+
+---
+
+## 문제 3. 리렌더링마다 무거운 계산이 반복된다
+
+리렌더링이 비싼 비용이라는 것을 알게 되었다. 그렇다면 아래 코드는 어떨까?
+
+```tsx {3,16}
+import { useState } from "react";
+
+// 무거운 계산: 10만 개의 아이템 생성 및 정렬
+const generateInitialData = () => {
+  console.log("🔥 무거운 계산 시작!");
+  const startTime = performance.now();
+
+  const items = Array.from({ length: 100_000 }, (_, i) => ({
+    id: i,
+    value: Math.random(),
+    name: `Item ${i}`,
+  }));
+  items.sort((a, b) => a.value - b.value);
+
+  const endTime = performance.now();
+  console.log(`⏱️ 소요 시간: ${(endTime - startTime).toFixed(2)}ms`);
+  return items.slice(0, 10);
+};
+
+function App() {
+  console.log("🔄 컴포넌트 렌더링");
+
+  // ❌ 잘못된 방법: 매 렌더링마다 10만 개 생성 + 정렬
+  const [topItems, setTopItems] = useState(generateInitialData());
+  const [count, setCount] = useState(0);
+
+  return (
+    <>
+      <h1>카운트: {count}</h1>
+      <button onClick={() => setCount((c) => c + 1)}>카운트 증가</button>
+      <ul>
+        {topItems.map((item) => (
+          <li key={item.id}>
+            {item.name}: {item.value.toFixed(4)}
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+```
+
+```
+콘솔 결과:
+🔥 무거운 계산 시작!
+⏱️ 소요 시간: 150.23ms
+🔄 컴포넌트 렌더링
+
+// 버튼 클릭 (단순히 count만 바꾸는데...)
+🔥 무거운 계산 시작!
+⏱️ 소요 시간: 148.56ms  ← 또 150ms 낭비!
+🔄 컴포넌트 렌더링
+```
+
+`generateInitialData()`의 결과값은 초기 렌더링에서만 사용되지만, 함수 호출 자체는 매 렌더링마다 일어난다. 버튼을 10번 누르면 1.5초를 낭비하는 셈이다.
+
+---
+
+## 해결 3. 함수의 참조를 넘기자 (Lazy Initialization)
+
+이를 해결하기 위해서는 `generateInitialData()`를 실행한 값이 아닌 **함수의 참조**를 넘기면 된다.
+
+```tsx {5-6}
+function App() {
+  console.log("🔄 컴포넌트 렌더링");
+
+  // ✅ 올바른 방법: 함수 참조 전달 (초기 렌더링에서만 실행)
+  const [topItems, setTopItems] = useState(generateInitialData);
+  // 또는 화살표 함수로 감싸기: useState(() => generateInitialData())
+
+  const [count, setCount] = useState(0);
+
+  return (
+    // ... 동일
+  );
+}
+```
+
+```
+콘솔 결과:
+🔥 무거운 계산 시작!
+⏱️ 소요 시간: 151.34ms
+🔄 컴포넌트 렌더링
+
+// 버튼 클릭 후
+🔄 컴포넌트 렌더링  ← 계산 없이 즉시 렌더링! ✅
+```
+
+함수를 useState에 전달하면 React는 초기화 중에만 함수를 호출한다. `generateInitialData()`가 아니라 `generateInitialData`를 전달하고 있다는 것에 주목하자.
+
+### 실제 사용 예시: localStorage
+
+가장 흔하게 사용되는 패턴이다.
+
+```tsx {2,5}
+// ❌ 매 렌더링마다 localStorage 접근
+const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
+
+// ✅ 초기 렌더링에서만 localStorage 접근
+const [theme, setTheme] = useState(
+  () => localStorage.getItem("theme") || "light"
+);
+```
+
+초기값 계산이 단순한 원시값이면 그냥 넣어도 되지만, 함수 호출, API, localStorage 접근 등이 포함되면 함수로 감싸는 습관을 들이자.
+
+---
+
+## 문제 4. State를 업데이트해도 화면이 바뀌지 않는다
+
+React를 처음 배우다 보면 분명히 state를 업데이트했는데 화면이 바뀌지 않는 경우를 마주하게 된다. 이건 React의 **불변성(Immutability)** 원칙과 관련이 있다.
+
+```tsx {8-9,13-14}
+import { useState } from "react";
+
+function App() {
+  const [formData, setFormData] = useState({
+    name: "Matthew",
+    age: 27,
+  });
+
+  const handleNameChange = () => {
+    formData.name = "YongMin"; // ❌ 기존 객체를 직접 변경
+    setFormData(formData); // ❌ 같은 참조를 다시 전달
+  };
+
+  const handleAgeChange = () => {
+    formData.age = formData.age + 1; // ❌ 기존 객체를 직접 변경
+    setFormData(formData);
+  };
+
+  return (
+    <>
+      <h1>Name: {formData.name}</h1>
+      <h1>Age: {formData.age}</h1>
+      <button onClick={handleNameChange}>이름 변경</button>
+      <button onClick={handleAgeChange}>나이 변경</button>
+    </>
+  );
+}
+```
+
+버튼을 클릭해도 화면은 전혀 바뀌지 않는다. 왜일까?
+
+### 원인: Object.is 비교
+
+React는 state가 변경되었는지 판단할 때 [`Object.is`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Object/is)로 비교한다.
+
+```ts
+Object.is(이전state, 다음state); // true면 업데이트 무시
+```
+
+문제는 객체를 직접 변경하면 참조(reference)가 그대로라는 점이다.
+
+```tsx
+const formData = { name: "Matthew", age: 27 };
+formData.name = "YongMin"; // 내용은 바꿨지만...
+
+Object.is(formData, formData); // true (참조는 여전히 같음)
+```
+
+React 입장에서는 "어? 같은 객체네? 바뀐 거 없구나" 하고 리렌더링을 건너뛴다.
+
+### 시각적으로 이해하기
+
+```
+❌ 잘못된 방법: 직접 변경 (Mutation)
+
+[메모리 주소: 0x001]
+{ name: "Matthew", age: 27 }
+        ↓
+formData.name = "YongMin"
+        ↓
+[메모리 주소: 0x001]  ← 같은 주소!
+{ name: "YongMin", age: 27 }
+
+React: Object.is(0x001, 0x001) → true → "변경 없음, 스킵!"
+```
+
+```
+✅ 올바른 방법: 새 객체 생성
+
+[메모리 주소: 0x001]
+{ name: "Matthew", age: 27 }
+        ↓
+{ ...formData, name: "YongMin" }
+        ↓
+[메모리 주소: 0x002]  ← 새로운 주소!
+{ name: "YongMin", age: 27 }
+
+React: Object.is(0x001, 0x002) → false → "변경됨, 리렌더링!"
+```
+
+---
+
+## 해결 4-1. 새로운 객체를 만들자
+
+간단하게 새로운 객체를 만들면 된다. 스프레드 연산자(`...`)를 활용해서 이전 값을 복사하고 변경할 부분만 덮어쓰면 된다.
+
+```tsx {9-12,15-18}
+import { useState } from "react";
+
+function App() {
+  const [formData, setFormData] = useState({
+    name: "Matthew",
+    age: 27,
+  });
+
+  const handleNameChange = () => {
+    setFormData({
+      ...formData, // 기존 값 복사
+      name: "YongMin", // 변경할 값만 덮어쓰기
+    });
+  };
+
+  const handleAgeChange = () => {
+    setFormData({
+      ...formData,
+      age: formData.age + 1,
+    });
+  };
+
+  return (
+    <>
+      <h1>Name: {formData.name}</h1>
+      <h1>Age: {formData.age}</h1>
+      <button onClick={handleNameChange}>이름 변경</button>
+      <button onClick={handleAgeChange}>나이 변경</button>
+    </>
+  );
+}
+```
+
+이제 버튼을 클릭하면 화면이 정상적으로 업데이트된다.
+
+### 중첩 객체가 깊어지면?
+
+간단한 객체는 스프레드 연산자로 충분하다. 하지만 구조가 복잡해지면 이야기가 달라진다.
+
+```tsx
+const [user, setUser] = useState({
+  name: "Matthew",
+  address: {
+    city: "Seoul",
+    district: {
+      name: "Gangnam",
+      zip: "12345",
+    },
+  },
+  hobbies: ["coding", "reading"],
+});
+
+// zip만 바꾸고 싶은데...
+setUser({
+  ...user,
+  address: {
+    ...user.address,
+    district: {
+      ...user.address.district,
+      zip: "67890",
+    },
+  },
+});
+```
+
+단순히 `zip` 하나 바꾸려고 이렇게 장황하게 작성해야 한다. 이런 코드는 실수하기도 쉽고 가독성도 떨어진다.
+
+---
+
+## 해결 4-2. Immer로 간편하게
+
+이러한 문제는 `redux-toolkit` 같은 상태관리를 활용할 때도 발생한다. 항상 불변성을 유지하는 것이 리액트의 상태관리에 있어서 상당히 중요하기 때문이다.
+
+당연히 우리의 선배 개발자분들은 이러한 문제를 동일하게 겪었고, 이를 해결하기 위해 [Immer](https://immerjs.github.io/immer/)라는 라이브러리를 만들었다. 불변성을 유지하면서도 직접 변경하는 것처럼 코드를 작성할 수 있게 해준다.
+
+```bash
+bun install immer use-immer
+```
+
+### 기본 사용법: produce
+
+```tsx {2,11-13}
+import { useState } from "react";
+import { produce } from "immer";
+
+function App() {
+  const [formData, setFormData] = useState({
+    name: "Matthew",
+    age: 27,
+  });
+
+  const handleNameChange = () => {
+    // ✅ 직접 변경하는 것처럼 작성해도 OK
+    setFormData(
+      produce((draft) => {
+        draft.name = "YongMin";
+      })
+    );
+  };
+
+  const handleAgeChange = () => {
+    setFormData(
+      produce((draft) => {
+        draft.age += 1;
+      })
+    );
+  };
+
+  // ...
+}
+```
+
+`draft`는 원본의 "임시 복사본"이다. 이걸 마음대로 변경하면 Immer가 알아서 새로운 불변 객체를 만들어준다.
+
+### 더 간편하게: useImmer
+
+리액트 공식문서에서는 [use-immer](https://github.com/immerjs/use-immer) 패키지를 활용할 것을 권장한다. useState를 대체할 수 있다.
+
+```tsx {1,4,8-10}
+import { useImmer } from "use-immer";
+
+function App() {
+  const [formData, setFormData] = useImmer({
+    name: "Matthew",
+    age: 27,
+  });
+
+  const handleNameChange = () => {
+    setFormData((draft) => {
+      draft.name = "YongMin";
+    });
+  };
+
+  const handleAgeChange = () => {
+    setFormData((draft) => {
+      draft.age += 1;
+    });
+  };
+
+  return (
+    <>
+      <h1>Name: {formData.name}</h1>
+      <h1>Age: {formData.age}</h1>
+      <button onClick={handleNameChange}>이름 변경</button>
+      <button onClick={handleAgeChange}>나이 변경</button>
+    </>
+  );
+}
+```
+
+### 중첩 객체도 간단하게
+
+아까 그 복잡했던 중첩 객체 업데이트가 이렇게 바뀐다.
+
+```tsx
+// ❌ Immer 없이
+setUser({
+  ...user,
+  address: {
+    ...user.address,
+    district: {
+      ...user.address.district,
+      zip: "67890",
+    },
+  },
+});
+
+// ✅ Immer 사용
+setUser((draft) => {
+  draft.address.district.zip = "67890";
+});
+```
+
+### 배열 업데이트도 직관적으로
+
+```tsx {1,4,9,14}
+const [items, setItems] = useImmer(["🍎", "🍌", "🍇"]);
+
+// 추가
+setItems((draft) => {
+  draft.push("🍊");
+});
+
+// 삭제
+setItems((draft) => {
+  const index = draft.findIndex((item) => item === "🍌");
+  if (index !== -1) draft.splice(index, 1);
+});
+
+// 수정
+setItems((draft) => {
+  draft[0] = "🍑";
+});
+```
+
+---
+
+## 핵심 정리
+
+| 개념                    | 설명                                                         |
+| :---------------------- | :----------------------------------------------------------- |
+| **State는 스냅샷**      | 렌더링 시점의 값이 고정되어 함수 내에서 변하지 않음          |
+| **Batching**            | 여러 state 업데이트를 묶어서 한 번만 리렌더링                |
+| **업데이터 함수**       | 이전 state를 기반으로 안전하게 업데이트 (`prev => prev + 1`) |
+| **Lazy Initialization** | 무거운 초기값 계산은 함수로 감싸서 전달                      |
+| **불변성**              | 객체/배열은 직접 변경하지 말고 새로 만들어서 교체            |
+| **Immer**               | 복잡한 불변성 관리를 간편하게 해주는 라이브러리              |
+
+이러한 개념들을 잘 이해하고 활용하면, 성능 좋고 버그 없는 React 애플리케이션을 만들 수 있을 것이다.
+
+---
+
+## 참고자료
+
+- [React 공식 문서 - useState](https://react.dev/reference/react/useState)
+- [React 공식 문서 - Updating Objects in State](https://react.dev/learn/updating-objects-in-state)
+- [React 공식 문서 - Updating Arrays in State](https://react.dev/learn/updating-arrays-in-state)
+- [MDN - Object.is()](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Object/is)
+- [Immer 공식 문서](https://immerjs.github.io/immer/)
+- [use-immer GitHub](https://github.com/immerjs/use-immer)
+- [useState 강의 영상](https://youtu.be/fgjsQoTHcnE?si=-N3xe5-bfGH3iUuF)
