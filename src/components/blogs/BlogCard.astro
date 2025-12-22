@@ -15,7 +15,7 @@ const slug = post.slug.replace("blog/", "");
   <!-- 그라디언트 오버레이 -->
   <div class="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-purple-50/0 group-hover:from-blue-50/30 group-hover:to-purple-50/30 transition-all duration-500 pointer-events-none"></div>
 
-  <a href={`/post/${slug}`} class="relative block p-7">
+  <a href={`/post/${slug}`} class="relative block p-7 sm:p-5">
     <!-- 카테고리 & 메타 정보 -->
     <div class="flex items-center gap-3 mb-4">
       <CategoryBadge category={category} className="group-hover:scale-105" />

@@ -16,13 +16,13 @@ export async function getStaticPaths() {
     .map(category => category.toLowerCase())
 
   const paths = []
-  const POSTS_PER_PAGE = 5
+  const POSTS_PER_PAGE = 8
 
   // 전체 블로그 페이지네이션 (2페이지부터)
   const totalAllPages = Math.ceil(sortPostsByDate(allPosts).length / POSTS_PER_PAGE)
   for (let page = 2; page <= totalAllPages; page++) {
     const { items: posts, pagination } = paginateArray(sortPostsByDate(allPosts), page, POSTS_PER_PAGE)
-    
+
     paths.push({
       params: { slug: `page/${page}` },
       props: {
@@ -43,10 +43,10 @@ export async function getStaticPaths() {
     const categoryKey = category.toUpperCase() as BlogCategory
     const filteredPosts = filterPostsByCategory(allPosts, categoryKey)
     const sortedPosts = sortPostsByDate(filteredPosts)
-    
+
     const categoryPostsPerPage = 5
     const totalCategoryPages = Math.ceil(sortedPosts.length / categoryPostsPerPage)
-    
+
     // 카테고리 1페이지
     const { items: firstPagePosts, pagination: firstPagination } = paginateArray(sortedPosts, 1, categoryPostsPerPage)
     paths.push({
@@ -63,11 +63,11 @@ export async function getStaticPaths() {
         totalPostsInCategory: sortedPosts.length
       }
     })
-    
+
     // 카테고리 2페이지부터
     for (let page = 2; page <= totalCategoryPages; page++) {
       const { items: posts, pagination } = paginateArray(sortedPosts, page, categoryPostsPerPage)
-      
+
       paths.push({
         params: { slug: `${category}/page/${page}` },
         props: {
@@ -96,10 +96,10 @@ const totalPosts = totalPostsInCategory || pagination.totalPosts
 ---
 
 <BaseLayout>
-  <div class="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-12">
+  <div class="container mx-auto max-w-6xl px-8 sm:px-4 py-12">
     <h1 class="text-center text-4xl font-bold mb-4">{categoryLabel}</h1>
     <p class="text-center text-gray-600 dark:text-gray-400 mb-12">{totalPosts} posts</p>
-    
+
     <div class="mb-12">
       <CategoryList categories={categories} currentPath={Astro.url.pathname} />
     </div>
@@ -132,16 +132,16 @@ const totalPosts = totalPostsInCategory || pagination.totalPosts
           </p>
         </div>
 
-        <a 
-          href="/" 
+        <a
+          href="/"
           class="group mt-2 inline-flex items-center gap-2 rounded-full bg-gray-50 px-4 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-100"
         >
           <span>메인으로 돌아가기</span>
-          <svg 
-            class="h-4 w-4 transition-transform group-hover:translate-x-0.5" 
-            xmlns="http://www.w3.org/2000/svg" 
-            fill="none" 
-            viewBox="0 0 24 24" 
+          <svg
+            class="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
             stroke="currentColor"
           >
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
