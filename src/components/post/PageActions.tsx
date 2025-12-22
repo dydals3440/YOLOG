@@ -1,32 +1,32 @@
-import { ArrowTopIcon, CommentIcon } from '../ui/icons';
-import ActionButton from './ActionButton';
-import CopyLinkButton from './CopyLinkButton';
+import { ArrowUp, MessageCircle } from "lucide-react";
+import ActionButton from "./ActionButton";
+import CopyLinkButton from "./CopyLinkButton";
 
 const PageActions = () => {
   const handleScrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleScrollToComments = () => {
-    const commentsSection = document.querySelector('.giscus');
-    commentsSection?.scrollIntoView({ behavior: 'smooth' });
+    const commentsSection = document.querySelector(".giscus");
+    commentsSection?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
-    <ul className='mt-4 flex items-center gap-1 lg:mt-0' data-animate>
-      <li className='inline-flex'>
+    <ul className="flex items-center gap-1" data-animate>
+      <li>
         <CopyLinkButton />
       </li>
-      <li className='inline-flex'>
+      <li>
         <ActionButton onClick={handleScrollToComments}>
-          <CommentIcon />
-          <span className='sr-only'>댓글으로 이동</span>
+          <MessageCircle size={18} />
+          <span className="sr-only">댓글으로 이동</span>
         </ActionButton>
       </li>
-      <li className='inline-flex lg:hidden'>
+      <li className="lg:hidden">
         <ActionButton onClick={handleScrollToTop}>
-          <ArrowTopIcon />
-          <span className='sr-only'>상단으로 이동</span>
+          <ArrowUp size={18} />
+          <span className="sr-only">상단으로 이동</span>
         </ActionButton>
       </li>
     </ul>

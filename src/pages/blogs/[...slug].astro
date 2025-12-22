@@ -93,60 +93,42 @@ const { posts, pagination, categories, category, categoryLabel, totalPostsInCate
 // URL 기반 경로 설정
 const basePath = category ? `/blogs/${category}` : '/blogs'
 const totalPosts = totalPostsInCategory || pagination.totalPosts
+
+// 제목: 전체 페이지면 "블로그", 카테고리면 카테고리 이름
+const displayTitle = category ? categoryLabel : '블로그'
 ---
 
 <BaseLayout>
-  <div class="container mx-auto max-w-6xl px-8 sm:px-4 py-12">
-    <h1 class="text-center text-4xl font-bold mb-4">{categoryLabel}</h1>
-    <p class="text-center text-gray-600 dark:text-gray-400 mb-12">{totalPosts} posts</p>
+  <div class="py-12 sm:py-8">
+    <div class="mb-12 sm:mb-8">
+      <h1 class="text-3xl font-bold tracking-tight mb-2 sm:text-2xl">{displayTitle}</h1>
+      <p class="text-second text-sm">
+        {totalPosts}개의 글
+      </p>
+    </div>
 
-    <div class="mb-12">
+    <div class="mb-10 sm:mb-8">
       <CategoryList categories={categories} currentPath={Astro.url.pathname} />
     </div>
 
     {posts.length > 0 ? (
-      <div class="w-full">
-        <div class="grid gap-6 mb-12">
+      <div>
+        <div class="divide-y divide-border">
           {posts.map(post => <BlogCard post={post} />)}
         </div>
 
         {pagination.totalPages > 1 && (
-          <div class="w-full">
+          <div class="mt-12">
             <Pagination pagination={pagination} basePath={basePath} />
           </div>
         )}
       </div>
     ) : (
-      <div class="mx-auto flex max-w-md flex-col items-center justify-center space-y-6 py-16 text-center">
-        <div class="relative">
-          <div class="absolute -inset-1 animate-pulse rounded-full bg-gradient-to-r from-purple-100 to-pink-100 opacity-75 blur-xl"></div>
-          <YongGlass className="relative h-24 w-24 text-gray-900/80" />
-        </div>
-
-        <div class="space-y-2">
-          <p class="text-xl font-bold">
-            {category ? '카테고리에 해당하는 게시글이 없습니다' : '게시글이 없습니다'}
-          </p>
-          <p class="text-base text-gray-600">
-            잠시 기다려주시면 좋은 글로 찾아뵙겠습니다
-          </p>
-        </div>
-
-        <a
-          href="/"
-          class="group mt-2 inline-flex items-center gap-2 rounded-full bg-gray-50 px-4 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-100"
-        >
-          <span>메인으로 돌아가기</span>
-          <svg
-            class="h-4 w-4 transition-transform group-hover:translate-x-0.5"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-          </svg>
-        </a>
+      <div class="py-16 flex flex-col items-center justify-center text-center">
+        <YongGlass className="w-24 h-24 mb-6" />
+        <p class="text-second">
+          해당하는 게시글이 없습니다.
+        </p>
       </div>
     )}
   </div>

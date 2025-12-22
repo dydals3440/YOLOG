@@ -8,26 +8,26 @@ export interface Props extends CategoryListProps {}
 const { categories, currentPath } = Astro.props
 
 // 카테고리 경로 생성 로직을 별도 함수로 분리하여 재사용성과 가독성 향상
-const getCategoryPath = (categoryId: BlogCategory) => 
+const getCategoryPath = (categoryId: BlogCategory) =>
   categoryId === 'ALL' ? '/blogs' : `/blogs/${categoryId.toLowerCase()}`
 
 // 현재 경로와 카테고리 경로 일치 여부 확인 로직 분리
 const isCurrentPath = (categoryPath: string) => currentPath === categoryPath
 ---
 
-<nav class="flex justify-center" aria-label="블로그 카테고리 네비게이션">
-  <ul class="flex flex-wrap items-center justify-center gap-8" role="list">
+<nav aria-label="블로그 카테고리 네비게이션">
+  <ul class="flex flex-wrap items-center gap-6" role="list">
     {categories.map(category => {
       const categoryPath = getCategoryPath(category.id)
       const isActive = isCurrentPath(categoryPath)
-      
+
       return (
         <li>
           <a
             href={categoryPath}
             class={cn(
               'text-base font-medium transition-colors duration-200',
-              isActive 
+              isActive
                 ? 'text-gray-900 dark:text-white'
                 : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
             )}
@@ -49,4 +49,4 @@ const isCurrentPath = (categoryPath: string) => currentPath === categoryPath
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
-</style> 
+</style>

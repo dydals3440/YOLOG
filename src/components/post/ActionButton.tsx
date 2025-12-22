@@ -1,15 +1,18 @@
-import type { ButtonHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes } from "react";
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
-  onClick: () => void
+  onClick: () => void;
 }
 
 const ActionButton = ({ children, ...props }: Props) => {
   return (
-    <button className="rounded p-1 transition-colors hover:bg-selection hover:text-body" {...props}>
+    <button
+      className="flex items-center justify-center w-8 h-8 rounded-md text-third transition-colors hover:bg-hover hover:text-primary"
+      {...props}
+    >
       {children}
     </button>
-  )
-}
+  );
+};
 
-export default ActionButton
+export default ActionButton;

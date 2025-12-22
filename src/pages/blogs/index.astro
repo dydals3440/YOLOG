@@ -5,6 +5,7 @@ import BaseLayout from '@/layouts/BaseLayout.astro'
 import CategoryList from '@/components/blogs/CategoryList.astro'
 import BlogCard from '@/components/blogs/BlogCard.astro'
 import Pagination from '@/components/blogs/Pagination.astro'
+import YongGlass from '@/components/YongGlass.astro'
 import { sortPostsByDate, createCategoryList, paginateArray } from '@/lib/blog-utils'
 
 const allPosts = await getCollection('post')
@@ -39,7 +40,8 @@ const { items: posts, pagination } = paginateArray(sortedPosts, 1, POSTS_PER_PAG
         </div>
       </div>
     ) : (
-      <div class="py-16 text-center">
+      <div class="py-16 flex flex-col items-center justify-center text-center">
+        <YongGlass className="w-24 h-24 mb-6" />
         <p class="text-second">
           해당하는 게시글이 없습니다.
         </p>

@@ -1,44 +1,43 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback } from "react";
+import { Link, Check } from "lucide-react";
 
-import { useToast } from '@/hooks/use-toast'
-
-import { CheckIcon, LinkIcon } from '../ui/icons'
-import ActionButton from './ActionButton'
+import { useToast } from "@/hooks/use-toast";
+import ActionButton from "./ActionButton";
 
 const CopyLinkButton = () => {
-  const [isCopied, setIsCopied] = useState(false)
-  const { toast } = useToast()
+  const [isCopied, setIsCopied] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (isCopied) {
       const timer = setTimeout(() => {
-        setIsCopied(false)
-      }, 1000)
-      return () => clearTimeout(timer)
+        setIsCopied(false);
+      }, 1000);
+      return () => clearTimeout(timer);
     }
-  }, [isCopied])
+  }, [isCopied]);
 
   const handleCopyLink = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href)
-      setIsCopied(true)
+      await navigator.clipboard.writeText(window.location.href);
+      setIsCopied(true);
       toast({
-        title: '✅ 링크를 복사했습니다!',
-      })
+        title: "✅ 링크를 복사했습니다!",
+      });
     } catch {
       toast({
-        title: '❌ 링크 복사에 실패했습니다.',
-        variant: 'destructive',
-      })
+        title: "❌ 링크 복사에 실패했습니다.",
+        variant: "destructive",
+      });
     }
-  }, [toast])
+  }, [toast]);
 
   return (
     <ActionButton onClick={handleCopyLink}>
-      {isCopied ? <CheckIcon /> : <LinkIcon />}
+      {isCopied ? <Check size={18} /> : <Link size={18} />}
       <span className="sr-only">링크 복사</span>
     </ActionButton>
-  )
-}
+  );
+};
 
-export default CopyLinkButton
+export default CopyLinkButton;
