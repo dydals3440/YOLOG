@@ -39,19 +39,19 @@ const { Content } = await post.render()
 <BaseLayout seo={{ title, description, image, keywords: tags }}>
   <LeftSidebar>
     <a
-      class="group flex w-fit items-center gap-2 rounded-lg px-3 py-2 transition-all hover:bg-gray-100"
+      class="group flex w-fit items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-hover"
       href="#"
       onclick="history.back(); return false;"
       data-animate
     >
       <UndoIcon
         strokeWidth={1.5}
-        className="h-4 w-4 text-gray-600 transition-transform group-hover:-translate-x-0.5"
+        className="h-4 w-4 text-third transition-transform group-hover:-translate-x-0.5"
       />
-      <span class="font-serif text-sm font-medium text-gray-700 group-hover:text-gray-900">이전 페이지</span>
+      <span class="text-sm text-second group-hover:text-primary">뒤로</span>
     </a>
-    <div class="mt-8 border-l-2 border-gray-100 pl-4 lg:hidden">
-      <h3 class="mb-3 font-serif text-sm font-semibold text-gray-900">목차</h3>
+    <div class="mt-8 lg:hidden">
+      <h3 class="mb-3 text-xs font-medium text-third uppercase tracking-wider">목차</h3>
       <TableOfContent
         className="text-sm"
         data-animate
@@ -64,18 +64,20 @@ const { Content } = await post.render()
     </div>
   </LeftSidebar>
   <section>
-    <h1 class="mt-14">{title}</h1>
-    <time datetime={formattedDate} class="text-sm">{formattedDate}</time>
-    <div class="mt-6">
-      <SocialShare
-        title={title}
-        url={Astro.url.href}
-        client:visible
-      />
+    <div class="pt-12 pb-8 sm:pt-8 sm:pb-6">
+      <time datetime={formattedDate} class="text-xs text-third">{formattedDate}</time>
+      <h1 class="mt-3 text-3xl font-bold tracking-tight leading-tight sm:text-2xl">{title}</h1>
+      <div class="mt-6">
+        <SocialShare
+          title={title}
+          url={Astro.url.href}
+          client:visible
+        />
+      </div>
     </div>
   </section>
   <section>
-    <article data-animate data-animate-speed="fast" class="mdx mt-14">
+    <article data-animate data-animate-speed="fast" class="mdx">
       <Content components={{ img: PostImage }} />
     </article>
     <GoogleAdsense
@@ -83,7 +85,7 @@ const { Content } = await post.render()
       className="my-8"
     />
     <footer class="px-0">
-      <hr class="mb-7 mt-4" />
+      <hr class="my-8 border-border" />
       <PostNavigation {prevPost} {nextPost} />
       <GiscusComment className="mx-auto my-half-page" client:idle />
     </footer>

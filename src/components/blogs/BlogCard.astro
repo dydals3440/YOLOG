@@ -11,61 +11,27 @@ const { title, description, date, category } = post.data;
 const slug = post.slug.replace("blog/", "");
 ---
 
-<article class="group relative bg-white rounded-2xl border border-gray-100 overflow-hidden transition-all duration-500 hover:shadow-2xl hover:border-gray-200 hover:-translate-y-2 hover:scale-[1.02]">
-  <!-- 그라디언트 오버레이 -->
-  <div class="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-purple-50/0 group-hover:from-blue-50/30 group-hover:to-purple-50/30 transition-all duration-500 pointer-events-none"></div>
-
-  <a href={`/post/${slug}`} class="relative block p-7 sm:p-5">
+<article class="group">
+  <a href={`/post/${slug}`} class="block py-6 transition-colors duration-200 hover:bg-hover rounded-lg -mx-4 px-4 sm:py-5 sm:-mx-3 sm:px-3">
     <!-- 카테고리 & 메타 정보 -->
-    <div class="flex items-center gap-3 mb-4">
-      <CategoryBadge category={category} className="group-hover:scale-105" />
+    <div class="flex items-center gap-3 mb-3">
+      <CategoryBadge category={category} />
       <ReadingTime content={post.body} />
     </div>
 
     <!-- 제목 -->
-    <h2 class="mb-3 text-xl font-bold text-gray-900 transition-all duration-300 group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-purple-600 line-clamp-2">
+    <h2 class="mb-2 text-lg font-semibold text-primary leading-snug line-clamp-2 sm:text-base">
       {title}
     </h2>
 
     <!-- 설명 -->
     {description && (
-      <p class="mb-5 text-sm text-gray-600 line-clamp-3 leading-relaxed transition-colors duration-300 group-hover:text-gray-700">
+      <p class="mb-4 text-sm text-second line-clamp-2 leading-relaxed">
         {description}
       </p>
     )}
 
     <!-- 하단 정보 -->
-    <PostMeta
-      date={date}
-      showArrow={true}
-      className="pt-4 border-t border-gray-50 group-hover:border-gray-100 transition-colors duration-300"
-    />
+    <PostMeta date={date} showArrow={true} />
   </a>
-
-  <!-- 호버 시 나타나는 사이드 라인 -->
-  <div class="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-blue-500 to-purple-500 transform scale-y-0 transition-transform duration-500 group-hover:scale-y-100 origin-top"></div>
 </article>
-
-<style>
-  @keyframes shimmer {
-    0% {
-      background-position: -200% 0;
-    }
-    100% {
-      background-position: 200% 0;
-    }
-  }
-
-  .group:hover h2 {
-    background-size: 200% auto;
-    animation: shimmer 3s linear infinite;
-  }
-
-  article {
-    backdrop-filter: blur(10px);
-  }
-
-  article:hover {
-    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.1);
-  }
-</style>

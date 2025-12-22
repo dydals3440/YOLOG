@@ -16,44 +16,34 @@ const { items: posts, pagination } = paginateArray(sortedPosts, 1, POSTS_PER_PAG
 ---
 
 <BaseLayout>
-  <div class="bg-gray-50 min-h-screen">
-    <div class="container mx-auto max-w-6xl px-8 sm:px-4 py-12">
-      <div class="text-center mb-16">
-        <h1 class="text-4xl font-bold text-gray-900 mb-4">All Posts</h1>
-        <p class="text-gray-600 text-lg">
-          전체 {sortedPosts.length}개의 글
+  <div class="py-12 sm:py-8">
+    <div class="mb-12 sm:mb-8">
+      <h1 class="text-3xl font-bold tracking-tight mb-2 sm:text-2xl">블로그</h1>
+      <p class="text-second text-sm">
+        {sortedPosts.length}개의 글
+      </p>
+    </div>
+
+    <div class="mb-10 sm:mb-8">
+      <CategoryList categories={categories} currentPath={Astro.url.pathname} />
+    </div>
+
+    {posts.length > 0 ? (
+      <div>
+        <div class="divide-y divide-border">
+          {posts.map(post => <BlogCard post={post} />)}
+        </div>
+
+        <div class="mt-12">
+          <Pagination pagination={pagination} basePath="/blogs" />
+        </div>
+      </div>
+    ) : (
+      <div class="py-16 text-center">
+        <p class="text-second">
+          해당하는 게시글이 없습니다.
         </p>
       </div>
-
-      <div class="mb-12">
-        <CategoryList categories={categories} currentPath={Astro.url.pathname} />
-      </div>
-
-      {posts.length > 0 ? (
-        <div class="w-full">
-          <div class="grid gap-6 mb-16">
-            {posts.map(post => <BlogCard post={post} />)}
-          </div>
-
-          <div class="w-full">
-            <Pagination pagination={pagination} basePath="/blogs" />
-          </div>
-        </div>
-      ) : (
-        <div class="bg-white rounded-xl p-12 text-center shadow-sm border border-gray-200">
-          <div class="text-gray-400 mb-4">
-            <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-          </div>
-          <p class="text-xl text-gray-800 font-medium mb-2">
-            해당하는 게시글이 없습니다.
-          </p>
-          <p class="text-gray-600">
-            잠시 기다려주시면 좋은 글로 찾아뵙겠습니다.
-          </p>
-        </div>
-      )}
-    </div>
+    )}
   </div>
 </BaseLayout>

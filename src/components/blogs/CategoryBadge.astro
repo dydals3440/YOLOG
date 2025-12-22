@@ -8,34 +8,9 @@ export interface Props {
 
 const { category, className = '' } = Astro.props
 
-// 카테고리별 색상 매핑
-type CategoryColorMap = {
-  [K in BlogCategory | 'default']: {
-    bg: string
-    text: string
-    border: string
-  }
-}
-
-const categoryColors: CategoryColorMap = {
-  'ALL': { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300' },
-  'DEVELOPMENT': { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300' },
-  'REVIEW': { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' },
-  'HTTP': { bg: 'bg-purple-100', text: 'text-purple-800', border: 'border-purple-300' },
-  'STORY': { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-300' },
-  'default': { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300' }
-}
-
-const colors = category && category in categoryColors
-  ? categoryColors[category as BlogCategory]
-  : categoryColors.default
-
 const categoryLabel = category ? BLOG_CATEGORIES[category] : '기타'
 ---
 
-<span class={`inline-flex items-center px-3 py-1.5 text-xs font-bold ${colors.text} ${colors.bg} rounded-full border-2 ${colors.border} transition-all duration-300 ${className}`}>
-  <svg class="w-3 h-3 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
-    <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path>
-  </svg>
+<span class={`inline-flex items-center px-2 py-0.5 text-xs font-medium text-third bg-hover rounded ${className}`}>
   {categoryLabel}
 </span>

@@ -3,26 +3,23 @@ import IconLink from '@/components/ui/icon-link'
 import { EmailIcon, GithubIcon, LinkedinIcon, YoutubeIcon } from '@/components/ui/icons'
 ---
 
-<footer class="container mt-auto py-8 text-center text-sm text-second">
-  <p>© {new Date().getFullYear()} yolog. Powered by Matthew.</p>
-
-   <div class="mb-16 mt-7 flex items-center justify-center">
-      <div data-animate class="flex items-center justify-center gap-0.5">
-        <IconLink href="mailto:dydals3440@gmail.com" aria-label="이메일" target="_self">
-          <EmailIcon width="1.2rem" height="1.2rem" />
-        </IconLink>
-        <IconLink href="https://github.com/dydals3440" aria-label="깃허브">
-          <GithubIcon width="1.2rem" height="1.2rem" />
-        </IconLink>
-        <IconLink
-          href="https://www.linkedin.com/in/dydals3440/"
-          aria-label="링크드인"
-        >
-          <LinkedinIcon width="1.2rem" height="1.2rem" />
-        </IconLink>
-        <IconLink href="https://www.youtube.com/@yongcoding" aria-label="유튜브">
-          <YoutubeIcon width="1.2rem" height="1.2rem" />
-        </IconLink>
-      </div>
-    </div>
-</footer> 
+<footer class="container mt-auto pb-8 pt-16 text-center">
+  <div class="flex items-center justify-center gap-1">
+    <IconLink href="mailto:dydals3440@gmail.com" aria-label="이메일" target="_self">
+      <EmailIcon width="1rem" height="1rem" />
+    </IconLink>
+    <IconLink href="https://github.com/dydals3440" aria-label="깃허브">
+      <GithubIcon width="1rem" height="1rem" />
+    </IconLink>
+    <IconLink
+      href="https://www.linkedin.com/in/dydals3440/"
+      aria-label="링크드인"
+    >
+      <LinkedinIcon width="1rem" height="1rem" />
+    </IconLink>
+    <IconLink href="https://www.youtube.com/@yongcoding" aria-label="유튜브">
+      <YoutubeIcon width="1rem" height="1rem" />
+    </IconLink>
+  </div>
+  <p class="mt-4 text-xs text-third">© {new Date().getFullYear()} yolog</p>
+</footer>
