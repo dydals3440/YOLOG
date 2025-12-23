@@ -10,6 +10,8 @@ import GiscusComment from '@/components/post/GiscusComment'
 import MediumZoomScript from '@/components/post/MediumZoomScript.astro'
 import PageActions from '@/components/post/PageActions'
 import PostImage from '@/components/post/PostImage.astro'
+import ReadingProgress from '@/components/post/ReadingProgress'
+import RelatedPosts from '@/components/post/RelatedPosts.astro'
 import TableOfContent from '@/components/post/TableOfContent'
 import SocialShare from '@/components/post/SocialShare'
 import { generateDescription, parseToc } from '@/lib/mdx'
@@ -66,6 +68,7 @@ const blogPostingSchema = {
 ---
 
 <BaseLayout seo={{ title, description, image, keywords: tags }}>
+  <ReadingProgress client:idle />
   <script type="application/ld+json" set:html={JSON.stringify(blogPostingSchema)} />
   <LeftSidebar>
     <a
@@ -110,6 +113,7 @@ const blogPostingSchema = {
       slot="1234567890"
       className="my-8"
     />
+    <RelatedPosts currentPost={post} />
     <footer class="px-0">
       <hr class="my-8 border-border" />
       <PostNavigation {prevPost} {nextPost} />

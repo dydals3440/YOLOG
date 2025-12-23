@@ -34,6 +34,7 @@
     --foreground: 240 10% 3.9%;
 
     --code-highlighted: var(--selection);
+    --progress-bar-color: var(--gray-800);
   }
 
   .dark {
@@ -65,6 +66,7 @@
     --foreground: 0 0% 98%;
 
     --code-highlighted: hsla(240, 5%, 84%, 0.06);
+    --progress-bar-color: #60a5fa;
   }
 }
 
@@ -162,7 +164,7 @@
   .external-link::before,
   .mdx a:not(.anchor)::before {
     @apply absolute -inset-x-1 bottom-0.5 top-0 -z-10 rounded transition-colors hover:bg-selection;
-    content: '';
+    content: "";
   }
   .external-link::before {
     @apply -right-0.5;
@@ -170,7 +172,7 @@
   a.external-link::after,
   .mdx a.external-link::after {
     @apply m-0 inline-block h-3.5 w-3.5;
-    content: '';
+    content: "";
     background: url('data:image/svg+xml;utf8,<svg color="%23464646" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6m0 0H9m9 0v9"/></svg>');
     background-repeat: no-repeat;
     background-size: cover;
@@ -244,7 +246,7 @@
   .blur-layer:after {
     position: absolute;
     inset: 0;
-    content: '';
+    content: "";
     background: linear-gradient(to bottom, var(--page-background), transparent);
   }
 }

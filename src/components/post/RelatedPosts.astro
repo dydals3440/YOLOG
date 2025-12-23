@@ -1,0 +1,93 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { getCollection } from 'astro:content';
+
+interface Props {
+  currentPost: CollectionEntry<'post'>;
+  maxPosts?: number;
+}
+
+const { currentPost, maxPosts = 3 } = Astro.props;
+
+// 현재 포스트의 태그와 카테고리
+const currentTags = currentPost.data.tags || [];
+const currentCategory = currentPost.data.category;
+const currentSlug = currentPost.slug;
+
+// 모든 포스트 가져오기
+const allPosts = await getCollection('post');
+
+// 관련도 점수 계산
+function calculateRelevance(post: CollectionEntry<'post'>): number {
+  if (post.slug === currentSlug) return -1; // 현재 포스트 제외
+
+  let score = 0;
+  const postTags = post.data.tags || [];
+
+  // 같은 카테고리면 +3점
+  if (post.data.category === currentCategory) {
+    score += 3;
+  }
+
+  // 공통 태그 1개당 +2점
+  const commonTags = currentTags.filter(tag => postTags.includes(tag));
+  score += commonTags.length * 2;
+
+  // 최근 포스트일수록 +1점 (6개월 이내)
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  if (new Date(post.data.date) > sixMonthsAgo) {
+    score += 1;
+  }
+
+  return score;
+}
+
+// 관련 포스트 정렬 및 선택
+const relatedPosts = allPosts
+  .map(post => ({ post, score: calculateRelevance(post) }))
+  .filter(({ score }) => score > 0)
+  .sort((a, b) => {
+    // 점수가 같으면 최신순
+    if (b.score === a.score) {
+      return new Date(b.post.data.date).getTime() - new Date(a.post.data.date).getTime();
+    }
+    return b.score - a.score;
+  })
+  .slice(0, maxPosts)
+  .map(({ post }) => post);
+
+const resolveSlug = (slug: string) => slug.replace('blog/', '');
+---
+
+{relatedPosts.length > 0 && (
+  <section class="mt-16 pt-8 border-t border-border">
+    <h2 class="text-sm font-medium text-second mb-6">관련 포스트</h2>
+    <div class="grid grid-cols-3 gap-3 sm:grid-cols-1 sm:gap-4">
+      {relatedPosts.map((post) => (
+        <a
+          href={`/post/${resolveSlug(post.slug)}`}
+          class="group relative block aspect-[4/3] w-full overflow-hidden rounded-lg bg-gray-100 isolate sm:flex sm:aspect-auto sm:bg-transparent sm:items-center sm:gap-4 sm:overflow-visible sm:rounded-none"
+        >
+          {/* 썸네일 이미지 Layer (z-0) */}
+          {post.data.image ? (
+            <img
+              src={post.data.image}
+              alt={post.data.title}
+              class="absolute inset-0 h-full w-full object-cover transition-all duration-500 ease-out z-0 group-hover:scale-105 group-hover:brightness-50 group-hover:blur-[2px] sm:static sm:h-20 sm:w-28 sm:flex-shrink-0 sm:rounded-md sm:transition-none sm:group-hover:scale-100 sm:group-hover:filter-none sm:z-auto"
+            />
+          ) : (
+            <div class="absolute inset-0 bg-gray-200 z-0 sm:static sm:h-20 sm:w-28 sm:flex-shrink-0 sm:rounded-md" />
+          )}
+
+          {/* 텍스트 & 오버레이 Layer (z-10) */}
+          <div class="absolute inset-0 z-10 flex flex-col items-center justify-center p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-black/10 sm:static sm:block sm:bg-transparent sm:p-0 sm:opacity-100">
+            <h3 class="text-center text-base font-bold text-white leading-snug break-keep drop-shadow-md line-clamp-3 sm:text-left sm:text-sm sm:font-medium sm:text-heading sm:drop-shadow-none sm:line-clamp-2">
+              {post.data.title}
+            </h3>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+)}
