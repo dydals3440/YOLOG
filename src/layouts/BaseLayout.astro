@@ -9,7 +9,7 @@ import ThemeHead from '@/components/scripts/ThemeHead.astro'
 import { Toaster } from '@/components/ui/toaster'
 import Analytics from '@vercel/analytics/astro'
 import SpeedInsights from "@vercel/speed-insights/astro"
-
+import { isProduction } from '@/lib/utils'
 
 import type { BaseLayoutProps } from '@/types/astro'
 
@@ -23,6 +23,9 @@ const { seo, class: className } = Astro.props
     <MetaHead {...seo} />
     <ThemeHead />
     <Monitoring />
+    {isProduction && (
+      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3296643559689345" crossorigin="anonymous"></script>
+    )}
   </head>
   <body>
     <Header />

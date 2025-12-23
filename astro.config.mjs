@@ -1,8 +1,8 @@
-import mdx from '@astrojs/mdx';
-import react from '@astrojs/react';
-import sitemap from '@astrojs/sitemap';
-import tailwind from '@astrojs/tailwind';
-import vercel from '@astrojs/vercel';
+import mdx from "@astrojs/mdx";
+import react from "@astrojs/react";
+import sitemap from "@astrojs/sitemap";
+import tailwind from "@astrojs/tailwind";
+import vercel from "@astrojs/vercel";
 import {
   transformerMetaHighlight,
   transformerMetaWordHighlight,
@@ -10,31 +10,35 @@ import {
   transformerNotationErrorLevel,
   transformerNotationFocus,
   transformerNotationHighlight,
-} from '@shikijs/transformers';
-import { transformerTwoslash } from '@shikijs/twoslash';
-import { defineConfig } from 'astro/config';
-import rehypeAutolinkHeadings from 'rehype-autolink-headings';
-import rehypeExternalLinks from 'rehype-external-links';
-import rehypeSlug from 'rehype-slug';
-import remarkBreaks from 'remark-breaks';
-import remarkDirective from 'remark-directive';
+} from "@shikijs/transformers";
+import { transformerTwoslash } from "@shikijs/twoslash";
+import { defineConfig } from "astro/config";
+import rehypeAutolinkHeadings from "rehype-autolink-headings";
+import rehypeExternalLinks from "rehype-external-links";
+import rehypeSlug from "rehype-slug";
+import remarkBreaks from "remark-breaks";
+import remarkDirective from "remark-directive";
 
-import { transformerFragment } from './plugins/transformer-fragment';
-import { customCallout } from './src/lib/directives';
+import { transformerFragment } from "./plugins/transformer-fragment";
+import { customCallout } from "./src/lib/directives";
 
 export default defineConfig({
-  output: 'static',
+  output: "static",
   adapter: vercel({
     isr: true,
   }),
-  site: 'https://www.yolog.co.kr',
+  site: "https://www.yolog.co.kr",
+  prefetch: {
+    prefetchAll: true,
+    defaultStrategy: "viewport",
+  },
   integrations: [
     mdx({
-      syntaxHighlight: 'shiki',
+      syntaxHighlight: "shiki",
       shikiConfig: {
         themes: {
-          light: 'one-light',
-          dark: 'slack-dark',
+          light: "one-light",
+          dark: "slack-dark",
         },
         transformers: [
           transformerTwoslash({
@@ -55,9 +59,9 @@ export default defineConfig({
         [
           rehypeAutolinkHeadings,
           {
-            behavior: 'wrap',
+            behavior: "wrap",
             properties: {
-              className: ['anchor'],
+              className: ["anchor"],
             },
           },
         ],
@@ -65,10 +69,10 @@ export default defineConfig({
           rehypeExternalLinks,
           {
             properties: {
-              class: 'external-link',
+              class: "external-link",
             },
-            target: '_blank',
-            rel: ['noopener noreferrer'],
+            target: "_blank",
+            rel: ["noopener noreferrer"],
           },
         ],
       ],

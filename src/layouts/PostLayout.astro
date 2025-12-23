@@ -18,6 +18,7 @@ import PostNavigation from '@/components/common/PostNavigation.astro'
 
 import BaseLayout from './BaseLayout.astro'
 import GoogleAdsense from '@/components/GoogleAdsense.astro'
+import { WEBSITE_CONFIG } from '@/consts'
 
 type Props = {
   post: CollectionEntry<'post'>
@@ -33,9 +34,39 @@ const formattedDate = formatDate(date)
 const toc = parseToc(post.body)
 
 const { Content } = await post.render()
+
+// BlogPosting JSON-LD Schema
+const blogPostingSchema = {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": title,
+  "description": description,
+  "image": image ? new URL(image, Astro.site).toString() : new URL(WEBSITE_CONFIG.OG_IMAGE, Astro.site).toString(),
+  "datePublished": new Date(date).toISOString(),
+  "dateModified": new Date(date).toISOString(),
+  "author": {
+    "@type": "Person",
+    "name": "매튜",
+    "url": Astro.site?.toString()
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "YOLOG",
+    "logo": {
+      "@type": "ImageObject",
+      "url": new URL("/favicon.ico", Astro.site).toString()
+    }
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": Astro.url.toString()
+  },
+  ...(tags && tags.length > 0 ? { "keywords": tags.join(", ") } : {})
+}
 ---
 
 <BaseLayout seo={{ title, description, image, keywords: tags }}>
+  <script type="application/ld+json" set:html={JSON.stringify(blogPostingSchema)} />
   <LeftSidebar>
     <a
       class="group flex w-fit items-center gap-1.5 text-third transition-colors hover:text-primary lg:gap-2"

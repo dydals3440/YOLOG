@@ -4,8 +4,9 @@ import {
   FacebookIcon,
   LinkedinIcon,
   LinkIcon,
+  ShareIcon,
+  CopyCheckIcon,
 } from "@/components/ui/icons";
-import { ShareIcon, CopyCheckIcon } from "./ShareIcons";
 import { useToast } from "@/hooks/use-toast";
 import {
   copyToClipboard,

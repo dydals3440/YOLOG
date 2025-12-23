@@ -1,13 +1,12 @@
 import type { ButtonHTMLAttributes } from "react";
 
-interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
-  onClick: () => void;
-}
+type Props = ButtonHTMLAttributes<HTMLButtonElement>;
 
-const ActionButton = ({ children, ...props }: Props) => {
+const ActionButton = ({ children, className = "", ...props }: Props) => {
   return (
     <button
-      className="flex items-center justify-center w-8 h-8 rounded-md text-third transition-colors hover:bg-hover hover:text-primary"
+      type="button"
+      className={`flex items-center justify-center w-8 h-8 rounded-md text-third transition-colors hover:bg-hover hover:text-primary ${className}`}
       {...props}
     >
       {children}

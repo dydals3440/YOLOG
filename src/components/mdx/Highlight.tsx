@@ -1,24 +1,22 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
+
+type HighlightColor = "yellow" | "pink" | "blue" | "green" | "orange";
 
 interface HighlightProps {
   children: ReactNode;
-  color?: 'yellow' | 'pink' | 'blue' | 'green' | 'orange';
+  color?: HighlightColor;
 }
 
-const Highlight = ({ children, color = 'yellow' }: HighlightProps) => {
-  const colorClasses: Record<string, string> = {
-    yellow: '',
-    pink: 'pink',
-    blue: 'blue',
-    green: 'green',
-    orange: 'orange'
-  };
+const colorClasses: Record<HighlightColor, string> = {
+  yellow: "",
+  pink: "pink",
+  blue: "blue",
+  green: "green",
+  orange: "orange",
+};
 
-  return (
-    <mark className={colorClasses[color] || ''}>
-      {children}
-    </mark>
-  );
+const Highlight = ({ children, color = "yellow" }: HighlightProps) => {
+  return <mark className={colorClasses[color]}>{children}</mark>;
 };
 
 export default Highlight;

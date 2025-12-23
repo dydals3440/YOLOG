@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
-import { Link, Check } from "lucide-react";
 
+import { LinkIcon, CheckIcon } from "@/components/ui/icons";
+import { copyToClipboard } from "@/utils/share";
 import { useToast } from "@/hooks/use-toast";
 import ActionButton from "./ActionButton";
 
@@ -19,14 +20,16 @@ const CopyLinkButton = () => {
 
   const handleCopyLink = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await copyToClipboard(window.location.href);
       setIsCopied(true);
       toast({
-        title: "✅ 링크를 복사했습니다!",
+        title: "링크가 복사되었습니다",
+        description: "클립보드에 저장되었습니다",
       });
     } catch {
       toast({
-        title: "❌ 링크 복사에 실패했습니다.",
+        title: "복사 실패",
+        description: "링크 복사에 실패했습니다",
         variant: "destructive",
       });
     }
@@ -34,7 +37,7 @@ const CopyLinkButton = () => {
 
   return (
     <ActionButton onClick={handleCopyLink}>
-      {isCopied ? <Check size={18} /> : <Link size={18} />}
+      {isCopied ? <CheckIcon /> : <LinkIcon />}
       <span className="sr-only">링크 복사</span>
     </ActionButton>
   );

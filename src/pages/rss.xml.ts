@@ -1,18 +1,18 @@
 import rss from '@astrojs/rss';
 import { getCollection } from 'astro:content';
+import type { APIContext } from 'astro';
 
 import { resolveSlug } from '@/lib/mdx';
-
 import { WEBSITE_CONFIG } from '@/consts';
 
-export async function GET(context) {
+export async function GET(context: APIContext) {
   const posts = await getCollection('post');
   return rss({
     title: WEBSITE_CONFIG.TITLE,
     description: WEBSITE_CONFIG.DESCRIPTION,
-    site: context.site,
+    site: context.site!,
     items: posts.map((post) => ({
-      ...post.data,
+      title: post.data.title,
       link: `/post/${resolveSlug(post.slug)}/`,
       pubDate: new Date(post.data.date),
       description: post.data.description || WEBSITE_CONFIG.DESCRIPTION,
