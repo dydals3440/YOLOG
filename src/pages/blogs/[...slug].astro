@@ -94,8 +94,8 @@ const { posts, pagination, categories, category, categoryLabel, totalPostsInCate
 const basePath = category ? `/blogs/${category}` : '/blogs'
 const totalPosts = totalPostsInCategory || pagination.totalPosts
 
-// 제목: 전체 페이지면 "블로그", 카테고리면 카테고리 이름
-const displayTitle = category ? categoryLabel : '블로그'
+// 제목: 전체 페이지면 "전체", 카테고리면 카테고리 이름
+const displayTitle = category ? categoryLabel : '전체'
 ---
 
 <BaseLayout>
