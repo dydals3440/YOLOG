@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 
 import { LinkIcon, CheckIcon } from "@/components/ui/icons";
-import { copyToClipboard } from "@/utils/share";
+import { copyToClipboard } from "@/lib/utils/share";
 import { useToast } from "@/hooks/use-toast";
+import { COPY_LINK_ICON_RESTORE_DELAY } from "@/lib/constants";
 import ActionButton from "./ActionButton";
 
 const CopyLinkButton = () => {
@@ -13,7 +14,7 @@ const CopyLinkButton = () => {
     if (isCopied) {
       const timer = setTimeout(() => {
         setIsCopied(false);
-      }, 1000);
+      }, COPY_LINK_ICON_RESTORE_DELAY);
       return () => clearTimeout(timer);
     }
   }, [isCopied]);

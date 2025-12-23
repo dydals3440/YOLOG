@@ -14,7 +14,8 @@ import {
   openShareWindow,
   type SharePlatform,
   shareNative,
-} from "@/utils/share";
+} from "@/lib/utils/share";
+import { COPY_ICON_RESTORE_DELAY } from "@/lib/constants";
 import ShareButton from "./ShareButton";
 import ShareContainer, { ShareDivider } from "./ShareContainer";
 
@@ -28,9 +29,6 @@ interface ShareOption {
   icon: React.ReactNode;
   label: string;
 }
-
-// 링크 복사 성공 시 아이콘 복원 시간 (ms)
-const COPY_ICON_RESTORE_DELAY = 2000;
 
 const SHARE_OPTIONS: ShareOption[] = [
   {

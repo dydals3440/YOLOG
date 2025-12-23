@@ -1,16 +1,17 @@
+import { useCallback } from "react";
 import { ArrowUp, MessageCircle } from "lucide-react";
 import ActionButton from "./ActionButton";
 import CopyLinkButton from "./CopyLinkButton";
 
 const PageActions = () => {
-  const handleScrollToTop = () => {
+  const handleScrollToTop = useCallback(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  }, []);
 
-  const handleScrollToComments = () => {
+  const handleScrollToComments = useCallback(() => {
     const commentsSection = document.querySelector(".giscus");
     commentsSection?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, []);
 
   return (
     <ul className="flex items-center gap-1" data-animate>
