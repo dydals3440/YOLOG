@@ -1,0 +1,675 @@
+---
+title: useReducer로 복잡한 상태 관리 깔끔하게 정리하기
+date: 2025-12-24
+updatedDate: 2025-12-24
+tags: [리액트, React, useReducer, Hooks, 상태관리, State, Reducer]
+category: DEVELOPMENT
+image: "/images/react-hooks-useReducer/thumbnail.webp"
+---
+
+# useReducer로 복잡한 상태 관리 깔끔하게 정리하기
+
+프론트엔드 개발자에게 있어서 **상태 관리**는 필수적이다. 서비스의 규모가 커지고 기능이 고도화될수록, 이 상태들을 어떻게 효율적으로 관리하느냐가 코드의 품질을 결정짓기 때문이다.
+
+리액트에서 상태를 다룬다고 하면, 우리 모두 자연스럽게 `useState`를 가장 먼저 떠올린다. 가장 직관적이고 사용하기 쉽기 때문이다. 사실 기술적인 관점에서 본다면, `useReducer`로 할 수 있는 모든 작업은 `useState`로도 구현이 가능하다.
+
+그렇다면 여기서 근본적인 의문이 생긴다. **"굳이 더 복잡해 보이는 `useReducer`를 사용해야 할 이유가 있을까?"**
+
+React 팀이 이 훅을 만든 이유는 명확하다. 바로 "상태 업데이트 로직의 복잡성"을 해결하기 위해서다. 실무에서 개발을 하다 보면, 단순히 값 하나를 바꾸는 것을 넘어 **하나의 액션이 여러 상태를 동시에 변경하거나, 이전 상태에 의존하여 복잡한 로직을 수행**해야 하는 경우가 빈번하게 발생한다.
+
+이때 `useState`만 고집한다면 컴포넌트 내부에 비즈니스 로직이 어지럽게 흩어지게 된다. 바로 이 지점이 우리가 `useReducer`를 고민해야 할 타이밍이다.
+
+---
+
+## 시나리오: 휴대폰 인증 회원가입 폼
+
+직접 `useState`와 `useReducer`로 아래의 시나리오를 각각 구현해보며 비교해보자.
+
+1. 휴대폰 번호를 입력하고 '인증번호 받기'를 누른다.
+2. 인증번호 입력창이 뜬다. 이때 7분(420초) 타이머가 돈다.
+3. 제약 사항: 타이머가 0이 되기 전까지는 '재전송' 버튼이 비활성화된다.
+4. 인증이 완료되면 회원가입 폼(아이디/비번 입력)으로 넘어간다.
+
+실제로 위의 사례는 실무에서 직접 구현한 폼 중 일부 스텝을 가져와 구현한 예제다.
+
+---
+
+## 문제 1. useState만으로 복잡한 상태를 관리할 때
+
+useState를 사용하면 상태가 개별적으로 존재한다. 문제는 '재전송' 같은 복합적인 액션이 발생할 때, 핸들러 함수 하나에서 여러 상태를 수동으로 조작해야 한다는 점이다.
+
+```tsx {5-8,18-21,23-27}
+type Step = "PHONE" | "OTP" | "REGISTER";
+
+export const SignupWithState = () => {
+  // 😫 상태들이 파편화되어 있음
+  const [step, setStep] = useState<Step>("PHONE");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [timer, setTimer] = useState(0);
+
+  // 타이머 (Effect)
+  useEffect(() => {
+    if (timer <= 0) return;
+    const id = setInterval(() => setTimer((t) => t - 1), 1000);
+    return () => clearInterval(id);
+  }, [timer > 0]);
+
+  // 😫 핸들러 함수가 비대해짐 (UI 로직과 비즈니스 로직의 혼재)
+  const handleSendOTP = () => {
+    setStep("OTP");
+    setTimer(420);
+    setOtp("");
+  };
+
+  const handleResend = () => {
+    // 재전송 시 타이머 리셋, 인풋 초기화 등 연관된 상태를 개발자가 일일이 기억해서 바꿔야 함
+    setTimer(420);
+    setOtp("");
+  };
+
+  const handleVerify = () => {
+    if (otp.length === 6) {
+      setStep("REGISTER");
+      setTimer(0);
+    }
+  };
+
+  return (
+    <div>
+      {step === "PHONE" && (
+        <>
+          <PhoneInput value={phone} onChange={setPhone} />
+          <Button onClick={handleSendOTP}>인증번호 받기</Button>
+        </>
+      )}
+
+      {step === "OTP" && (
+        <>
+          <OTPInput value={otp} onChange={setOtp} />
+          <Timer seconds={timer} />
+          <Button onClick={handleResend} disabled={timer > 0}>
+            재전송
+          </Button>
+          <Button onClick={handleVerify}>확인</Button>
+        </>
+      )}
+
+      {step === "REGISTER" && <RegisterForm />}
+    </div>
+  );
+};
+```
+
+### 무엇이 문제일까?
+
+1. **실수 가능성**: `handleResend`에서 만약 `setOtp('')`를 빼먹는다면? 사용자는 이전 인증번호가 남아있는 버그를 겪게 된다.
+2. **유지보수**: 상태가 하나 늘어나면(예: 에러 메시지), 관련된 모든 핸들러를 찾아다니며 수정해야 한다.
+
+---
+
+## useReducer 사용 방법
+
+문제를 해결하기 전에, 먼저 [`useReducer`](https://ko.react.dev/reference/react/useReducer)가 무엇인지 알아보자. `useReducer`는 컴포넌트에 reducer를 추가하는 React Hook이다.
+
+```tsx
+const [state, dispatch] = useReducer(reducer, initialArg, init?)
+```
+
+### 매개변수
+
+`useReducer`는 세 개의 매개변수를 받는다.
+
+1. **reducer**: state가 어떻게 업데이트되는지 지정하는 순수 함수. State와 Action을 받아 다음 State를 반환한다.
+2. **initialArg**: 초기 State 값. 모든 데이터 타입이 가능하다.
+3. **init**: (선택) 초기 State를 반환하는 초기화 함수. 없으면 `initialArg`가 초기값, 있으면 `init(initialArg)` 결과가 초기값이 된다.
+
+### 반환값
+
+`useReducer`는 정확히 두 개의 값을 가진 배열을 반환한다.
+
+1. **state**: 현재 상태. 첫 번째 렌더링에서는 `initialArg` 또는 `init(initialArg)`로 설정된다.
+2. **dispatch**: state를 새로운 값으로 업데이트하고 리렌더링을 트리거하는 함수.
+
+---
+
+## 해결 1. useReducer로 마이그레이션하기
+
+**useReducer**를 사용하면 컴포넌트 내부에서 useState를 완전히 제거할 수 있다. 입력값 관리부터 단계 이동까지 모든 상태 변경 로직을 Reducer 함수 한 곳에 모아두기 때문이다.
+
+### Step 1: State & Action 정의
+
+`Discriminated Union(구별된 유니온)`을 사용하여 타입 안정성을 확보한다. 쉽게 말해, 각 액션의 `type` 값으로 어떤 액션인지 구분하고, TypeScript가 자동으로 해당 액션에 맞는 속성을 추론해주는 패턴이다.
+
+```ts
+interface State {
+  step: "PHONE" | "OTP" | "REGISTER";
+  phone: string;
+  otp: string;
+  timer: number;
+}
+
+type Action =
+  | { type: "SET_PHONE"; phone: string } // 입력 핸들링
+  | { type: "SET_OTP"; otp: string } // 입력 핸들링
+  | { type: "SEND_OTP" } // 로직: 전송
+  | { type: "RESEND_OTP" } // 로직: 재전송
+  | { type: "VERIFY_SUCCESS" } // 로직: 인증 완료
+  | { type: "TICK" }; // 로직: 타이머 감소
+```
+
+### Step 2: Reducer 함수 작성
+
+"무엇을 할 것인가(Action)"만 정해주면, "어떻게 변할 것인가(State Change)"는 여기서 다 처리한다.
+
+```ts {8-9,12-13}
+const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "SET_PHONE":
+      return { ...state, phone: action.phone };
+    case "SET_OTP":
+      return { ...state, otp: action.otp };
+    case "SEND_OTP":
+      // 전송 시: 다음 단계로 이동 + 타이머 설정 + 기존 OTP 클리어
+      return { ...state, step: "OTP", timer: 420, otp: "" };
+    case "RESEND_OTP":
+      // 재전송 시: 타이머 리셋 + 기존 OTP 클리어 (로직 응집)
+      return { ...state, timer: 420, otp: "" };
+    case "VERIFY_SUCCESS":
+      return { ...state, step: "REGISTER", timer: 0 };
+    case "TICK":
+      return { ...state, timer: Math.max(0, state.timer - 1) };
+    default:
+      return state;
+  }
+};
+```
+
+### Step 3: 컴포넌트에서 사용
+
+이제 컴포넌트는 UI 렌더링과 사용자의 의도(dispatch)를 전달하는 역할만 수행한다. 코드가 훨씬 선언적(Declarative)으로 변했다.
+
+```tsx {4,15,24}
+const initialState: State = { step: "PHONE", phone: "", otp: "", timer: 0 };
+
+export const SignupWithReducer = () => {
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  // 💡 Reducer는 순수 함수여야 하므로, 시간의 흐름(Side Effect)은 Effect에서 처리
+  useEffect(() => {
+    if (state.timer <= 0) return;
+    const id = setInterval(() => dispatch({ type: "TICK" }), 1000);
+    return () => clearInterval(id);
+  }, [state.timer > 0]);
+
+  return (
+    <div>
+      {state.step === "PHONE" && (
+        <>
+          <PhoneInput
+            value={state.phone}
+            onChange={(phone) => dispatch({ type: "SET_PHONE", phone })}
+          />
+          <Button onClick={() => dispatch({ type: "SEND_OTP" })}>
+            인증번호 받기
+          </Button>
+        </>
+      )}
+
+      {state.step === "OTP" && (
+        <>
+          <OTPInput
+            value={state.otp}
+            onChange={(otp) => dispatch({ type: "SET_OTP", otp })}
+          />
+          <Timer seconds={state.timer} />
+
+          {/* "재전송 해줘"라고 의도만 전달하면 끝! */}
+          <Button
+            onClick={() => dispatch({ type: "RESEND_OTP" })}
+            disabled={state.timer > 0}
+          >
+            재전송
+          </Button>
+
+          <Button
+            onClick={() =>
+              state.otp.length === 6 && dispatch({ type: "VERIFY_SUCCESS" })
+            }
+          >
+            확인
+          </Button>
+        </>
+      )}
+
+      {state.step === "REGISTER" && <RegisterForm />}
+    </div>
+  );
+};
+```
+
+### 뭐가 달라졌을까?
+
+| 비교 항목         | useState                   | useReducer                      |
+| :---------------- | :------------------------- | :------------------------------ |
+| **상태 선언**     | 4개의 개별 useState        | 1개의 통합 State 객체           |
+| **업데이트 로직** | 각 핸들러에 분산           | reducer 한 곳에 집중            |
+| **실수 가능성**   | 높음 (연관 상태 누락 위험) | 낮음 (액션 단위로 응집)         |
+| **테스트**        | 컴포넌트 테스트 필요       | reducer 함수만 단위 테스트 가능 |
+
+---
+
+## Reducer 작성 시 주의사항
+
+### 1. Reducer는 순수함수여야 한다
+
+**순수함수**란 같은 입력에 항상 같은 출력을 반환하고, 외부 상태를 변경하지 않는 함수다. 마치 계산기처럼, 2+3을 넣으면 언제나 5가 나오는 것과 같다. useState와 마찬가지로, state는 읽기 전용이다. 객체나 배열을 직접 수정하면 안 된다.
+
+```tsx {5-6,9}
+function tasksReducer(tasks: Task[], action: Action) {
+  switch (action.type) {
+    case "added": {
+      // ❌ 잘못된 방법: 기존 배열을 직접 수정
+      tasks.push({ id: action.id, text: action.text, done: false });
+      return tasks;
+
+      // ✅ 올바른 방법: 새 배열을 반환
+      return [...tasks, { id: action.id, text: action.text, done: false }];
+    }
+    // ...
+  }
+}
+```
+
+### 2. 각 액션은 단일 사용자 상호작용을 나타낸다
+
+사용자가 5개의 필드가 있는 양식에서 "재설정"을 누르면, 5개의 개별 `set_field` 액션보다 하나의 `reset_form` 액션을 dispatch하는 것이 더 합리적이다.
+
+```tsx {2-6,9}
+// ❌ 나쁜 예: 5개의 개별 액션
+dispatch({ type: "set_field_1", value });
+dispatch({ type: "set_field_2", value });
+dispatch({ type: "set_field_3", value });
+dispatch({ type: "set_field_4", value });
+dispatch({ type: "set_field_5", value });
+
+// ✅ 좋은 예: 1개의 의미 있는 액션
+dispatch({ type: "reset_form" });
+```
+
+---
+
+## 문제 2. 초기값 계산이 무거울 때
+
+useState의 Lazy Initialization과 마찬가지로, useReducer에서도 초기값 계산이 무거우면 문제가 된다.
+
+```tsx {3}
+function TodoApp({ username }: { username: string }) {
+  // ❌ 매 렌더링마다 createInitialState 호출
+  const [state, dispatch] = useReducer(reducer, createInitialState(username));
+
+  // ...
+}
+```
+
+---
+
+## 해결 2. init 함수로 Lazy Initialization
+
+세 번째 인자인 `init` 함수를 활용하면 초기 렌더링에서만 초기화 로직이 실행된다.
+
+```tsx {2-8,12}
+// 무거운 초기화 로직
+function createInitialState(username: string) {
+  return {
+    user: username,
+    todos: loadTodosFromStorage(username), // localStorage 접근
+    preferences: loadPreferences(username), // 복잡한 계산
+  };
+}
+
+function TodoApp({ username }: { username: string }) {
+  // ✅ 초기 렌더링에서만 createInitialState 호출
+  const [state, dispatch] = useReducer(reducer, username, createInitialState);
+
+  // ...
+}
+```
+
+---
+
+## 문제 3. 중첩 객체 업데이트가 번거롭다
+
+Reducer는 순수함수여야 하므로 불변성을 유지해야 한다. 하지만 중첩 객체가 깊어지면 코드가 매우 장황해진다.
+
+```tsx {2-10}
+// 😫 zip 하나만 바꾸고 싶은데...
+setUser({
+  ...user,
+  address: {
+    ...user.address,
+    district: {
+      ...user.address.district,
+      zip: "67890",
+    },
+  },
+});
+```
+
+---
+
+## 해결 3. Immer로 간편하게
+
+[Immer](https://immerjs.github.io/immer/)의 `useImmerReducer`를 사용하면 마치 직접 수정하는 것처럼 코드를 작성할 수 있다. 불변성은 Immer가 알아서 처리해준다.
+
+```bash
+bun install immer use-immer
+```
+
+```tsx {1,6-8,11-12}
+import { useImmerReducer } from "use-immer";
+
+function tasksReducer(draft: Task[], action: Action) {
+  switch (action.type) {
+    case "added": {
+      // ✅ draft를 직접 수정해도 OK
+      draft.push({ id: action.id, text: action.text, done: false });
+      break;
+    }
+    case "changed": {
+      const index = draft.findIndex((t) => t.id === action.task.id);
+      draft[index] = action.task;
+      break;
+    }
+    case "deleted": {
+      return draft.filter((t) => t.id !== action.id);
+    }
+  }
+}
+
+function TaskApp() {
+  const [tasks, dispatch] = useImmerReducer(tasksReducer, initialTasks);
+  // ...
+}
+```
+
+`draft`는 원본의 "임시 복사본"이다. 이걸 마음대로 변경하면 Immer가 알아서 새로운 불변 객체를 만들어준다.
+
+---
+
+## useReducer + Context로 전역 상태 관리
+
+`useReducer`로 상태를 관리하면, 깊은 컴포넌트로 state와 dispatch를 전달할 때 **prop drilling** 문제가 발생할 수 있다. Prop drilling이란 데이터를 여러 단계의 컴포넌트를 거쳐 전달해야 하는 상황을 말한다. 예를 들어, 최상위 → 중간 → 최하위 컴포넌트로 props를 계속 내려보내야 하는 경우다. Context와 결합하면 이 문제를 해결할 수 있다.
+
+### 1. Context 생성
+
+```tsx
+// TasksContext.tsx
+import {
+  createContext,
+  useContext,
+  useReducer,
+  ReactNode,
+  Dispatch,
+} from "react";
+
+const TasksContext = createContext<Task[] | null>(null);
+const TasksDispatchContext = createContext<Dispatch<Action> | null>(null);
+```
+
+### 2. Provider 컴포넌트 만들기
+
+```tsx {2-10}
+// TasksContext.tsx
+export function TasksProvider({ children }: { children: ReactNode }) {
+  const [tasks, dispatch] = useReducer(tasksReducer, initialTasks);
+
+  return (
+    <TasksContext value={tasks}>
+      <TasksDispatchContext value={dispatch}>{children}</TasksDispatchContext>
+    </TasksContext>
+  );
+}
+```
+
+### 3. Custom Hooks로 간편하게 사용
+
+```tsx
+// TasksContext.tsx
+export function useTasks() {
+  const context = useContext(TasksContext);
+  if (!context) throw new Error("useTasks must be used within TasksProvider");
+  return context;
+}
+
+export function useTasksDispatch() {
+  const context = useContext(TasksDispatchContext);
+  if (!context)
+    throw new Error("useTasksDispatch must be used within TasksProvider");
+  return context;
+}
+```
+
+### 4. 컴포넌트에서 사용
+
+```tsx {6-8,16-17}
+// App.tsx
+import { TasksProvider } from "./TasksContext";
+
+export default function TaskApp() {
+  return (
+    <TasksProvider>
+      <h1>교토 여행 일정</h1>
+      <AddTask />
+      <TaskList />
+    </TasksProvider>
+  );
+}
+
+// TaskList.tsx
+function TaskList() {
+  const tasks = useTasks();
+  const dispatch = useTasksDispatch();
+
+  return (
+    <ul>
+      {tasks.map((task) => (
+        <li key={task.id}>
+          <Task task={task} dispatch={dispatch} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+이제 props를 거치지 않고도 어디서든 상태와 dispatch에 접근할 수 있다.
+
+---
+
+## 꿀팁: Reducer Map 패턴
+
+> 공식 문서에는 없는, 실무에서 유용하게 사용하는 나만의 패턴을 소개한다.
+
+위에서 만든 회원가입 폼 reducer를 다시 보자. 지금은 case가 6개다. 그런데 실무에서는 어떨까? 에러 처리, 로딩 상태, 추가 검증 로직이 들어가면 case가 10개, 20개로 늘어난다.
+
+switch문이 길어지면 어떤 문제가 생길까?
+
+- 스크롤을 위아래로 왔다갔다하면서 찾아야 한다
+- `RESEND_OTP`가 어디 있는지 `Ctrl+F`로 검색해야 한다
+- 새로운 액션을 추가할 때 `default` 위에 case를 넣어야 하는지 헷갈린다
+
+이럴 때 **객체(Map)** 를 활용하면 훨씬 깔끔하게 관리할 수 있다.
+
+### Before: switch문
+
+앞서 작성한 회원가입 폼의 reducer를 다시 보자.
+
+```tsx
+const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "SET_PHONE":
+      return { ...state, phone: action.phone };
+    case "SET_OTP":
+      return { ...state, otp: action.otp };
+    case "SEND_OTP":
+      return { ...state, step: "OTP", timer: 420, otp: "" };
+    case "RESEND_OTP":
+      return { ...state, timer: 420, otp: "" };
+    case "VERIFY_SUCCESS":
+      return { ...state, step: "REGISTER", timer: 0 };
+    case "TICK":
+      return { ...state, timer: Math.max(0, state.timer - 1) };
+    default:
+      return state;
+  }
+};
+```
+
+case가 6개일 때도 이미 20줄이 넘는다. 실무에서는 이게 50줄, 100줄이 되기도 한다.
+
+### After: Reducer Map 패턴
+
+이제 같은 로직을 객체로 표현해보자.
+
+```tsx {2-13,16-17}
+// 1. Reducer Map - 각 액션을 독립적인 함수로 관리
+const reducerMap: Record<
+  Action["type"],
+  (state: State, action: Action) => State
+> = {
+  SET_PHONE: (state, action) =>
+    action.type === "SET_PHONE" ? { ...state, phone: action.phone } : state,
+  SET_OTP: (state, action) =>
+    action.type === "SET_OTP" ? { ...state, otp: action.otp } : state,
+  SEND_OTP: (state) => ({ ...state, step: "OTP", timer: 420, otp: "" }),
+  RESEND_OTP: (state) => ({ ...state, timer: 420, otp: "" }),
+  VERIFY_SUCCESS: (state) => ({ ...state, step: "REGISTER", timer: 0 }),
+  TICK: (state) => ({ ...state, timer: Math.max(0, state.timer - 1) }),
+};
+
+// 2. Reducer 함수 - 단 한 줄!
+const reducer = (state: State, action: Action): State =>
+  reducerMap[action.type](state, action);
+```
+
+코드가 절반으로 줄었다. 하지만 더 중요한 건 **가독성**이다. 모든 액션이 한눈에 보인다.
+
+### 왜 이 패턴이 더 좋을까?
+
+#### 1. 한눈에 모든 액션이 보인다
+
+switch문은 `case`, `return`, 들여쓰기 때문에 한 액션이 3~4줄을 차지한다. reducerMap은 액션 하나가 딱 한 줄이다. 스크롤 없이 전체 로직을 파악할 수 있다.
+
+#### 2. 새 액션 추가가 쉽다
+
+새로운 액션 `SET_ERROR`를 추가한다고 해보자.
+
+```tsx
+// switch문: case 추가 + 위치 고민
+case "SET_ERROR":
+  return { ...state, error: action.error };
+
+// reducerMap: 그냥 한 줄 추가
+SET_ERROR: (state, action) => ({ ...state, error: action.error }),
+```
+
+#### 3. TypeScript가 누락을 잡아준다
+
+Action 타입에 `SET_ERROR`를 추가했는데 reducerMap에 안 넣으면? TypeScript가 바로 에러를 띄운다.
+
+```tsx
+// ❌ Type Error: Property 'SET_ERROR' is missing
+const reducerMap: { [T in Action["type"]]: ActionHandler<T> } = {
+  SET_PHONE: ...,
+  // SET_ERROR 빠뜨림!
+};
+```
+
+switch문에서는 이런 실수를 컴파일 타임에 잡기 어렵다.
+
+#### 4. 테스트가 쉬워진다
+
+각 액션 핸들러를 독립적으로 테스트할 수 있다.
+
+```tsx
+describe("reducerMap", () => {
+  const initialState: State = { step: "PHONE", phone: "", otp: "", timer: 0 };
+
+  it("SEND_OTP: OTP 단계로 이동하고 타이머를 420초로 설정한다", () => {
+    const result = reducerMap.SEND_OTP(initialState, { type: "SEND_OTP" });
+
+    expect(result.step).toBe("OTP");
+    expect(result.timer).toBe(420);
+    expect(result.otp).toBe("");
+  });
+
+  it("TICK: 타이머를 1초 감소시킨다", () => {
+    const state = { ...initialState, timer: 100 };
+    const result = reducerMap.TICK(state, { type: "TICK" });
+
+    expect(result.timer).toBe(99);
+  });
+
+  it("TICK: 타이머가 0 미만으로 내려가지 않는다", () => {
+    const state = { ...initialState, timer: 0 };
+    const result = reducerMap.TICK(state, { type: "TICK" });
+
+    expect(result.timer).toBe(0);
+  });
+});
+```
+
+switch문은 매번 `reducer(state, { type: "..." })`처럼 전체 reducer를 호출해야 한다. reducerMap은 `reducerMap.TICK(state, action)`처럼 해당 함수만 직접 테스트할 수 있다.
+
+### 정리
+
+| 항목            | switch문                       | Reducer Map 패턴            |
+| :-------------- | :----------------------------- | :-------------------------- |
+| **가독성**      | 액션당 3~4줄, 스크롤 필요      | 액션당 1줄, 한눈에 파악     |
+| **타입 안전성** | 누락된 case 감지 어려움        | TypeScript가 누락 즉시 알림 |
+| **테스트**      | reducer 전체 호출 필요         | 개별 함수 단위 테스트 가능  |
+| **확장성**      | case 추가 + 들여쓰기 + default | 한 줄 추가로 끝             |
+
+switch문이 5개를 넘어가기 시작하면 이 패턴을 고려해보자.
+
+---
+
+## useState vs useReducer 언제 뭘 쓸까?
+
+| 항목          | useState                    | useReducer                        |
+| :------------ | :-------------------------- | :-------------------------------- |
+| **코드량**    | 적음                        | 초기 작성량 많음                  |
+| **가독성**    | 간단한 상태에 좋음          | 복잡한 로직에 우수                |
+| **디버깅**    | 로직이 분산되어 추적 어려움 | 한 곳에서 모든 업데이트 확인 가능 |
+| **테스트**    | 컴포넌트 테스트 필요        | reducer 함수만 독립 테스트 가능   |
+| **추천 상황** | 간단한 상태 (1-2개)         | 복잡한 상태, 관련 상태가 많을 때  |
+
+### useReducer를 선택하는 기준
+
+- 여러 이벤트 핸들러에서 비슷한 방식으로 state를 업데이트할 때
+- 상태 업데이트 로직이 복잡해서 컴포넌트를 읽기 어려울 때
+- 상태 변경을 쉽게 테스트하고 싶을 때
+- 디버깅 시 "어떤 액션이 일어났는지" 로그로 확인하고 싶을 때
+
+---
+
+## 핵심 정리
+
+| 개념                     | 설명                                                       |
+| :----------------------- | :--------------------------------------------------------- |
+| **dispatch**             | "어떤 일이 일어났는지"를 action 객체로 전달                |
+| **reducer**              | 현재 state와 action을 받아 다음 state를 반환하는 순수함수  |
+| **action**               | 무슨 일이 일어났는지 설명하는 객체 (보통 `type` 필드 포함) |
+| **Lazy Initialization**  | 무거운 초기화 로직을 init 함수로 분리                      |
+| **useReducer + Context** | 전역 상태 관리 패턴 (prop drilling 해결)                   |
+
+---
+
+## 참고자료
+
+- [React 공식 문서 - useReducer](https://ko.react.dev/reference/react/useReducer)
+- [React 공식 문서 - Extracting State Logic into a Reducer](https://react.dev/learn/extracting-state-logic-into-a-reducer)
+- [React 공식 문서 - Scaling Up with Reducer and Context](https://react.dev/learn/scaling-up-with-reducer-and-context)
+- [Immer 공식 문서](https://immerjs.github.io/immer/)
+- [use-immer GitHub](https://github.com/immerjs/use-immer)
