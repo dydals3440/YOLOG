@@ -3,6 +3,7 @@ import '@/styles/global.css'
 
 import { WEBSITE_CONFIG } from '@/consts'
 import type { SEOModel } from '@/types'
+import { SITE_URL } from '@/lib/config'
 
 import FontLoader from './FontLoader.astro'
 
@@ -28,10 +29,10 @@ const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
   "name": "YOLOG",
-  "url": Astro.site?.toString() || "https://www.yolog.co.kr",
+  "url": Astro.site?.toString() || SITE_URL,
   "logo": {
     "@type": "ImageObject",
-    "url": new URL("/favicon.ico", Astro.site).toString()
+    "url": new URL("/favicon.ico", Astro.site || SITE_URL).toString()
   },
   "sameAs": [
     WEBSITE_CONFIG.SOCIAL_LINKS.YOUTUBE

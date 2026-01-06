@@ -8,7 +8,7 @@ import BlogCard from '@/components/blogs/BlogCard.astro'
 import Pagination from '@/components/blogs/Pagination.astro'
 import YongGlass from '@/components/YongGlass.astro'
 import { sortPostsByDate, createCategoryList, filterPostsByCategory, paginateArray } from '@/lib/blog-utils'
-import { PAGINATION } from '@/lib/config'
+import { PAGINATION, getSiteUrl } from '@/lib/config'
 
 export async function getStaticPaths() {
   const allPosts = await getCollection('post')
@@ -97,7 +97,7 @@ const totalPosts = totalPostsInCategory || pagination.totalPosts
 const displayTitle = category ? categoryLabel : '전체'
 
 // SEO: 페이지네이션 rel="prev/next" URL 계산
-const siteUrl = Astro.site?.toString().replace(/\/$/, '') || 'https://www.yolog.co.kr'
+const siteUrl = getSiteUrl(Astro.site)
 const currentPage = pagination.currentPage
 const totalPages = pagination.totalPages
 

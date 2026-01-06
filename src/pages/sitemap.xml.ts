@@ -1,7 +1,8 @@
-import { getPostInfoList } from '@/lib/mdx';
+import { getPostInfoList } from "@/lib/mdx";
+import { SITE_URL } from "@/lib/config";
 
 export async function GET() {
-  const siteUrl = import.meta.env.SITE || 'https://www.yolog.co.kr';
+  const siteUrl = import.meta.env.SITE || SITE_URL;
   const posts = await getPostInfoList();
 
   const renderUrl = (slug: string) => `<url><loc>${siteUrl}${slug}</loc></url>`;
@@ -9,20 +10,20 @@ export async function GET() {
   const result = `
     <?xml version="1.0" encoding="UTF-8"?>
     <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-      ${renderUrl('/')}
-      ${renderUrl('/blogs')}
+      ${renderUrl("/")}
+      ${renderUrl("/blogs")}
       ${posts
         .map((post) => {
           const lastMod = (post.updatedDate ?? post.date).toISOString();
           return `<url><loc>${siteUrl}${post.href}/</loc><lastmod>${lastMod}</lastmod></url>`;
         })
-        .join('\n')}
+        .join("\n")}
     </urlset>
   `.trim();
 
   return new Response(result, {
     headers: {
-      'Content-Type': 'application/xml',
+      "Content-Type": "application/xml",
     },
   });
 }

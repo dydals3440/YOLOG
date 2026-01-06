@@ -7,7 +7,7 @@ import BlogCard from '@/components/blogs/BlogCard.astro'
 import Pagination from '@/components/blogs/Pagination.astro'
 import YongGlass from '@/components/YongGlass.astro'
 import { sortPostsByDate, createCategoryList, paginateArray } from '@/lib/blog-utils'
-import { PAGINATION } from '@/lib/config'
+import { PAGINATION, getSiteUrl } from '@/lib/config'
 
 const allPosts = await getCollection('post')
 const sortedPosts = sortPostsByDate(allPosts)
@@ -16,7 +16,7 @@ const categories = createCategoryList(allPosts)
 const { items: posts, pagination } = paginateArray(sortedPosts, 1, PAGINATION.POSTS_PER_PAGE)
 
 // SEO: 첫 페이지에서 rel="next" 링크 설정
-const siteUrl = Astro.site?.toString().replace(/\/$/, '') || 'https://www.yolog.co.kr'
+const siteUrl = getSiteUrl(Astro.site)
 const nextUrl = pagination.totalPages > 1 ? `${siteUrl}/blogs/page/2` : null
 ---
 

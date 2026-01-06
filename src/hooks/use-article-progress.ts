@@ -23,6 +23,9 @@ export function useArticleProgress({
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    // SSR 환경에서는 document가 없으므로 early return
+    if (typeof document === "undefined") return;
+
     const article = document.querySelector(selector);
     if (!article) return;
 

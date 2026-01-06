@@ -21,6 +21,7 @@ import PostNavigation from '@/components/common/PostNavigation.astro'
 import BaseLayout from './BaseLayout.astro'
 import GoogleAdsense from '@/components/GoogleAdsense.astro'
 import { WEBSITE_CONFIG, BLOG_CATEGORIES, type BlogCategory } from '@/consts'
+import { getSiteUrl } from '@/lib/config'
 
 type Props = {
   post: CollectionEntry<'post'>
@@ -68,6 +69,7 @@ const blogPostingSchema = {
 
 // BreadcrumbList Schema for SEO
 const categoryLabel = category ? BLOG_CATEGORIES[category as BlogCategory] : null
+const siteUrl = getSiteUrl(Astro.site)
 const breadcrumbSchema = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
@@ -76,19 +78,19 @@ const breadcrumbSchema = {
       "@type": "ListItem",
       "position": 1,
       "name": "홈",
-      "item": Astro.site?.toString() || "https://www.yolog.co.kr"
+      "item": siteUrl
     },
     {
       "@type": "ListItem",
       "position": 2,
       "name": "블로그",
-      "item": `${Astro.site?.toString() || "https://www.yolog.co.kr"}blogs`
+      "item": `${siteUrl}/blogs`
     },
     ...(category ? [{
       "@type": "ListItem",
       "position": 3,
       "name": categoryLabel,
-      "item": `${Astro.site?.toString() || "https://www.yolog.co.kr"}blogs/${category.toLowerCase()}`
+      "item": `${siteUrl}/blogs/${category.toLowerCase()}`
     }] : []),
     {
       "@type": "ListItem",
