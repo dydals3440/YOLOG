@@ -20,7 +20,7 @@ import PostNavigation from '@/components/common/PostNavigation.astro'
 
 import BaseLayout from './BaseLayout.astro'
 import GoogleAdsense from '@/components/GoogleAdsense.astro'
-import { WEBSITE_CONFIG } from '@/consts'
+import { WEBSITE_CONFIG, BLOG_CATEGORIES, type BlogCategory } from '@/consts'
 
 type Props = {
   post: CollectionEntry<'post'>
@@ -30,7 +30,7 @@ type Props = {
 
 const { post, prevPost, nextPost } = Astro.props
 
-const { title, date, image, tags } = post.data
+const { title, date, updatedDate, image, tags, category } = post.data
 const description = post.data.description || generateDescription(post.body)
 const formattedDate = formatDate(date)
 const toc = parseToc(post.body)
@@ -45,7 +45,7 @@ const blogPostingSchema = {
   "description": description,
   "image": image ? new URL(image, Astro.site).toString() : new URL(WEBSITE_CONFIG.OG_IMAGE, Astro.site).toString(),
   "datePublished": new Date(date).toISOString(),
-  "dateModified": new Date(date).toISOString(),
+  "dateModified": new Date(updatedDate || date).toISOString(),
   "author": {
     "@type": "Person",
     "name": "매튜",
@@ -65,11 +65,44 @@ const blogPostingSchema = {
   },
   ...(tags && tags.length > 0 ? { "keywords": tags.join(", ") } : {})
 }
+
+// BreadcrumbList Schema for SEO
+const categoryLabel = category ? BLOG_CATEGORIES[category as BlogCategory] : null
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "홈",
+      "item": Astro.site?.toString() || "https://www.yolog.co.kr"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "블로그",
+      "item": `${Astro.site?.toString() || "https://www.yolog.co.kr"}blogs`
+    },
+    ...(category ? [{
+      "@type": "ListItem",
+      "position": 3,
+      "name": categoryLabel,
+      "item": `${Astro.site?.toString() || "https://www.yolog.co.kr"}blogs/${category.toLowerCase()}`
+    }] : []),
+    {
+      "@type": "ListItem",
+      "position": category ? 4 : 3,
+      "name": title
+    }
+  ]
+}
 ---
 
 <BaseLayout seo={{ title, description, image, keywords: tags }}>
   <ReadingProgress client:idle />
   <script type="application/ld+json" set:html={JSON.stringify(blogPostingSchema)} />
+  <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
   <LeftSidebar>
     <a
       class="group flex w-fit items-center gap-1.5 text-third transition-colors hover:text-primary lg:gap-2"

@@ -6,8 +6,9 @@ import {
   LinkIcon,
   ShareIcon,
   CopyCheckIcon,
-} from "@/components/ui/icons";
+} from "@/components/ui/Icons";
 import { useToast } from "@/hooks/use-toast";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import {
   copyToClipboard,
   createShareUrls,
@@ -15,7 +16,6 @@ import {
   type SharePlatform,
   shareNative,
 } from "@/lib/utils/share";
-import { COPY_ICON_RESTORE_DELAY } from "@/lib/constants";
 import ShareButton from "./ShareButton";
 import ShareContainer, { ShareDivider } from "./ShareContainer";
 
@@ -51,7 +51,7 @@ const SHARE_OPTIONS: ShareOption[] = [
 const SocialShare = ({ title, url }: SocialShareProps) => {
   const { toast } = useToast();
   const [isSharing, setIsSharing] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
+  const { isCopied, setIsCopied } = useCopyFeedback();
 
   const shareUrls = useMemo(() => createShareUrls(title, url), [title, url]);
 
@@ -82,11 +82,6 @@ const SocialShare = ({ title, url }: SocialShareProps) => {
         title: "링크가 복사되었습니다",
         description: "클립보드에 저장되었습니다",
       });
-
-      // 아이콘 복원
-      setTimeout(() => {
-        setIsCopied(false);
-      }, COPY_ICON_RESTORE_DELAY);
     } catch (err) {
       toast({
         title: "복사 실패",
@@ -96,7 +91,7 @@ const SocialShare = ({ title, url }: SocialShareProps) => {
     } finally {
       setIsSharing(false);
     }
-  }, [url, toast]);
+  }, [url, toast, setIsCopied]);
 
   const isNativeShareSupported =
     typeof navigator !== "undefined" && "share" in navigator;

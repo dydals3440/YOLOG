@@ -1,23 +1,17 @@
-import { useEffect, useState, useCallback } from "react";
+import { useCallback } from "react";
 
-import { LinkIcon, CheckIcon } from "@/components/ui/icons";
+import { LinkIcon, CheckIcon } from "@/components/ui/Icons";
 import { copyToClipboard } from "@/lib/utils/share";
 import { useToast } from "@/hooks/use-toast";
-import { COPY_LINK_ICON_RESTORE_DELAY } from "@/lib/constants";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
+import { DELAYS } from "@/lib/config";
 import ActionButton from "./ActionButton";
 
 const CopyLinkButton = () => {
-  const [isCopied, setIsCopied] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (isCopied) {
-      const timer = setTimeout(() => {
-        setIsCopied(false);
-      }, COPY_LINK_ICON_RESTORE_DELAY);
-      return () => clearTimeout(timer);
-    }
-  }, [isCopied]);
+  const { isCopied, setIsCopied } = useCopyFeedback({
+    delayMs: DELAYS.COPY_LINK_ICON_RESTORE_MS,
+  });
 
   const handleCopyLink = useCallback(async () => {
     try {
@@ -34,7 +28,7 @@ const CopyLinkButton = () => {
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [toast, setIsCopied]);
 
   return (
     <ActionButton onClick={handleCopyLink}>

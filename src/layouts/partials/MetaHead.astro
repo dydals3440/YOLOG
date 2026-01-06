@@ -10,10 +10,10 @@ interface Props extends SEOModel {}
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site)
 
-const { title = WEBSITE_CONFIG.TITLE, description = WEBSITE_CONFIG.DESCRIPTION, image = WEBSITE_CONFIG.OG_IMAGE, keywords } = Astro.props
+const { title = WEBSITE_CONFIG.TITLE, description = WEBSITE_CONFIG.DESCRIPTION, image = WEBSITE_CONFIG.OG_IMAGE, keywords, prevUrl, nextUrl } = Astro.props
 const formattedTitle = title === WEBSITE_CONFIG.TITLE ? title : WEBSITE_CONFIG.TITLE_TEMPLATE.replace('%s', title)
 
-// Structured Data for JSON-LD
+// Structured Data for JSON-LD (WebPage)
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "WebPage",
@@ -21,6 +21,21 @@ const structuredData = {
   "description": description,
   "url": canonicalURL.toString(),
   ...(keywords && keywords.length > 0 ? { "keywords": keywords.join(', ') } : {})
+}
+
+// Organization Schema for Google Knowledge Panel
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "YOLOG",
+  "url": Astro.site?.toString() || "https://www.yolog.co.kr",
+  "logo": {
+    "@type": "ImageObject",
+    "url": new URL("/favicon.ico", Astro.site).toString()
+  },
+  "sameAs": [
+    WEBSITE_CONFIG.SOCIAL_LINKS.YOUTUBE
+  ]
 }
 
 ---
@@ -39,6 +54,10 @@ const structuredData = {
 
 <!-- Canonical URL -->
 <link rel="canonical" href={canonicalURL} />
+
+<!-- Pagination SEO -->
+{prevUrl && <link rel="prev" href={prevUrl} />}
+{nextUrl && <link rel="next" href={nextUrl} />}
 
 <!-- Primary Meta Tags -->
 <title>{formattedTitle}</title>
@@ -66,3 +85,4 @@ const structuredData = {
 
 <!-- Structured Data -->
 <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+<script type="application/ld+json" set:html={JSON.stringify(organizationSchema)} />

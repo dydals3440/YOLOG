@@ -1,5 +1,10 @@
-import type { CollectionEntry } from 'astro:content';
-import type { BlogCategory } from '@/consts';
+/**
+ * 컴포넌트 Props 타입 정의
+ */
+
+import type { CollectionEntry } from "astro:content";
+import type { BlogCategory } from "@/consts";
+import type { SEOProps } from "./seo";
 
 // BaseLayout Props
 export interface BaseLayoutProps {
@@ -7,17 +12,9 @@ export interface BaseLayoutProps {
   class?: string;
 }
 
-// SEO Props
-export interface SEOProps {
-  title?: string;
-  description?: string;
-  image?: string;
-  keywords?: string[];
-}
-
 // BlogCard Props
 export interface BlogCardProps {
-  post: CollectionEntry<'post'>;
+  post: CollectionEntry<"post">;
 }
 
 // CategoryList Props
@@ -45,15 +42,15 @@ export interface PaginationProps {
 
 // PostNavigation Props
 export interface PostNavigationProps {
-  prevPost?: CollectionEntry<'post'>;
-  nextPost?: CollectionEntry<'post'>;
+  prevPost?: CollectionEntry<"post">;
+  nextPost?: CollectionEntry<"post">;
 }
 
 // PostLayout Props
 export interface PostLayoutProps {
-  post: CollectionEntry<'post'>;
-  prevPost?: CollectionEntry<'post'>;
-  nextPost?: CollectionEntry<'post'>;
+  post: CollectionEntry<"post">;
+  prevPost?: CollectionEntry<"post">;
+  nextPost?: CollectionEntry<"post">;
 }
 
 // PostImage Props
@@ -62,7 +59,7 @@ export interface PostImageProps {
   alt: string;
   width?: number;
   height?: number;
-  loading?: 'lazy' | 'eager';
+  loading?: "lazy" | "eager";
 }
 
 // GoogleAdsense Props

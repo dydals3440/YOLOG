@@ -1,13 +1,14 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 import { getCollection } from 'astro:content';
+import { RELATED_POSTS } from '@/lib/config';
 
 interface Props {
   currentPost: CollectionEntry<'post'>;
   maxPosts?: number;
 }
 
-const { currentPost, maxPosts = 3 } = Astro.props;
+const { currentPost, maxPosts = RELATED_POSTS.MAX_COUNT } = Astro.props;
 
 // 현재 포스트의 태그와 카테고리
 const currentTags = currentPost.data.tags || [];
@@ -24,20 +25,20 @@ function calculateRelevance(post: CollectionEntry<'post'>): number {
   let score = 0;
   const postTags = post.data.tags || [];
 
-  // 같은 카테고리면 +3점
+  // 같은 카테고리면 점수 추가
   if (post.data.category === currentCategory) {
-    score += 3;
+    score += RELATED_POSTS.SCORES.CATEGORY_MATCH;
   }
 
-  // 공통 태그 1개당 +2점
+  // 공통 태그 1개당 점수 추가
   const commonTags = currentTags.filter(tag => postTags.includes(tag));
-  score += commonTags.length * 2;
+  score += commonTags.length * RELATED_POSTS.SCORES.TAG_MATCH;
 
-  // 최근 포스트일수록 +1점 (6개월 이내)
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-  if (new Date(post.data.date) > sixMonthsAgo) {
-    score += 1;
+  // 최근 포스트일수록 점수 추가
+  const recentDate = new Date();
+  recentDate.setMonth(recentDate.getMonth() - RELATED_POSTS.RECENCY_MONTHS);
+  if (new Date(post.data.date) > recentDate) {
+    score += RELATED_POSTS.SCORES.RECENCY_BONUS;
   }
 
   return score;

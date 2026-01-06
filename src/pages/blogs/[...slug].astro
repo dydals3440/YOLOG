@@ -8,6 +8,7 @@ import BlogCard from '@/components/blogs/BlogCard.astro'
 import Pagination from '@/components/blogs/Pagination.astro'
 import YongGlass from '@/components/YongGlass.astro'
 import { sortPostsByDate, createCategoryList, filterPostsByCategory, paginateArray } from '@/lib/blog-utils'
+import { PAGINATION } from '@/lib/config'
 
 export async function getStaticPaths() {
   const allPosts = await getCollection('post')
@@ -16,12 +17,11 @@ export async function getStaticPaths() {
     .map(category => category.toLowerCase())
 
   const paths = []
-  const POSTS_PER_PAGE = 8
 
   // 전체 블로그 페이지네이션 (2페이지부터)
-  const totalAllPages = Math.ceil(sortPostsByDate(allPosts).length / POSTS_PER_PAGE)
+  const totalAllPages = Math.ceil(sortPostsByDate(allPosts).length / PAGINATION.POSTS_PER_PAGE)
   for (let page = 2; page <= totalAllPages; page++) {
-    const { items: posts, pagination } = paginateArray(sortPostsByDate(allPosts), page, POSTS_PER_PAGE)
+    const { items: posts, pagination } = paginateArray(sortPostsByDate(allPosts), page, PAGINATION.POSTS_PER_PAGE)
 
     paths.push({
       params: { slug: `page/${page}` },
@@ -44,11 +44,10 @@ export async function getStaticPaths() {
     const filteredPosts = filterPostsByCategory(allPosts, categoryKey)
     const sortedPosts = sortPostsByDate(filteredPosts)
 
-    const categoryPostsPerPage = 5
-    const totalCategoryPages = Math.ceil(sortedPosts.length / categoryPostsPerPage)
+    const totalCategoryPages = Math.ceil(sortedPosts.length / PAGINATION.POSTS_PER_PAGE_CATEGORY)
 
     // 카테고리 1페이지
-    const { items: firstPagePosts, pagination: firstPagination } = paginateArray(sortedPosts, 1, categoryPostsPerPage)
+    const { items: firstPagePosts, pagination: firstPagination } = paginateArray(sortedPosts, 1, PAGINATION.POSTS_PER_PAGE_CATEGORY)
     paths.push({
       params: { slug: category },
       props: {
@@ -66,7 +65,7 @@ export async function getStaticPaths() {
 
     // 카테고리 2페이지부터
     for (let page = 2; page <= totalCategoryPages; page++) {
-      const { items: posts, pagination } = paginateArray(sortedPosts, page, categoryPostsPerPage)
+      const { items: posts, pagination } = paginateArray(sortedPosts, page, PAGINATION.POSTS_PER_PAGE_CATEGORY)
 
       paths.push({
         params: { slug: `${category}/page/${page}` },
@@ -96,9 +95,34 @@ const totalPosts = totalPostsInCategory || pagination.totalPosts
 
 // 제목: 전체 페이지면 "전체", 카테고리면 카테고리 이름
 const displayTitle = category ? categoryLabel : '전체'
+
+// SEO: 페이지네이션 rel="prev/next" URL 계산
+const siteUrl = Astro.site?.toString().replace(/\/$/, '') || 'https://www.yolog.co.kr'
+const currentPage = pagination.currentPage
+const totalPages = pagination.totalPages
+
+const getPrevUrl = () => {
+  if (currentPage <= 1) return null
+  if (currentPage === 2) {
+    return category ? `${siteUrl}/blogs/${category}` : `${siteUrl}/blogs`
+  }
+  return category
+    ? `${siteUrl}/blogs/${category}/page/${currentPage - 1}`
+    : `${siteUrl}/blogs/page/${currentPage - 1}`
+}
+
+const getNextUrl = () => {
+  if (currentPage >= totalPages) return null
+  return category
+    ? `${siteUrl}/blogs/${category}/page/${currentPage + 1}`
+    : `${siteUrl}/blogs/page/${currentPage + 1}`
+}
+
+const prevUrl = getPrevUrl()
+const nextUrl = getNextUrl()
 ---
 
-<BaseLayout>
+<BaseLayout seo={{ prevUrl, nextUrl }}>
   <div class="py-12 sm:py-8">
     <div class="mb-12 sm:mb-8">
       <h1 class="text-3xl font-bold tracking-tight mb-2 sm:text-2xl">{displayTitle}</h1>
