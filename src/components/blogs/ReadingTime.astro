@@ -1,4 +1,6 @@
 ---
+import { READING_SPEED } from '@/lib/config'
+
 export interface Props {
   content?: string
   className?: string
@@ -15,12 +17,8 @@ function calculateReadingTime(text: string): number {
   const koreanCharCount = (plainText.match(/[\u3131-\uD79D]/g) || []).length
   const englishWordCount = (plainText.match(/[a-zA-Z]+/g) || []).length
 
-  // 읽기 속도 기준
-  const KOREAN_CHARS_PER_MINUTE = 500  // 한글: 분당 500자
-  const ENGLISH_WORDS_PER_MINUTE = 200 // 영어: 분당 200단어
-
-  const koreanMinutes = koreanCharCount / KOREAN_CHARS_PER_MINUTE
-  const englishMinutes = englishWordCount / ENGLISH_WORDS_PER_MINUTE
+  const koreanMinutes = koreanCharCount / READING_SPEED.KOREAN_CHARS_PER_MINUTE
+  const englishMinutes = englishWordCount / READING_SPEED.ENGLISH_WORDS_PER_MINUTE
 
   const totalMinutes = koreanMinutes + englishMinutes
 

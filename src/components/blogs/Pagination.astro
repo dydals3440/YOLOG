@@ -1,5 +1,6 @@
 ---
-import type { PaginationProps } from '@/types/astro'
+import type { PaginationProps } from '@/types'
+import { PAGINATION } from '@/lib/config'
 
 export interface Props extends PaginationProps {}
 
@@ -9,7 +10,7 @@ const getPageUrl = (page: number) => page === 1 ? basePath : `${basePath}/page/$
 
 const generatePageNumbers = () => {
   const { currentPage, totalPages } = pagination
-  const delta = 2
+  const delta = PAGINATION.DELTA
   const range = []
   const rangeWithDots = []
 

@@ -1,17 +1,16 @@
-import type { BlogCategory } from '@/consts';
+/**
+ * 타입 통합 re-export
+ */
 
-export interface SEOModel {
-  title?: string;
-  description?: string;
-  image?: string;
-  keywords?: string[];
-}
-
-export interface BlogPost {
-  title: string;
-  description?: string;
-  date: string;
-  category: BlogCategory;
-  tags?: string[];
-  image?: string;
-}
+export type { SEOModel, SEOProps } from "./seo";
+export type { BlogPost, PostInfoModel, TOCSectionModel } from "./content";
+export type {
+  BaseLayoutProps,
+  BlogCardProps,
+  CategoryListProps,
+  PaginationProps,
+  PostNavigationProps,
+  PostLayoutProps,
+  PostImageProps,
+  GoogleAdsenseProps,
+} from "./props";

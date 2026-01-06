@@ -5,15 +5,15 @@ import {
   ToastProvider,
   ToastTitle,
   ToastViewport,
-} from "@/components/ui/toast";
+} from "@/components/ui/Toast";
 import { useToast } from "@/hooks/use-toast";
-import { TOAST_DURATION } from "@/lib/constants";
+import { TOAST } from "@/lib/config";
 
 export function Toaster() {
   const { toasts } = useToast();
 
   return (
-    <ToastProvider duration={TOAST_DURATION}>
+    <ToastProvider duration={TOAST.DURATION_MS}>
       {toasts.map(function ({ id, title, description, action, ...props }) {
         return (
           <Toast key={id} {...props}>

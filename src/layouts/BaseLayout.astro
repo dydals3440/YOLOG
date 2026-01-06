@@ -6,12 +6,12 @@ import Footer from '@/layouts/partials/Footer.astro'
 import Header from '@/layouts/partials/Header.astro'
 import Monitoring from '@/components/scripts/Monitoring.astro'
 import ThemeHead from '@/components/scripts/ThemeHead.astro'
-import { Toaster } from '@/components/ui/toaster'
+import { Toaster } from '@/components/ui/Toaster'
 import Analytics from '@vercel/analytics/astro'
 import SpeedInsights from "@vercel/speed-insights/astro"
 import { isProduction } from '@/lib/utils'
 
-import type { BaseLayoutProps } from '@/types/astro'
+import type { BaseLayoutProps } from '@/types'
 
 export interface Props extends BaseLayoutProps {}
 
