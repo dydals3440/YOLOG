@@ -6,6 +6,7 @@ import { isProduction } from '@/lib/utils'
 {
   isProduction && (
     <script
+      is:inline
       async
       src={`https://www.googletagmanager.com/gtag/js?id=${import.meta.env.PUBLIC_GA_ID}`}
     />
@@ -14,6 +15,7 @@ import { isProduction } from '@/lib/utils'
 {
   isProduction && (
     <script
+      is:inline
       async
       src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3296643559689345"
       crossorigin="anonymous"

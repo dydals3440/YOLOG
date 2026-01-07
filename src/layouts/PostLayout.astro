@@ -103,8 +103,8 @@ const breadcrumbSchema = {
 
 <BaseLayout seo={{ title, description, image, keywords: tags }}>
   <ReadingProgress client:idle />
-  <script type="application/ld+json" set:html={JSON.stringify(blogPostingSchema)} />
-  <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(blogPostingSchema)} />
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
   <LeftSidebar>
     <a
       class="group flex w-fit items-center gap-1.5 text-third transition-colors hover:text-primary lg:gap-2"

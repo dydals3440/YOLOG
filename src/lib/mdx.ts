@@ -2,6 +2,8 @@ import { type CollectionEntry, getCollection } from "astro:content";
 import { sortPostsByDate } from "./blog-utils";
 import type { PostInfoModel, TOCSectionModel } from "@/types";
 
+export type { TOCSectionModel };
+
 export const isBlogPost = (post: { slug: string }) => {
   return post.slug.includes("blog/");
 };
