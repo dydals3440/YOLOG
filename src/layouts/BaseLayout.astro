@@ -24,7 +24,7 @@ const { seo, class: className } = Astro.props
     <ThemeHead />
     <Monitoring />
     {isProduction && (
-      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3296643559689345" crossorigin="anonymous"></script>
+      <script is:inline async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3296643559689345" crossorigin="anonymous"></script>
     )}
   </head>
   <body>
