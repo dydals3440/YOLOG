@@ -712,7 +712,7 @@ class PostService {
 
 ```tsx
 // contexts/PostContext.tsx
-import { createContext, use, useState } from "react";
+import { createContext, use, useState, type PropsWithChildren } from "react";
 
 interface PostClient {
   postService: PostService;
@@ -720,12 +720,10 @@ interface PostClient {
 
 const PostContext = createContext<PostClient | null>(null);
 
-interface Props {
-  children: React.ReactNode;
-  client?: PostClient; // 테스트용 오버라이드
-}
-
-export function PostContextProvider({ children, client }: Props) {
+export function PostContextProvider({
+  children,
+  client,
+}: PropsWithChildren<{ client?: PostClient }>) {
   const httpClient = useHttpClient(); // 위에서 설명한 HttpClient
 
   // Lazy initialization: 서비스 그래프 한 번만 생성
@@ -767,7 +765,11 @@ function CreatePostForm() {
 
   const mutation = useMutation({
     mutationFn: () => postService.createPost({ title, content }),
-    onError: (err) => setError(err.message),
+    onError: (err) => {
+      const message =
+        err instanceof Error ? err.message : "알 수 없는 오류가 발생했다";
+      setError(message);
+    },
   });
 
   return (
@@ -901,7 +903,7 @@ class ClassicThemeService {
 Provider에서 A/B 테스트 그룹에 따라 Service를 교체한다.
 
 ```tsx
-function ThemeContextProvider({ children }: Props) {
+function ThemeContextProvider({ children }: PropsWithChildren) {
   const { variant } = useABTest("theme-preference");
 
   const [themeClient] = useState<ThemeClient>(() => {
@@ -918,6 +920,197 @@ function ThemeContextProvider({ children }: Props) {
 ```
 
 `<Dashboard />` 컴포넌트는 **단 한 줄도 변경하지 않았다**. 50대 이상 사용자에게 B안을 노출하고, 체류 시간과 이탈률을 비교한 뒤 연령대별 기본 테마를 결정하면 된다.
+
+### Fixtures로 테스트와 스토리북 데이터 공유하기
+
+앞서 테스트에서 mock 객체를 주입하는 방법을 살펴봤다. 그런데 테스트 케이스가 늘어날수록 비슷한 mock 데이터를 반복해서 작성하게 된다. 스토리북에서도 마찬가지다. 포스트 목록 스토리를 만들려면 또 mock 데이터를 작성해야 한다.
+
+이 데이터들을 한 곳에서 관리하면 어떨까?
+
+**Fixtures 폴더 구조**
+
+서버 응답을 흉내낸 데이터를 `__fixtures__` 폴더에 모아두고, 테스트와 스토리북에서 **동일한 데이터를 재사용**할 수 있다.
+
+```text
+src/
+├── __fixtures__/
+│   ├── factories.ts       # 테스트 데이터 생성 함수
+│   ├── stubs.ts           # Service Stub 구현
+│   ├── presets.ts         # 시나리오별 Preset
+│   └── index.ts           # 통합 export
+├── components/
+│   └── PostList/
+│       ├── PostList.tsx
+│       ├── PostList.test.tsx     # fixtures 사용
+│       └── PostList.stories.tsx  # 동일한 fixtures 사용
+└── contexts/
+    └── PostContext.tsx
+```
+
+**Factory: 테스트 데이터 생성**
+
+테스트 데이터를 생성하는 함수를 별도 파일로 분리한다. `satisfies` 반복을 없애고, 필요한 필드만 오버라이드할 수 있다.
+
+```ts
+// __fixtures__/factories.ts
+import type { Post } from "@/types";
+
+let idCounter = 0;
+
+export function createPost(overrides: Partial<Post> = {}): Post {
+  idCounter += 1;
+  return {
+    id: overrides.id ?? idCounter,
+    title: overrides.title ?? `테스트 포스트 ${idCounter}`,
+    content: overrides.content ?? "테스트 내용이다.",
+    author: overrides.author ?? "매튜",
+  };
+}
+
+export function createPosts(count: number): Post[] {
+  return Array.from({ length: count }, () => createPost());
+}
+```
+
+`createPost()`를 호출할 때마다 고유한 ID가 부여된다. 특정 필드만 바꾸고 싶으면 `createPost({ title: "원하는 제목" })`처럼 오버라이드하면 된다.
+
+**Stub: vi.fn() 없이 Service 구현**
+
+`vi.fn()`에 의존하지 않는 Stub을 만들면 **스토리북에서도 테스트 프레임워크 없이** 동작한다.
+
+```ts
+// __fixtures__/stubs.ts
+import type { Post, CreatePostInput, PostService } from "@/types";
+import { createPost } from "./factories";
+
+interface PostServiceStubOptions {
+  posts?: Post[];
+  createPostResult?: Post | Error;
+}
+
+export function createPostServiceStub(
+  options: PostServiceStubOptions = {},
+): PostService {
+  const { posts = [], createPostResult } = options;
+
+  return {
+    async getPosts() {
+      return posts;
+    },
+    async createPost(input: CreatePostInput) {
+      if (createPostResult instanceof Error) {
+        throw createPostResult;
+      }
+      return createPostResult ?? createPost(input);
+    },
+  };
+}
+```
+
+Stub은 실제 `PostService` 인터페이스를 구현하되, 내부 로직을 단순화한 것이다. 네트워크 요청 없이 미리 정의한 데이터를 반환한다.
+
+**Presets: 자주 쓰는 시나리오 미리 정의**
+
+반복적으로 사용하는 시나리오를 Preset으로 묶어두면 테스트 코드가 훨씬 간결해진다.
+
+```ts
+// __fixtures__/presets.ts
+import { createPost, createPosts } from "./factories";
+import { createPostServiceStub } from "./stubs";
+
+export const postPresets = {
+  // 기본: 포스트 3개
+  withPosts: () => createPostServiceStub({ posts: createPosts(3) }),
+
+  // 빈 목록
+  empty: () => createPostServiceStub({ posts: [] }),
+
+  // 단일 포스트
+  single: () => createPostServiceStub({ posts: [createPost()] }),
+
+  // 생성 실패 시나리오
+  createFails: (message = "제목은 2자 이상이어야 한다") =>
+    createPostServiceStub({ createPostResult: new Error(message) }),
+};
+```
+
+`postPresets.withPosts()`를 호출하면 포스트 3개가 담긴 Stub Service가 생성된다. 테스트마다 mock 데이터를 복붙할 필요가 없다.
+
+**스토리북에서 활용하기**
+
+```tsx
+// PostList.stories.tsx
+import type { Meta, StoryObj } from "@storybook/react";
+import { PostContextProvider } from "@/contexts/PostContext";
+import { postPresets } from "@/__fixtures__";
+import { PostList } from "./PostList";
+
+const meta: Meta<typeof PostList> = {
+  component: PostList,
+};
+export default meta;
+
+type Story = StoryObj<typeof PostList>;
+
+export const Default: Story = {
+  decorators: [
+    (Story) => (
+      <PostContextProvider client={{ postService: postPresets.withPosts() }}>
+        <Story />
+      </PostContextProvider>
+    ),
+  ],
+};
+
+export const Empty: Story = {
+  decorators: [
+    (Story) => (
+      <PostContextProvider client={{ postService: postPresets.empty() }}>
+        <Story />
+      </PostContextProvider>
+    ),
+  ],
+};
+```
+
+`vi.fn()`을 사용하지 않으므로 스토리북에서 Vitest 없이도 정상 동작한다. Context의 `client` prop을 통해 Stub을 주입하면 실제 서버 없이도 다양한 상태를 시각적으로 확인할 수 있다.
+
+**테스트에서 동일하게 활용하기**
+
+```tsx
+// PostList.test.tsx
+import { postPresets } from "@/__fixtures__";
+
+test("포스트 목록을 표시한다", async () => {
+  render(
+    <PostContextProvider client={{ postService: postPresets.withPosts() }}>
+      <PostList />
+    </PostContextProvider>,
+  );
+
+  expect(await screen.findByText("테스트 포스트 1")).toBeInTheDocument();
+});
+
+test("포스트가 없으면 빈 상태를 표시한다", async () => {
+  render(
+    <PostContextProvider client={{ postService: postPresets.empty() }}>
+      <PostList />
+    </PostContextProvider>,
+  );
+
+  expect(await screen.findByText("포스트가 없다")).toBeInTheDocument();
+});
+```
+
+스토리북과 **완전히 동일한 패턴**이다. 같은 Preset을 사용하므로 스토리북에서 보이는 UI와 테스트에서 검증하는 UI가 일치한다.
+
+이 패턴의 장점은 명확하다.
+
+1. **Factory**: 데이터 구조가 바뀌면 `createPost()` 하나만 수정하면 된다
+2. **Stub**: `vi.fn()` 없이 동작하므로 스토리북에서도 바로 사용할 수 있다
+3. **Presets**: 자주 쓰는 시나리오를 한 줄로 표현할 수 있다
+
+한 곳에서 관리하고, 여러 곳에서 재사용한다. 이것이 의존성 주입이 가져다주는 **진짜 재사용성**이다.
 
 ---
 
