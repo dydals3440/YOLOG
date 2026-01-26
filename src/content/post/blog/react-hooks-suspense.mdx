@@ -1,0 +1,718 @@
+---
+title: Suspense로 비동기 상태 선언적으로 다루기
+date: 2026-01-26
+updatedDate: 2026-01-26
+tags: [리액트, React, Suspense, Hooks, TanStack Query, 비동기]
+category: DEVELOPMENT
+image: "/images/react-hooks-suspense/thumbnail.webp"
+---
+
+# Suspense로 비동기 상태 선언적으로 다루기
+
+데이터를 불러오는 컴포넌트를 만들 때마다 같은 패턴을 반복하고 있지 않은가?
+
+```tsx
+function PostList() {
+  const { data, isLoading, isError } = useQuery({
+    /* ... */
+  });
+
+  if (isLoading) return <Loading />;
+  if (isError) return <Error />;
+
+  return <ul>{data?.map(/* ... */)}</ul>;
+}
+```
+
+로딩 체크, 에러 체크, 그리고 나서야 실제 렌더링. 컴포넌트마다 이 패턴이 반복된다. `PostList`의 본질은 게시글 목록을 보여주는 것인데, 로딩과 에러 처리 코드가 절반을 차지한다.
+
+코드를 읽는 사람은 로딩 처리 → 에러 처리 → 본래 로직 순서로 시선이 분산되고, 컴포넌트의 책임도 점점 많아진다.
+
+`Suspense`는 이 문제를 해결한다. **로딩 상태를 컴포넌트 밖으로 분리**해서, 컴포넌트는 오직 데이터 렌더링에만 집중할 수 있게 만든다.
+
+이 글에서는 Suspense가 어떻게 이 문제를 해결하는지, 그리고 실전에서 어떻게 활용하는지 알아본다.
+
+---
+
+## Suspense가 해결하는 문제
+
+기존 방식의 문제점을 하나씩 살펴보자.
+
+### 반복되는 보일러플레이트
+
+게시글 목록을 보여주는 `PostList`와 게시글 상세를 보여주는 `PostDetail`을 만든다고 하자.
+
+```tsx
+function PostList() {
+  const { data, isLoading, isError } = useQuery({
+    /* ... */
+  });
+
+  if (isLoading) return <Loading />;
+  if (isError) return <Error />;
+
+  return <ul>{data?.map(/* ... */)}</ul>;
+}
+
+function PostDetail({ id }: { id: number }) {
+  const { data, isLoading, isError } = useQuery({
+    /* ... */
+  });
+
+  if (isLoading) return <Loading />;
+  if (isError) return <Error />;
+
+  return <article>{data?.title}</article>;
+}
+```
+
+두 컴포넌트 모두 같은 패턴이다. `isLoading`, `isError` 체크 후 렌더링. 데이터를 불러오는 컴포넌트가 10개라면? 같은 코드를 10번 반복해야 한다.
+
+### 타입 안정성 문제
+
+`useQuery`의 반환값 `data`는 항상 `undefined`일 수 있다.
+
+데이터 페칭은 부수효과이기 때문에 렌더링 중에 실행될 수 없고, 컴포넌트가 마운트된 후에 시작된다. 따라서 첫 렌더링 시점에는 데이터가 존재하지 않는다.
+
+```tsx
+const { data } = useQuery({
+  /* ... */
+});
+// data의 타입: Post[] | undefined
+
+return <ul>{data?.map(/* ... */)}</ul>; // Optional chaining 필수
+```
+
+조건문으로 `isLoading`과 `isError`를 먼저 체크했음에도, TypeScript는 그 아래에서 `data`가 반드시 존재한다고 추론하지 못한다. 그래서 `data?.`처럼 optional chaining을 계속 써야 한다.
+
+### 워터폴(폭포수) 문제
+
+부모 컴포넌트가 데이터를 불러온 후에야 자식 컴포넌트가 렌더링된다.
+
+```tsx
+function PostPage({ id }: { id: number }) {
+  const { data: post, isLoading } = useQuery({
+    /* ... */
+  });
+
+  if (isLoading) return <Loading />;
+
+  return (
+    <>
+      <PostDetail post={post} />
+      <Comments postId={id} /> {/* post 로딩 완료 후에야 렌더링 시작 */}
+    </>
+  );
+}
+```
+
+`Comments`는 `post` 데이터와 무관하게 `postId`만 있으면 댓글을 불러올 수 있다. 하지만 부모인 `PostPage`의 로딩이 끝나야 자식인 `Comments`가 렌더링되고, 그제서야 댓글 요청이 시작된다.
+
+**타임라인:**
+
+1. `post` 데이터 요청 시작 → 300ms 후 완료
+2. `Comments` 렌더링 → 댓글 요청 시작 → 300ms 후 완료
+3. 총 600ms 소요
+
+두 요청을 병렬로 실행했다면 300ms면 충분했을 것이다.
+
+하지만 자식 컴포넌트는 부모가 렌더링을 완료해야 렌더링되고, 데이터 요청은 컴포넌트가 렌더링될 때 시작된다.
+
+결국 부모-자식 구조 자체가 요청 순서를 직렬로 만들어버린다. 데이터 간에 의존성이 없어도 컴포넌트 트리 구조 때문에 순차적으로 요청할 수밖에 없는 것이다.
+
+---
+
+## Suspense의 동작 원리
+
+Suspense의 핵심은 **Promise를 throw하는 것**이다. 일반적으로 `throw`는 에러를 던질 때 사용하지만, React에서는 Promise를 throw해서 "아직 준비 안 됐어"라고 알릴 수 있다.
+
+### Promise throw 메커니즘
+
+```tsx
+function PostList() {
+  // 데이터가 준비되지 않았으면 Promise를 throw
+  // 준비됐으면 데이터를 반환
+  const { data: posts } = useSuspenseQuery(postQueries.all());
+
+  return <ul>{posts.map(/* ... */)}</ul>;
+}
+```
+
+`useSuspenseQuery`는 내부적으로 이렇게 동작한다:
+
+1. 데이터가 캐시에 없으면 → Promise를 throw
+2. React가 Promise를 감지 → 가장 가까운 `Suspense` 경계를 찾아 fallback 렌더링
+3. Promise가 resolve되면 → 컴포넌트를 다시 렌더링
+4. 이번엔 데이터가 있으므로 → 정상적으로 렌더링 완료
+
+### Promise의 세 가지 상태
+
+| 상태     | React 동작                         | UI            |
+| -------- | ---------------------------------- | ------------- |
+| Pending  | Promise throw → 렌더링 중단        | Fallback 표시 |
+| Resolved | 데이터 반환 → 정상 렌더링          | 실제 콘텐츠   |
+| Rejected | 에러 throw → Error Boundary로 전파 | 에러 UI       |
+
+---
+
+## TanStack Query와 Suspense
+
+TanStack Query의 `useSuspenseQuery`를 사용하면 Suspense를 쉽게 적용할 수 있다.
+
+### 쿼리 옵션 정의
+
+먼저 쿼리 옵션을 한 곳에서 정의한다. 이후 예제에서는 이 설정을 그대로 사용한다.
+
+```tsx
+// queries/posts.ts
+import { queryOptions } from "@tanstack/react-query";
+
+export const postQueries = {
+  all: () =>
+    queryOptions({
+      queryKey: ["posts"],
+      queryFn: fetchPosts,
+    }),
+  detail: (id: number) =>
+    queryOptions({
+      queryKey: ["posts", id],
+      queryFn: () => fetchPost(id),
+    }),
+};
+```
+
+### useSuspenseQuery 사용
+
+```tsx
+import { useSuspenseQuery } from "@tanstack/react-query";
+
+function PostList() {
+  const { data: posts } = useSuspenseQuery(postQueries.all());
+
+  // posts는 절대 undefined가 아니다!
+  return (
+    <ul>
+      {posts.map((post) => (
+        <li key={post.id}>{post.title}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+`useSuspenseQuery`의 핵심 특징:
+
+- **`data`가 항상 존재**: 로딩 중이면 Promise를 throw하므로, 이 코드에 도달했다면 데이터가 있다
+- **`isLoading` 체크 불필요**: Suspense가 대신 처리한다
+- **타입 안전성**: `Suspense` 안에서 실행되므로 데이터가 있음이 보장된다. `data`의 타입이 `Post[] | undefined`가 아닌 `Post[]`다
+
+### Loading/Error 컴포넌트 패턴
+
+컴포넌트와 함께 사용할 Loading, Error 컴포넌트를 정의한다.
+
+```tsx
+function PostList() {
+  const { data: posts } = useSuspenseQuery(postQueries.all());
+  // ...
+}
+
+PostList.Loading = function PostListLoading() {
+  return <div className="animate-pulse">게시글 불러오는 중...</div>;
+};
+
+PostList.Error = function PostListError() {
+  return <div className="text-red-500">게시글을 불러오지 못했습니다</div>;
+};
+```
+
+이제 사용하는 쪽에서:
+
+```tsx
+<ErrorBoundary fallback={<PostList.Error />}>
+  <Suspense fallback={<PostList.Loading />}>
+    <PostList />
+  </Suspense>
+</ErrorBoundary>
+```
+
+컴포넌트와 그에 맞는 로딩/에러 UI가 한 곳에 모여 있어 관리하기 쉽다.
+
+---
+
+## Error Boundary와 함께 사용하기
+
+Suspense는 로딩 상태만 처리한다. 에러 상태는 Error Boundary가 담당한다.
+
+```tsx
+import { ErrorBoundary } from "react-error-boundary";
+
+function PostPage() {
+  return (
+    <ErrorBoundary fallback={<PostList.Error />}>
+      <Suspense fallback={<PostList.Loading />}>
+        <PostList />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+```
+
+**동작 흐름:**
+
+1. `PostList` 렌더링 시도
+2. 데이터 로딩 중 → Promise throw → `Suspense`가 잡아서 `PostList.Loading` 표시
+3. 로딩 완료 → `PostList` 정상 렌더링
+4. 만약 에러 발생 → Error throw → `ErrorBoundary`가 잡아서 `PostList.Error` 표시
+
+### 에러 복구와 QueryErrorResetBoundary
+
+`react-error-boundary`의 `resetErrorBoundary`를 활용하면 재시도 버튼을 쉽게 구현할 수 있다.
+
+```tsx
+<ErrorBoundary
+  fallbackRender={({ resetErrorBoundary }) => (
+    <div>
+      <p>게시글을 불러오지 못했습니다</p>
+      <button onClick={resetErrorBoundary}>다시 시도</button>
+    </div>
+  )}
+>
+  <Suspense fallback={<PostList.Loading />}>
+    <PostList />
+  </Suspense>
+</ErrorBoundary>
+```
+
+그런데 문제가 있다. "다시 시도" 버튼을 눌러도 요청이 다시 실행되지 않는다.
+
+왜 그럴까? `ErrorBoundary`는 React의 에러 상태만 초기화한다. 하지만 TanStack Query는 자체적인 캐시를 가지고 있고, 이 캐시에는 여전히 **실패한 쿼리 상태**가 남아있다.
+
+`ErrorBoundary`를 리셋해도 Query 캐시의 에러 상태는 그대로이기 때문에, 컴포넌트가 다시 렌더링되면 캐시에서 에러를 읽어와 즉시 또 에러를 throw한다.
+
+이 문제를 해결하려면 `QueryErrorResetBoundary`가 필요하다.
+
+```tsx
+import { QueryErrorResetBoundary } from "@tanstack/react-query";
+import { ErrorBoundary } from "react-error-boundary";
+
+function PostPage() {
+  return (
+    <QueryErrorResetBoundary>
+      {({ reset }) => (
+        <ErrorBoundary
+          onReset={reset}
+          fallbackRender={({ resetErrorBoundary }) => (
+            <div>
+              <p>게시글을 불러오지 못했습니다</p>
+              <button onClick={resetErrorBoundary}>다시 시도</button>
+            </div>
+          )}
+        >
+          <Suspense fallback={<PostList.Loading />}>
+            <PostList />
+          </Suspense>
+        </ErrorBoundary>
+      )}
+    </QueryErrorResetBoundary>
+  );
+}
+```
+
+`QueryErrorResetBoundary`는 `reset` 함수를 제공하고, 이를 `ErrorBoundary`의 `onReset`에 연결한다. 이제 "다시 시도"를 누르면:
+
+1. `resetErrorBoundary()` 호출
+2. `ErrorBoundary`가 `onReset` 콜백 실행 → Query 캐시의 에러 상태 초기화
+3. `ErrorBoundary` 리셋 → 자식 컴포넌트 다시 렌더링
+4. `useSuspenseQuery`가 새로운 요청 시작
+
+`useQueryErrorResetBoundary` 훅을 사용해도 동일한 효과를 얻을 수 있다.
+
+```tsx
+import { useQueryErrorResetBoundary } from "@tanstack/react-query";
+
+function PostPage() {
+  const { reset } = useQueryErrorResetBoundary();
+
+  return (
+    <ErrorBoundary
+      onReset={reset}
+      fallbackRender={({ resetErrorBoundary }) => (
+        <div>
+          <p>게시글을 불러오지 못했습니다</p>
+          <button onClick={resetErrorBoundary}>다시 시도</button>
+        </div>
+      )}
+    >
+      <Suspense fallback={<PostList.Loading />}>
+        <PostList />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+```
+
+---
+
+## 코드 스플리팅: React.lazy
+
+`React.lazy`를 사용하면 컴포넌트를 별도 번들로 분리할 수 있다. 큰 컴포넌트를 필요할 때만 로드해서 초기 번들 크기를 줄인다.
+
+```tsx
+import { lazy, Suspense, useState } from "react";
+
+const PostEditor = lazy(() => import("./PostEditor"));
+
+function PostPage() {
+  const [isEditing, setIsEditing] = useState(false);
+
+  return (
+    <>
+      <PostDetail />
+
+      {isEditing && (
+        <Suspense fallback={<div>에디터 로딩 중...</div>}>
+          <PostEditor />
+        </Suspense>
+      )}
+
+      <button onClick={() => setIsEditing(true)}>수정하기</button>
+    </>
+  );
+}
+```
+
+`PostEditor`는 "수정하기" 버튼을 클릭할 때 로드된다. 게시글을 보기만 하는 사용자는 에디터 코드를 다운로드하지 않아도 된다.
+
+### lazy의 캐싱
+
+`lazy()`는 **모듈 레벨**에서 한 번만 실행된다.
+
+```tsx
+// ✅ 모듈 레벨에서 정의 - 한 번만 실행
+const PostEditor = lazy(() => import("./PostEditor"));
+
+function PostPage() {
+  // 컴포넌트가 리렌더링되어도 lazy()는 다시 실행되지 않음
+}
+```
+
+한 번 로드된 컴포넌트는 캐시되어, 다음에 다시 사용할 때 즉시 렌더링된다.
+
+```tsx
+// ❌ 컴포넌트 내부에서 정의 - 매 렌더링마다 새로 생성
+function PostPage() {
+  const PostEditor = lazy(() => import("./PostEditor")); // 문제!
+}
+```
+
+이렇게 하면 매 렌더링마다 새로운 lazy 컴포넌트가 생성되어 캐시 효과가 사라진다.
+
+---
+
+## 이벤트 핸들러에서의 Suspense 문제
+
+Suspense는 **렌더링 단계**에서만 Promise를 감지한다. 이벤트 핸들러는 렌더링 이후에 실행되므로, 그 안에서 발생한 상태 변경으로 인한 Suspense를 제대로 처리하지 못한다.
+
+왜 그럴까? React의 동작 원리를 간단히 살펴보자.
+
+React는 크게 두 단계로 동작한다:
+
+1. **Render Phase**: 컴포넌트 함수를 호출해서 Virtual DOM을 만든다. 이 과정에서 컴포넌트가 Promise를 throw하면, Suspense가 이를 catch해서 fallback을 보여준다.
+
+2. **Commit Phase**: 실제 DOM에 변경사항을 반영하고, `useEffect`와 이벤트 핸들러를 실행한다.
+
+핵심은 Suspense가 Promise를 감지하는 방식이다.
+
+컴포넌트가 렌더링 중에 Promise를 **throw**하면, 마치 Error가 Error Boundary로 전파되듯이 Promise가 가장 가까운 Suspense 경계까지 전파된다. Suspense는 이 Promise를 catch하고, resolve될 때까지 fallback을 보여준 뒤 다시 렌더링을 시도한다.
+
+그렇다면 이벤트 핸들러는 어떨까?
+
+이벤트 핸들러는 Commit Phase 이후, 즉 렌더링이 완전히 끝난 시점에 실행된다. 이때는 이미 Render Phase가 아니므로 Promise를 throw해도 Suspense가 catch할 수 없다.
+
+### 문제 상황
+
+```tsx
+function PostTabs() {
+  const [activeTab, setActiveTab] = useState<"list" | "popular">("list");
+
+  return (
+    <div>
+      <button onClick={() => setActiveTab("popular")}>인기 글</button>
+
+      <Suspense fallback={<PostList.Loading />}>
+        {activeTab === "popular" && <PopularPosts />}
+      </Suspense>
+    </div>
+  );
+}
+```
+
+버튼을 클릭하면:
+
+1. `setActiveTab('popular')` 실행
+2. 리렌더링 → `PopularPosts` 렌더링 시도
+3. `PopularPosts`가 Promise를 throw
+4. 하지만 이벤트 핸들러 컨텍스트이므로 Suspense가 제대로 동작하지 않을 수 있다
+
+### 해결책: useTransition
+
+`useTransition`을 사용하면 상태 변경을 "transition"으로 표시해서 Suspense와 호환되게 만들 수 있다.
+
+```tsx
+import { useTransition, Suspense, useState } from "react";
+
+function PostTabs() {
+  const [activeTab, setActiveTab] = useState<"list" | "popular">("list");
+  const [isPending, startTransition] = useTransition();
+
+  const handleTabChange = (tab: "list" | "popular") => {
+    startTransition(() => {
+      setActiveTab(tab);
+    });
+  };
+
+  return (
+    <div>
+      <button onClick={() => handleTabChange("popular")} disabled={isPending}>
+        인기 글 {isPending && "(로딩 중...)"}
+      </button>
+
+      <Suspense fallback={<PostList.Loading />}>
+        {activeTab === "popular" && <PopularPosts />}
+      </Suspense>
+    </div>
+  );
+}
+```
+
+`startTransition`으로 감싼 상태 변경은:
+
+- **Non-blocking**: 다른 긴급한 업데이트(입력, 클릭)를 먼저 처리
+- **Suspense 호환**: transition 내 상태 변경은 Suspense를 정상 작동시킴
+- **기존 콘텐츠 유지**: 새 콘텐츠가 준비될 때까지 이전 콘텐츠를 계속 표시
+
+### isPending 활용
+
+`isPending`은 transition이 진행 중인지 알려준다. 이를 활용해 로딩 인디케이터를 표시할 수 있다.
+
+```tsx
+<div style={{ opacity: isPending ? 0.7 : 1 }}>
+  <Suspense fallback={<PostList.Loading />}>
+    <PostList category={category} />
+  </Suspense>
+</div>
+```
+
+Suspense의 fallback을 표시하지 않고, 기존 콘텐츠를 흐리게 만들어 로딩 중임을 표시한다. 사용자 경험이 더 부드러워진다.
+
+---
+
+## useDeferredValue
+
+`useDeferredValue`는 값의 "지연된" 버전을 만든다. 원본 값이 바뀌어도 지연된 값은 잠시 이전 상태를 유지한다.
+
+```tsx
+function PostSearch() {
+  const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
+  const isStale = query !== deferredQuery;
+
+  return (
+    <>
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="검색어 입력..."
+      />
+
+      <div style={{ opacity: isStale ? 0.5 : 1 }}>
+        <Suspense fallback={<PostList.Loading />}>
+          <PostSearchResults query={deferredQuery} />
+        </Suspense>
+      </div>
+    </>
+  );
+}
+```
+
+**동작:**
+
+1. 사용자가 타이핑 → `query`가 즉시 변경 → 입력창에 바로 반영
+2. `deferredQuery`는 잠시 이전 값 유지 → 검색 결과는 아직 이전 상태
+3. React가 여유가 생기면 → `deferredQuery` 업데이트 → 검색 결과 갱신
+
+`isStale`로 "현재 검색 결과가 최신이 아님"을 표시할 수 있다.
+
+### useTransition vs useDeferredValue
+
+|           | useTransition                  | useDeferredValue         |
+| --------- | ------------------------------ | ------------------------ |
+| 제어 대상 | 상태 변경 함수                 | 값                       |
+| 사용 상황 | 이벤트 핸들러에서 상태 변경    | props나 외부에서 받은 값 |
+| 반환값    | `[isPending, startTransition]` | 지연된 값                |
+
+**선택 기준:**
+
+- 내가 상태를 직접 변경한다 → `useTransition`
+- 외부에서 받은 값이 빠르게 변한다 → `useDeferredValue`
+
+---
+
+## 중첩 Suspense로 점진적 UI 표시
+
+Suspense를 중첩해서 콘텐츠를 단계적으로 표시할 수 있다.
+
+```tsx
+function PostPage({ id }: { id: number }) {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <PostDetail id={id} />
+
+      <Suspense fallback={<Comments.Loading />}>
+        <Comments postId={id} />
+      </Suspense>
+    </Suspense>
+  );
+}
+```
+
+**렌더링 순서:**
+
+1. 처음: `PageSkeleton` 표시
+2. `PostDetail` 로딩 완료: 게시글 표시 + `Comments.Loading` 표시
+3. `Comments` 로딩 완료: 전체 페이지 완성
+
+게시글이 먼저 로드되면 댓글을 기다리지 않고 바로 보여준다. 사용자는 빠르게 콘텐츠를 볼 수 있다.
+
+### 병렬 데이터 페칭
+
+같은 Suspense 경계 안의 컴포넌트들은 데이터를 **동시에** 요청한다.
+
+```tsx
+<Suspense fallback={<Loading />}>
+  <PostDetail id={id} /> {/* 요청 시작 */}
+  <Comments postId={id} /> {/* 동시에 요청 시작 */}
+  <RelatedPosts id={id} /> {/* 동시에 요청 시작 */}
+</Suspense>
+```
+
+세 컴포넌트가 각자 데이터를 요청하지만, 모두 동시에 시작된다. 가장 느린 요청이 완료되면 모두 함께 렌더링된다.
+
+**vs 직렬 페칭:**
+
+```tsx
+// ❌ 워터폴 발생
+function PostPage({ id }) {
+  const { data: post, isLoading } = useQuery({
+    /* ... */
+  });
+  if (isLoading) return <Loading />;
+
+  return (
+    <>
+      <PostDetail post={post} />
+      <Comments postId={id} /> {/* post 로딩 후에야 요청 시작 */}
+    </>
+  );
+}
+```
+
+---
+
+## Server Components와 Suspense
+
+React Server Components(RSC)에서 Suspense는 더욱 강력해진다. 서버에서 데이터를 직접 불러오고, Streaming으로 클라이언트에 전송한다.
+
+```tsx
+// app/posts/page.tsx (Server Component)
+async function PostList() {
+  const posts = await fetchPosts(); // 서버에서 직접 호출
+  return (
+    <ul>
+      {posts.map((post) => (
+        <li key={post.id}>{post.title}</li>
+      ))}
+    </ul>
+  );
+}
+
+export default function PostsPage() {
+  return (
+    <div>
+      <h1>게시글</h1>
+      <Suspense fallback={<PostList.Loading />}>
+        <PostList />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+**장점:**
+
+- **번들 크기 감소**: 데이터 페칭 코드가 서버에만 존재
+- **Streaming**: HTML이 준비되는 대로 클라이언트에 전송
+- **워터폴 방지**: 서버에서 병렬로 데이터 페칭 가능
+
+|                 | 기존 SSR           | RSC + Suspense   |
+| --------------- | ------------------ | ---------------- |
+| 데이터 페칭     | getServerSideProps | 컴포넌트 내 직접 |
+| 클라이언트 번들 | 전체 포함          | 서버 코드 제외   |
+| Streaming       | 제한적             | 완전 지원        |
+
+---
+
+## 도입 후기
+
+`Suspense`를 도입하면 컴포넌트 코드가 훨씬 깔끔해지고, 개발자는 본질적인 렌더링 로직에만 집중할 수 있다.
+
+실제로 도입 후 체감되는 변화는 코드 가독성 향상이었다. 로딩 상태를 각 컴포넌트가 아닌 Suspense 경계에서 관리하니, 컴포넌트 로직이 단순해지고 시점이동이 줄어들었다.
+
+사용자 경험 측면에서도 개선이 있었다.
+
+중첩 Suspense를 활용해 준비된 콘텐츠부터 순차적으로 보여주니, 사용자가 빈 화면을 응시하는 시간이 줄었다.
+
+측정 결과 `FCP(First Contentful Paint)`가 약 150~200ms 정도 개선되었다.
+
+## 정리
+
+Suspense는 비동기 상태 처리를 **선언적**으로 바꿔준다.
+
+**기존 방식:**
+
+```tsx
+function PostList() {
+  const { data, isLoading, isError } = useQuery({
+    /* ... */
+  });
+  if (isLoading) return <Loading />;
+  if (isError) return <Error />;
+  return <ul>{data?.map(/* ... */)}</ul>;
+}
+```
+
+**Suspense 방식:**
+
+```tsx
+function PostList() {
+  const { data: posts } = useSuspenseQuery(postQueries.all());
+  return <ul>{posts.map(/* ... */)}</ul>;
+}
+
+// 사용하는 쪽
+<ErrorBoundary fallback={<PostList.Error />}>
+  <Suspense fallback={<PostList.Loading />}>
+    <PostList />
+  </Suspense>
+</ErrorBoundary>;
+```
+
+**핵심 포인트:**
+
+- 컴포넌트는 **데이터 렌더링에만 집중**
+- 로딩/에러 처리는 **경계(Boundary)가 담당**
+- `data`는 **항상 존재** (타입 안전성)
+- **병렬 데이터 페칭**으로 성능 향상
+- **중첩 Suspense**로 점진적 UI 표시
+
+이벤트 핸들러와 함께 사용할 때는 `useTransition`을, 빠르게 변하는 값에는 `useDeferredValue`를 활용하자.

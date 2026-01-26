@@ -11,7 +11,7 @@ import {
   transformerNotationFocus,
   transformerNotationHighlight,
 } from "@shikijs/transformers";
-import { transformerTwoslash } from "@shikijs/twoslash";
+
 import { defineConfig } from "astro/config";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeExternalLinks from "rehype-external-links";
@@ -41,9 +41,6 @@ export default defineConfig({
           dark: "slack-dark",
         },
         transformers: [
-          transformerTwoslash({
-            explicitTrigger: true,
-          }),
           transformerNotationHighlight(),
           transformerNotationDiff(),
           transformerNotationFocus(),
