@@ -8,7 +8,11 @@
       "mcp__acp__Bash",
       "mcp__acp__Edit",
       "mcp__context7__query-docs",
-      "WebSearch"
+      "WebSearch",
+      "Bash(SRC=\"/Users/kim-yongmin/Workspace/personal/YOLOG/public/images/vercel-deployment/check-success.webp\")",
+      "Bash(for i in thumbnail 1 2 3 4 5 6 7)",
+      "Bash(do cp \"$SRC\" \"$i.webp\")",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []
