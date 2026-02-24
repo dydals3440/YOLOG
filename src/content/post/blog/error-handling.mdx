@@ -1,0 +1,494 @@
+---
+title: 예상 가능한 에러와 예상 불가능한 에러
+date: 2026-02-25
+updatedDate: 2026-02-25
+tags:
+  [
+    에러 처리,
+    Error Handling,
+    Result 타입,
+    ErrorBoundary,
+    TypeScript,
+    React,
+  ]
+category: DEVELOPMENT
+image: '/images/error-handling/thumbnail.webp'
+---
+
+## 모든 에러를 같은 방식으로 처리하고 있지 않은가?
+
+개발을 하다 보면 에러 처리라는 건 묘하게 뒷전이 되기 쉽다. 기능 구현에 집중하다 보면 "에러? 일단 `try/catch`로 감싸면 되지"라는 생각이 자연스럽게 든다.
+
+현재 멘토링을 하고 있는 동아리의 프로젝트들을 보면, 거의 대부분의 팀들이 에러를 모조리 `try/catch`로 감싸서 처리하고 있다. 그리고 `catch` 블록 안에는 어김없이 "오류가 발생했습니다. 다시 시도해주세요"라는 뭉뚱그린 메시지가 들어있다.
+
+사실 남의 이야기가 아니다. 나 역시 실무에서 이런 식으로 에러를 처리하는 코드를 많이 작성했고, 그 대가를 톡톡히 치렀다. 장애가 터지면 "이 에러가 대체 뭔데?"라는 질문에 서버 로그를 보지 않는 이상 아무도 답할 수 없었고, CS 담당 팀원분들도, 디버깅하는 개발자도 매번 같은 피로감에 시달렸다.
+
+그때 얻은 경험을 이 글에 남겨보려고 한다. 에러를 제대로 분류하고 표현하는 방식을 도입한 후, 문제가 발생했을 때 구체적인 에러 메시지 덕분에 원인 파악과 CS 대응이 훨씬 수월해졌다. 코드 한 줄의 차이가 팀 전체의 피로도를 바꿀 수 있다는 걸 그때 체감했다.
+
+한 번 이런 상황을 생각해보자. Todo 앱에 AI 기능을 붙였다. 사용자가 "내일 오후 3시에 디자인 리뷰 미팅"이라고 자연어로 입력하면, AI가 이를 파싱해서 날짜, 시간, 제목을 자동으로 채워준다. 멋진 기능이다. 
+
+당연히 API 호출이 실패할 수 있으니 `try/catch`로 감쌌다.
+
+```ts
+async function handleAIParse() {
+  try {
+    const todo = await parseTodoWithAI(input)
+    addTodo(todo)
+  } catch {
+    alert('오류가 발생했습니다. 다시 시도해주세요.')
+  }
+}
+```
+
+이 코드는 돌아간다. 에러가 나면 메시지가 뜨고, 성공하면 Todo가 추가된다. 겉보기엔 문제없어 보인다.
+
+하지만 실제로 이 코드를 만난 사용자의 입장이 되어보자.
+
+AI 기능은 모든 사용자에게 무제한으로 열어주고 싶지만, 현실적으로 LLM API 호출 비용이 만만치 않다. 
+
+그래서 구독 중인 유저는 무제한, 비구독 유저는 하루 5회로 제한했다. 비구독 유저가 6번째 요청을 보내면 "다시 시도해주세요"가 뜬다. 
+
+사용자는 뭐가 잘못인지 모른 채 같은 요청을 또 보내고, 또 같은 메시지를 만난다. 결국 세 번째 시도에서 포기하고 페이지를 닫아버린다.
+
+사용자가 진짜로 알아야 했던 건 "다시 시도하라"가 아니라 **오늘 무료 사용량을 모두 소진했다**는 것이다. 그래야 "내일 다시 써야겠다"거나 "구독을 해볼까?" 같은 **다음 행동**을 결정할 수 있다.
+
+반면에 AI 서버가 터졌을 때는? 사용자가 할 수 있는 건 정말로 "잠시 후 다시 시도"하는 것뿐이다. 이 경우엔 저 메시지가 맞다.
+
+사용량 초과와 서버 다운. 이 두 에러는 성격이 완전히 다르다. 그런데 같은 `catch` 블록에서, 같은 메시지로 처리하고 있다.
+
+에러의 성격이 다르면, 처리도 달라야 한다.
+
+---
+
+## 에러의 두 가지 성격
+
+택배를 보냈는데 반송되었다고 하자.
+
+"주소가 틀려서 반송"이라면 어떻게 할까? 주소를 고쳐서 다시 보내면 된다. 원인이 명확하고, 대처법도 분명하다.
+
+하지만 "태풍으로 전국 배송 중단"이라면? 내가 할 수 있는 건 없다. 날씨가 풀릴 때까지 기다리는 수밖에.
+
+에러도 마찬가지다. 크게 두 종류로 나눌 수 있다.
+
+**예상 가능한 에러**는 코드를 작성하는 시점에 발생할 수 있다는 걸 **이미 아는** 에러다. AI 파싱 기능을 만들면서 "비구독 유저가 하루 5회를 넘기면 어떡하지?", "AI가 입력을 파싱하지 못하면?"이라고 예측할 수 있다. 원인을 알고 있으니 사용자에게 **구체적인 안내**를 해줄 수 있다.
+
+**예상 불가능한 에러**는 언제 발생할지 **알 수 없는** 에러다. AI 서버가 갑자기 죽거나, 사용자의 네트워크가 끊기거나, 요청이 타임아웃되는 상황이다. 개발자도 예측할 수 없고, 사용자에게 "잠시 후 다시 시도해주세요" 이상의 안내를 하기 어렵다.
+
+| | 예상 가능한 에러 | 예상 불가능한 에러 |
+|---|---|---|
+| **언제 알 수 있나** | 코드 작성 시점 | 알 수 없다 |
+| **원인** | 비즈니스 규칙 위반 | 인프라/환경 장애 |
+| **사용자에게** | 구체적 안내 | "잠시 후 다시 시도" |
+| **HTTP 상태** | 주로 `4xx` | 주로 `5xx`, 네트워크 에러 |
+
+여기까지는 직관적으로 이해가 된다. 그런데 진짜 문제는 다음이다. 이 두 에러를 코드에서는 **어떻게 다르게 표현해야 할까?**
+
+---
+
+## 예상 가능한 에러: 값으로 반환한다
+
+### throw가 숨기는 것
+
+먼저 우리가 흔히 작성하는 AI 파싱 함수를 하나 보자.
+
+```ts
+async function parseTodoWithAI(input: string): Promise<Todo> {
+  const res = await fetch('/api/todos/parse', {
+    method: 'POST',
+    body: JSON.stringify({ input }),
+  })
+
+  if (!res.ok) {
+    throw new Error('AI 파싱에 실패했습니다')
+  }
+
+  return res.json()
+}
+```
+
+이 함수의 시그니처는 `Promise<Todo>`다. 성공하면 `Todo`를 반환한다는 건 알겠는데, 어떤 에러가 발생할 수 있는지는 **함수 안을 들여다봐야만** 알 수 있다.
+
+마치 택배 송장에 "물건"이라고만 적혀 있는 것과 비슷하다. 안에 뭐가 들어있는지 알려면 포장을 뜯어봐야 한다.
+
+호출하는 쪽도 마찬가지로 불편하다.
+
+```ts
+try {
+  const todo = await parseTodoWithAI(input)
+} catch (error) {
+  // error의 타입은 unknown
+  // 사용량 초과인지, 파싱 실패인지, 서버 에러인지 알 수 없다
+}
+```
+
+TypeScript에서 `catch`의 `error`는 항상 `unknown`이다. 어떤 종류의 에러가 날아올 수 있는지 타입 시스템이 전혀 알려주지 않는다.
+
+그래서 이를 위해 매번, `instanceof`로 검사하거나 에러 메시지 문자열을 비교하는 불안정한 방법에 의존하게 된다. 에러 메시지는 리팩토링할 때 바뀔 수 있고, 오타 하나로 분기가 깨진다.
+
+정리하면 `throw`에는 두 가지 근본적인 문제가 있다. 함수 시그니처에 에러가 드러나지 않는다는 것, 그리고 에러를 처리하지 않아도 컴파일러가 **아무 경고도 하지 않는다**는 것이다.
+
+### 서버는 이미 에러를 알려주고 있다
+
+그런데 한 발짝 물러서서 생각해보면, 사실 서버는 이미 어떤 에러가 발생했는지 **구체적으로** 알려주고 있다.
+
+클라이언트가 자연어 입력을 보내면, 서버는 그 유저가 구독 중인지, 오늘 사용량이 남았는지, AI가 입력을 파싱할 수 있는지 검증을 마친 상태다. 그리고 그 결과를 HTTP 상태 코드와 **에러 코드**를 포함한 JSON으로 내려준다.
+
+비구독 유저가 하루 사용량을 초과했다면:
+
+```http
+HTTP/1.1 429 Too Many Requests
+Content-Type: application/json
+
+{
+  "error": {
+    "code": "TODO_0101",
+    "message": "일일 무료 사용 횟수를 초과했습니다"
+  }
+}
+```
+
+AI가 입력을 파싱하지 못했다면:
+
+```http
+HTTP/1.1 422 Unprocessable Entity
+Content-Type: application/json
+
+{
+  "error": {
+    "code": "TODO_0102",
+    "message": "입력에서 할 일 정보를 추출할 수 없습니다"
+  }
+}
+```
+
+에러 코드에 `TODO_`라는 접두사가 붙어 있는 것에 주목하자. 도메인별로 코드 범위를 나누면 코드만 봐도 **어떤 영역의 에러인지** 즉시 알 수 있다. `TODO_`는 할 일, `AUTH_`는 인증, `USER_`는 사용자 관련 에러 같은 식이다.
+
+서버가 이렇게 구체적인 에러 정보를 내려주는데, 클라이언트에서 `throw new Error('AI 파싱에 실패했습니다')`로 뭉뚱그리면 이 정보가 모두 사라진다.
+
+다시 택배 이야기로 돌아가보자. 택배사에서 "물건이 배송 중 파손되어 반송되었습니다"라고 알려주면, 고객은 판매자에게 재포장을 요청하면 된다. "기상 악화로 배송이 지연되고 있습니다"라고 알려주면, 하루 이틀 기다리면 된다. 원인을 알고 있으니 다음 행동이 명확하다.
+
+그런데 택배사가 이렇게 구체적인 사유를 알려줬는데, 고객센터에서 "배송 안 됨"이라고만 전달하면 어떨까? 고객 입장에서는 답답할 수밖에 없다. 내가 주소를 잘못 쓴 건지, 물건이 품절된 건지, 택배 차량이 고장 난 건지 알 수가 없으니 뭘 해야 할지도 모른다.
+
+에러 처리도 똑같다. 서버가 구체적인 이유를 알려주고 있는데, 클라이언트에서 그 정보를 뭉뚱그려 버리면 사용자는 다음에 뭘 해야 할지 알 수 없다. 서버가 알려주는 에러를 **타입으로 드러내는** 방법이 필요하다.
+
+### 다른 언어에서 힌트 얻기
+
+사실 이 문제는 TypeScript만의 고민이 아니다.
+
+Java에는 `checked exception`이라는 장치가 있어서, 함수 시그니처에 발생 가능한 에러를 명시하고 호출하는 쪽에서 반드시 처리하게 **강제**할 수 있다. 처리하지 않으면 컴파일 에러가 난다.
+
+```java
+// Java: 함수 시그니처에 발생 가능한 에러가 명시된다
+public Todo parseTodoWithAI(String input)
+    throws RateLimitException, ParseFailedException {
+    // ...
+}
+```
+
+"이 함수는 `RateLimitException`과 `ParseFailedException`을 던질 수 있으니까 반드시 처리해"라고 컴파일러가 알려주는 셈이다. 호출하는 쪽에서 이 에러들을 처리하지 않으면 코드 자체가 컴파일되지 않는다.
+
+하지만 TypeScript에는 이런 장치가 없다. `throw`는 타입 시그니처에 어떤 흔적도 남기지 않는다.
+
+그래서 TypeScript에서는 에러를 `throw` 대신 **반환값**으로 표현하는 방식이 대안이 된다.
+
+### Result 타입으로 에러를 드러내기
+
+물론 에러를 처리하는 방식은 개발자마다, 팀마다 다양하다. 이게 유일한 정답이라고 말하고 싶은 건 아니다.
+
+다만 실무에서 이 문제를 꽤 뼈저리게 겪었다. 사내에서 다양한 외부 회사들과 협업하며 API를 가져다 쓰는데, 어떤 회사는 구체적인 에러 코드는커녕 에러 메시지조차 제대로 주지 않는 경우가 있었다. 
+
+그리고 그 하나하나의 에러가 정말 서비스에 치명적인 경우가 많았다. "이 에러가 대체 뭔데?"라는 질문에 답할 수 없으니, CS를 담당하는 팀원분들도, 디버깅하는 개발자도 상당한 피로를 느꼈다.
+
+사실 우리 팀만 어려움을 겪는 거라면 어쩌면 다행이었을지도 모른다. 하지만 실제로 서비스를 쓰는 유저분들도 똑같은 고통을 겪고 있었다. 뭐가 잘못된 건지 알 수 없는 에러 메시지에 답답해하시고, 화를 내시는 분들도 적지 않았다. 
+
+이건 기존 아키텍처를 갈아엎더라도 반드시 해결하고 넘어가야 하는 문제였다.
+
+이 문제를 어떻게든 줄여보고 싶었고, 여러 방식을 시도해본 끝에 사내에서는 아래의 `Result` 패턴을 도입하게 되었다. 에러를 핸들링하는 방식은 다양하겠지만, 나는 이런 문제를 이런 식으로 풀었다는 기록을 남겨본다.
+
+`Result` 타입은 성공과 실패를 하나의 반환값으로 표현하는 패턴이다. 개념 자체는 단순하다.
+
+```ts
+type Result<T, E> =
+  | { ok: true; value: T }
+  | { ok: false; error: E }
+
+function ok<T>(value: T): Result<T, never> {
+  return { ok: true, value }
+}
+
+function err<E>(error: E): Result<never, E> {
+  return { ok: false, error }
+}
+```
+
+`ok`이면 성공 데이터가 들어있고, `ok`가 아니면 에러 정보가 들어있다.
+
+마치 택배 봉투를 열었을 때 물건이 들어있거나, "배송 실패 사유" 쪽지가 들어있는 것과 같다. 봉투를 열기 전까지는 둘 중 하나라는 것만 알고, 열어본 후에야 어떤 상태인지 확인할 수 있다.
+
+이제 이걸 가지고 AI 파싱 함수를 다시 작성해보자.
+
+```ts
+type ParseTodoError =
+  | { code: 'TODO_0101'; message: string }
+  | { code: 'TODO_0102'; message: string }
+
+async function parseTodoWithAI(
+  input: string
+): Promise<Result<Todo, ParseTodoError>> {
+  const res = await fetch('/api/todos/parse', {
+    method: 'POST',
+    body: JSON.stringify({ input }),
+  })
+
+  if (!res.ok) {
+    const body = await res.json()
+    return err(body.error) // throw 대신 반환
+  }
+
+  const todo = await res.json()
+
+  return ok(todo)
+}
+```
+
+함수 시그니처를 보자. `Promise<Result<Todo, ParseTodoError>>`다.
+
+이 시그니처만 읽어도 이 함수가 `TODO_0101`(사용량 초과)과 `TODO_0102`(파싱 실패) 에러를 반환할 수 있다는 걸 **즉시** 알 수 있다. 함수 내부를 읽을 필요가 없다. 아까의 비유로 돌아가면, 이제 택배 송장에 "파손 주의 / 냉동 식품"이라고 적혀 있는 셈이다. 포장을 뜯어볼 필요 없이, 송장만 봐도 안에 뭐가 들어있고 어떻게 다뤄야 하는지 알 수 있다.
+
+### UI에서 직접 처리하기
+
+호출하는 쪽의 코드도 달라진다.
+
+```ts
+async function handleAIParse() {
+  const result = await parseTodoWithAI(input)
+
+  if (!result.ok) {
+    switch (result.error.code) {
+      case 'TODO_0101':
+        setError('오늘 무료 사용 횟수를 모두 사용했습니다. 구독하면 무제한으로 이용할 수 있어요!')
+        break
+      case 'TODO_0102':
+        setError('입력을 인식하지 못했습니다. 좀 더 구체적으로 적어주세요.')
+        break
+      // 모든 에러 코드를 처리했다면 여기에 도달할 수 없다
+      // 새 에러 코드가 추가되었는데 빠뜨리면 컴파일 에러가 난다
+      default: {
+        const _exhaustiveCheck: never = result.error
+        throw _exhaustiveCheck
+      }
+    }
+    return
+  }
+
+  // result.value의 타입은 Todo로 확정된다
+  addTodo(result.value)
+}
+```
+
+`try/catch` 없이 `if` 분기로 에러를 처리한다. 그리고 여기서 중요한 점이 하나 있다. `default` 케이스에서 `never` 타입을 할당하는 부분에 주목하자. `ParseTodoError`의 모든 `code`를 처리했다면 `default`에 도달할 일이 없으므로 `never` 타입이 성립한다. 
+
+하지만 나중에 서버가 `TODO_0103` 같은 새 에러 코드를 추가했는데 switch에 반영하지 않으면, `never`에 할당할 수 없다는 **컴파일 에러**가 발생한다. 빠뜨린 케이스를 TypeScript가 잡아주는 것이다.
+
+도입부에서 봤던 코드와 비교해보자. "오류가 발생했습니다"라는 뭉뚱그린 메시지 대신, 사용량 초과면 "구독하면 무제한으로 이용할 수 있어요!", 파싱 실패면 "좀 더 구체적으로 적어주세요"라고 **구체적으로** 안내할 수 있다. 
+
+> 클라이언트에서 에러 처리를 우아하게 할 수 있다.
+
+사용자 입장에서는 완전히 다른 경험이다.
+
+---
+
+## 예상 불가능한 에러: throw로 던진다
+
+여기까지 읽으면 한 가지 의문이 생길 수 있다. "그럼 예상 불가능한 에러도 `Result`로 반환하면 되지 않나?"
+
+가능은 하다. 하지만 실제로 해보면 세 가지 문제가 생긴다.
+
+첫째, **타입이 오염된다**. 예상 불가능한 에러를 `Result`로 반환하면, 모든 API 함수의 반환 타입에 `NetworkError | ServerError`가 달라붙는다. `parseTodoWithAI`, `fetchTodos`, `updateTodo` 등 앱의 모든 함수가 이 에러 타입을 들고 다녀야 한다. 비즈니스 로직과는 아무 상관도 없는 에러가 타입 시그니처를 어지럽히는 것이다.
+
+둘째, **무의미한 반복이 생긴다**. 네트워크가 끊기든 서버가 500을 반환하든, 사용자에게 할 수 있는 말은 "잠시 후 다시 시도해주세요" 하나뿐이다. 그런데 모든 API 호출 지점에서 매번 `if (!result.ok && isUnexpectedError(result.error))` 같은 체크를 해야 한다면? 수십 군데에 같은 코드를 복붙하게 된다. 모든 방에 소화기를 비치해놓고, 불이 났을 때 각자 알아서 끄라는 것과 같다.
+
+셋째, **중앙 처리가 자연스럽다**. 건물에 불이 나면 각 방에서 개별적으로 대응하지 않는다. 화재 경보를 울려서 건물 전체를 대피시킨다. 예상 불가능한 에러도 마찬가지다. `throw`로 던져서 상위 경계가 한 번에 처리하게 하는 편이 훨씬 깔끔하다.
+
+그래서 예상 불가능한 에러는 `throw`를 사용한다.
+
+```ts
+class NetworkError extends Error {
+  constructor() {
+    super('네트워크 연결을 확인해주세요')
+  }
+}
+
+class ServerError extends Error {
+  constructor(public status: number) {
+    super('서버에 일시적인 문제가 발생했습니다')
+  }
+}
+```
+
+React에서는 [ErrorBoundary](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)가 바로 이 "화재 경보 시스템" 역할을 한다. `throw`된 에러는 컴포넌트 트리를 타고 올라가서 가장 가까운 `ErrorBoundary`에서 잡힌다. 실제 프로젝트에서는 [react-error-boundary](https://github.com/bvaughn/react-error-boundary) 라이브러리를 사용하면 더 간편하게 구현할 수 있다.
+
+한 가지 주의할 점이 있다. `ErrorBoundary`는 **렌더링 과정에서 발생한 에러만** 잡는다. 이벤트 핸들러나 비동기 코드에서 발생한 에러는 잡지 못한다. 그래서 이 글에서 다루는 예상 가능한 에러는 이벤트 핸들러 안에서 `Result` 타입으로 직접 처리하고, `ErrorBoundary`는 렌더링 중 발생하는 예상 불가능한 에러를 잡는 최후의 안전망 역할로 사용하는 것이다.
+
+```tsx
+function App() {
+  return (
+    <ErrorBoundary fallback={<ErrorFallback />}>
+      <Router />
+    </ErrorBoundary>
+  )
+}
+
+function ErrorFallback() {
+  return (
+    <div>
+      <h2>오류가 발생했습니다</h2>
+      <button onClick={() => window.location.reload()}>
+        새로고침
+      </button>
+    </div>
+  )
+}
+```
+
+이렇게 하면 개별 UI 컴포넌트는 예상 불가능한 에러를 처리하는 코드를 **한 줄도 가지지 않아도** 된다.
+
+AI 파싱 컴포넌트는 사용량 초과, 파싱 실패 같은 **자기가 아는 에러**만 처리하면 된다. 서버 다운이나 네트워크 끊김 같은 **아무도 예측 못한 에러**는 `ErrorBoundary`가 알아서 잡는다. 각 컴포넌트가 자기 책임에만 집중할 수 있는 것이다.
+
+---
+
+## 에러를 분류하는 곳: HTTP 클라이언트
+
+지금까지 예상 가능한 에러는 반환하고, 예상 불가능한 에러는 던진다고 했다. 그런데 이 분류를 **어디서** 해야 할까?
+
+답은 HTTP 클라이언트다. 모든 API 요청이 거쳐가는 단일 진입점에서 에러를 분류하면, 앱 전체의 에러 전략이 일관되게 유지된다.
+
+여기서 한 가지 알아둘 것이 있다. [`fetch`](https://developer.mozilla.org/ko/docs/Web/API/Fetch_API)는 axios 같은 라이브러리와 동작 방식이 다르다.
+
+`fetch`는 `4xx`나 `5xx` 응답을 받아도 **에러를 throw하지 않는다**. `fetch`가 throw하는 경우는 네트워크 자체가 끊기거나, DNS 조회에 실패하는 등 **요청 자체를 보내지 못했을 때**뿐이다. 서버가 `400`이든 `500`이든 응답을 보내기만 하면 `fetch`는 그것을 정상적인 `Response` 객체로 돌려준다.
+
+반면에 axios는 `4xx`든 `5xx`든 응답 상태가 에러이면 모두 throw해버린다. 예상 가능한 에러와 예상 불가능한 에러가 같은 `catch`에 섞이는 셈이다.
+
+`fetch`는 이런 분류를 **직접 제어**할 수 있기 때문에 오히려 유리하다.
+
+```ts
+type ApiError = { code: string; message: string }
+
+async function request<T>(
+  url: string,
+  options?: RequestInit
+): Promise<Result<T, ApiError>> {
+  let response: Response
+
+  try {
+    response = await fetch(url, options)
+  } catch {
+    // fetch 자체가 실패 = 네트워크 끊김
+    // 예상 불가능 → throw
+    throw new NetworkError()
+  }
+
+  if (response.ok) {
+    const data: T = await response.json()
+    return ok(data)
+  }
+
+  // 4xx → 예상 가능한 에러 → 반환
+  if (response.status >= 400 && response.status < 500) {
+    const body = await response.json()
+    return err({ code: body.error.code, message: body.error.message })
+  }
+
+  // 5xx → 예상 불가능한 에러 → throw
+  throw new ServerError(response.status)
+}
+```
+
+이 함수 하나가 에러 분류의 기준점이 된다. `4xx`는 비즈니스 로직에서 예상할 수 있는 에러이므로 `Result`로 반환하고, `5xx`와 네트워크 에러는 예측할 수 없으므로 `throw`한다.
+
+이제 앱의 모든 API 호출은 이 `request` 함수를 거치기 때문에, 에러 분류 기준을 바꾸고 싶으면 **이 한 곳만 수정**하면 된다. 교통 정리를 한 곳에서 하는 것이다.
+
+---
+
+## 에러 메시지, 그리고 보안
+
+예상 가능한 에러를 사용자에게 보여줄 때, 서버가 내려주는 에러 코드를 그대로 보여주면 안 된다. `TODO_0101`이라는 코드를 사용자가 이해할 리 없다.
+
+에러 코드를 사용자 친화적인 메시지로 변환하는 매핑이 필요하다.
+
+```ts
+const ERROR_MESSAGES: Record<string, string> = {
+  TODO_0101: '오늘 무료 사용 횟수를 모두 사용했습니다.',
+  TODO_0102: '입력을 인식하지 못했습니다.',
+  AUTH_0101: '로그인이 필요합니다.',
+}
+
+function toUserMessage(code: string): string {
+  return ERROR_MESSAGES[code] ?? '알 수 없는 오류가 발생했습니다.'
+}
+```
+
+여기까지는 별로 어려울 게 없다. 그런데 여기서 한 가지 더 생각해야 할 것이 있다. **보안**이다.
+
+로그인에 실패했을 때를 생각해보자. "존재하지 않는 이메일입니다"와 "비밀번호가 틀렸습니다"를 각각 보여주면 어떤 일이 생길까?
+
+공격자가 이메일을 하나씩 넣어보면서 "이 이메일은 가입되어 있군" 하고 유효한 계정 목록을 수집할 수 있다. 이를 `계정 열거 공격(Account Enumeration)`이라고 한다. 친절한 에러 메시지가 오히려 공격의 단서가 되는 것이다.
+
+```ts
+// 나쁜 예: 공격자에게 힌트를 준다
+const BAD_MESSAGES: Record<string, string> = {
+  AUTH_0201: '존재하지 않는 이메일입니다.',    // 이메일 존재 여부 노출
+  AUTH_0202: '비밀번호가 틀렸습니다.',          // 이메일은 존재한다는 걸 노출
+}
+
+// 좋은 예: 정보를 숨긴다
+const GOOD_MESSAGES: Record<string, string> = {
+  AUTH_0201: '입력 정보를 확인해주세요.',
+  AUTH_0202: '입력 정보를 확인해주세요.',      // 같은 메시지로 통일
+}
+```
+
+에러 메시지를 설계할 때는 "이 메시지가 공격자에게 시스템 내부 정보를 알려주지는 않는가?"를 항상 점검해야 한다. 사용자에게 친절한 것과 공격자에게 친절한 것은 다르다.
+
+---
+
+## 더 나아가기: Effect
+
+이 글에서 다룬 `Result` 패턴은 직접 타입을 정의하고, 에러를 수동으로 합쳐야 한다. 함수가 몇 개일 때는 괜찮지만, 함수가 많아지면 에러 타입을 관리하는 것 자체가 번거로워질 수 있다.
+
+[Effect](https://effect.website)는 이 아이디어를 더 체계적으로 구현한 TypeScript 라이브러리다. 핵심은 `Effect<Success, Error, Requirements>` 타입이다. 성공 타입, 에러 타입, 의존성을 모두 타입 레벨에서 추적한다.
+
+```ts
+import { Effect, Data } from "effect"
+
+class RateLimitError extends Data.TaggedError("RateLimitError")<{}> {}
+class ParseFailedError extends Data.TaggedError("ParseFailedError")<{}> {}
+
+// 타입: Effect<Todo, RateLimitError | ParseFailedError>
+const parseTodoWithAI = (input: string) =>
+  Effect.gen(function* () {
+    if (rateLimitExceeded) return yield* Effect.fail(new RateLimitError())
+    if (parseFailed) return yield* Effect.fail(new ParseFailedError())
+    return todo
+  })
+```
+
+앞서 언급한 `checked exception`처럼 에러가 타입 시그니처에 드러나면서도, 여러 Effect를 조합하면 에러 타입이 **자동으로 union**된다. `Result` 패턴처럼 에러 타입을 수동으로 합칠 필요가 없다.
+
+이 글에서 다룬 "예상 가능한 에러를 타입으로 추적한다"는 아이디어를 더 깊이 파고 싶다면, Effect도 한 번 살펴보는 것을 추천한다.
+
+---
+
+## 마무리
+
+이 글에서 이야기한 내용을 한 줄로 요약하면 이렇다. **에러의 성격이 다르면, 표현 방식도 달라야 한다.**
+
+예상 가능한 에러는 `Result<T, E>` 타입으로 **반환**한다. 함수 시그니처에 에러가 드러나고, TypeScript가 빠뜨린 케이스를 잡아준다.
+
+예상 불가능한 에러는 `throw`로 **던진다**. `ErrorBoundary`가 상위에서 한 번에 처리한다.
+
+그리고 이 분류를 HTTP 클라이언트라는 단일 지점에서 수행하면, 앱 전체의 에러 전략이 한 곳에서 관리된다.
+
+사실 이건 단순한 코딩 패턴의 문제가 아니다. 에러를 어떻게 다루느냐는 결국 "사용자에게 어떤 경험을 주고 싶은가"라는 질문과 직결된다. "오류가 발생했습니다"라는 뭉뚱그린 메시지를 보여줄 것인가, 아니면 사용자가 **다음에 무엇을 해야 하는지** 구체적으로 알려줄 것인가.
+
+에러 메시지 하나가 사용자의 다음 행동을 결정한다. 그리고 그 메시지를 제대로 보여주려면, 에러를 제대로 분류하는 것에서 시작해야 한다.

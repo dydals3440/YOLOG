@@ -12,7 +12,8 @@
       "Bash(SRC=\"/Users/kim-yongmin/Workspace/personal/YOLOG/public/images/vercel-deployment/check-success.webp\")",
       "Bash(for i in thumbnail 1 2 3 4 5 6 7)",
       "Bash(do cp \"$SRC\" \"$i.webp\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(pnpm build:*)"
     ],
     "deny": [],
     "ask": []
