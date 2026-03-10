@@ -37,6 +37,6 @@ const { seo, class: className } = Astro.props
       </div>
     </main>
     <Footer />
-    <Toaster client:idle />
+    <Toaster client:only="react" />
   </body>
 </html>

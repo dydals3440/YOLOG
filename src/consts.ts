@@ -16,6 +16,7 @@ export const BLOG_CATEGORIES = {
   REVIEW: "회고",
   HTTP: "HTTP",
   STORY: "이야기",
+  DESIGN_PATTERN: "디자인 패턴",
 } as const;
 
 export type BlogCategory = keyof typeof BLOG_CATEGORIES;

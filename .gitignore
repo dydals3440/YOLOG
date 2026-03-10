@@ -32,3 +32,6 @@ pnpm-debug.log*
 
 # docs
 docs/
+
+# claude
+.claude/

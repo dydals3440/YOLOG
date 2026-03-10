@@ -101,7 +101,7 @@ const breadcrumbSchema = {
 ---
 
 <BaseLayout seo={{ title, description, image, keywords: tags }}>
-  <ReadingProgress client:idle />
+  <ReadingProgress client:only="react" />
   <script is:inline type="application/ld+json" set:html={JSON.stringify(blogPostingSchema)} />
   <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
   <LeftSidebar>
@@ -119,11 +119,11 @@ const breadcrumbSchema = {
         className="text-sm"
         data-animate
         toc={toc}
-        client:visible
+        client:only="react"
       />
     </div>
     <div class="mt-auto pt-6 lg:mt-0 lg:pt-0">
-      <PageActions client:idle />
+      <PageActions client:only="react" />
     </div>
   </LeftSidebar>
   <section>
@@ -134,7 +134,7 @@ const breadcrumbSchema = {
         <SocialShare
           title={title}
           url={Astro.url.href}
-          client:visible
+          client:only="react"
         />
       </div>
     </div>
@@ -151,7 +151,7 @@ const breadcrumbSchema = {
     <footer class="px-0">
       <hr class="my-8 border-border" />
       <PostNavigation {prevPost} {nextPost} />
-      <GiscusComment className="mx-auto my-half-page" client:idle />
+      <GiscusComment className="mx-auto my-half-page" client:only="react" />
     </footer>
   </section>
   <MediumZoomScript />

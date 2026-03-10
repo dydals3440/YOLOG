@@ -1,0 +1,480 @@
+---
+title: Turborepo 리모트 캐시로 CI 시간 74% 감축하기
+date: 2026-03-10
+updatedDate: 2026-03-10
+tags:
+  [
+    Turborepo,
+    Remote Cache,
+    pnpm,
+    모노레포,
+    CI/CD,
+    GitHub Actions,
+    Vercel,
+    DevOps,
+    캐시,
+  ]
+category: DEVELOPMENT
+image: '/images/turborepo-remote-cache/thumbnail.webp'
+---
+
+## 코드 한 줄 안 바꿨는데, CI가 왜 3분이나 걸릴까?
+
+우리 서비스는 `Turborepo` + `pnpm` 기반 모노레포로 구성되어 있다.
+대략적으로 아래와 같은 구성이고 서비스의 방향성에 따라 `apps/web`, `apps/desktop` 같은 워크스페이스가 추가될 수도 있다.
+
+```
+apps/api            ← NestJS 백엔드 (Prisma ORM)
+apps/mobile         ← Expo 모바일 앱
+packages/validators ← Zod 스키마 (공유 DTO)
+packages/utils      ← 공유 유틸리티
+tooling/*           ← Biome, Jest, TypeScript 설정
+```
+
+왜 모노레포인가? API와 모바일이 같은 Zod 스키마를 공유하기 때문이다. `packages/validators`에 요청/응답 스키마를 한 번 정의하면, `apps/api`와 `apps/mobile`에서 그대로 import해서 쓴다. 
+
+검증 로직을 복붙하지 않아도 타입 안전성이 보장되고, 스키마가 바뀌면 빌드 타임에 양쪽 모두 잡아낸다. `tooling/*`도 마찬가지다. 린트, 타입, 테스트 설정을 한 곳에서 관리하니 앱마다 설정이 미묘하게 달라지는 문제가 사라진다.
+
+### pnpm — 버전 중앙 관리와 디스크 효율
+
+pnpm은 `catalog` 기능으로 의존성 버전을 중앙 관리할 수 있다.
+
+```yaml
+# pnpm-workspace.yaml
+catalog:
+  typescript: ^5.9.3
+  zod: ^4.3.5
+  vitest: ^4.0.0
+  jest: ^29.7.0
+```
+
+각 앱의 `package.json`에서 버전 대신 `catalog:`로 참조하면, `apps/api`와 `apps/mobile`이 같은 버전을 쓰는 게 보장된다. 업그레이드할 때도 `pnpm-workspace.yaml` 한 파일만 수정하면 된다.
+
+디스크 효율도 좋다. pnpm은 `content-addressable store`로 패키지를 관리한다. 두 앱이 동일한 `zod@4.3.5`를 쓰면 디스크에 **한 번만 저장**되고 하드링크로 공유된다. npm이나 yarn처럼 각 `node_modules`에 복사본을 두지 않으니, 모노레포에서 워크스페이스가 늘어나도 디스크 사용량이 선형으로 증가하지 않는다.
+
+### Turborepo — 빌드 캐싱과 병렬 실행
+
+Turborepo는 `turbo.json`에 정의된 태스크 파이프라인으로 빌드를 관리한다.
+
+- `dependsOn: ["^build"]` — `packages/validators`가 먼저 빌드된 후 `apps/api`, `apps/mobile`이 빌드된다
+- `inputs/outputs` — 파일이 변경되지 않으면 캐시 히트, 재실행을 건너뛴다
+- 독립적인 태스크는 병렬로 동시에 실행한다
+
+예를 들어 `pnpm test`를 실행하면 `apps/api`와 `apps/mobile`의 테스트가 동시에 돌고, `src/`에 변경이 없으면 캐시에서 즉시 완료된다.
+
+정리하면 이런 구조다.
+
+| 문제 | 모노레포 해결 방식 |
+|:-----|:-----------------|
+| 같은 라이브러리 버전이 앱마다 다름 | pnpm catalog으로 중앙 관리 |
+| 동일 패키지 중복 설치로 디스크 낭비 | pnpm의 하드링크 공유 |
+| 코드 변경 없는데 빌드/테스트 재실행 | Turborepo 캐싱으로 건너뜀 |
+| 독립 태스크를 순차 실행 | Turborepo 병렬 실행 |
+| API·Mobile 간 로직 복붙 | 공유 패키지로 import |
+| 린트/타입/테스트 설정 중복 | `tooling/*`으로 통일 |
+
+---
+
+## 그런데 CI가 느리다
+
+CI에서는 GitHub Actions로 3개 Job을 병렬 실행한다.
+
+1. **Lint & Type Check** — Biome check + TypeScript typecheck
+2. **Test** — 단위 테스트 + E2E 테스트
+3. **Build** — 프로덕션 빌드
+
+우리 팀은 브랜치를 최대한 작게 유지하려고 노력한다. 새로 합류한 사람이 히스토리를 빠르게 파악할 수 있어야 하고, 브랜치가 오래 살아 있으면 머지 충돌도 늘어나기 때문이다. AI 도구 덕분에 코드를 빠르게 찍어낼 수 있게 되면서 PR 빈도는 더 높아졌다.
+
+문제는 여기서 생긴다. 변경이 작을수록 코드 작성보다 CI 대기 시간이 더 길어지는 것이다. PR을 올리고, 리뷰를 받고, 수정하고, 다시 푸시할 때마다 약 4분씩 걸리는 CI가 반복된다. 하루에 이걸 수십 번 겪으면 누적 시간이 만만치 않다.
+
+원인을 파고들었더니 핵심은 단순했다. **코드 한 줄 안 바꿔도 매번 전체 빌드와 테스트를 처음부터 돌리고 있었다.** Turborepo를 이미 쓰고 있었지만, 캐시 히트율이 처참했다. 로컬에서는 잘 되는 것처럼 보였지만, CI에서는 캐시가 거의 먹히지 않아 매번 전체 빌드가 돌아가는 상황이 반복됐다.
+
+어떤 문제들이 있었고, 어떻게 해결했는지 정리해보려 한다.
+
+---
+
+## 기존 문제 3가지
+
+### 1. pnpm-lock.yaml 미추적
+
+기존 `turbo.json`의 `globalDependencies`를 보자.
+
+```jsonc
+// turbo.json (Before)
+{
+  "globalDependencies": [
+    "package.json",
+    "pnpm-workspace.yaml",
+    "tsconfig.json",
+    ".env.example"
+  ]
+}
+```
+
+`pnpm-lock.yaml`이 빠져 있다.
+
+`globalDependencies`는 "이 파일이 바뀌면 모든 태스크의 캐시를 무효화하라"는 설정이다. lock 파일이 여기에 없으면, 의존성을 업데이트해도 Turborepo는 "아무것도 안 바뀌었네"라고 판단하고 오래된 캐시를 그대로 반환한다.
+
+실제로 라이브러리를 업그레이드한 뒤 CI에서 캐시 히트가 뜨면서 이전 빌드 결과물을 그대로 사용하는 상황이 발생할 수 있다. 새로 설치한 라이브러리가 빌드 결과물에 반영되지 않으니, 런타임에서야 불일치를 발견하게 되는 것이다.
+
+### 2. Prisma 스키마 미추적
+
+`apps/api`는 `Prisma ORM`을 사용한다. Prisma의 워크플로우를 간단히 정리하면 이렇다.
+
+1. `prisma/schema.prisma`에 DB 스키마를 정의한다
+2. `npx prisma generate`를 실행하면 스키마 기반으로 타입이 생성된다
+3. 코드에서 생성된 타입을 사용한다
+
+문제는 루트 `turbo.json`의 `inputs` 설정에 `prisma/**`가 전혀 없었다는 것이다.
+
+```jsonc
+// turbo.json (Before)
+{
+  "tasks": {
+    "build": {
+      "inputs": ["src/**", "package.json", "tsconfig.json"]
+      // prisma/** 없음!
+    },
+    "test": {
+      "inputs": ["src/**", "test/**", "jest.config.*"]
+      // prisma/** 없음!
+    }
+  }
+}
+```
+
+어떤 상황이 벌어지는지 구체적으로 보자. 예를 들어 `User` 모델에 `nickname` 필드를 추가했다고 하자.
+
+```prisma
+// prisma/schema.prisma
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  nickname  String?  // ← 새로 추가
+}
+```
+
+`npx prisma generate`를 실행하면 `@prisma/client`의 타입이 갱신되고, 코드에서 `user.nickname`을 사용할 수 있게 된다.
+
+```ts
+// src/user/user.service.ts
+async updateNickname(userId: string, nickname: string) {
+  return this.prisma.user.update({
+    where: { id: userId },
+    data: { nickname }, // ← 새 필드 사용
+  });
+}
+```
+
+로컬에서는 `prisma generate`가 실행된 상태이니 빌드도 잘 되고 테스트도 통과한다. 하지만 CI에서는 어떨까?
+
+Turborepo는 `src/**`만 감시하고 있으니, `prisma/schema.prisma`가 바뀐 걸 모른다. 이전 CI 실행에서 캐시된 빌드 결과물을 그대로 반환하는데, 그 결과물에는 `nickname` 필드가 없는 이전 버전의 Prisma Client가 들어 있다. 캐시 히트는 떴지만 타입이 불일치하고, 런타임에서 에러가 터진다.
+
+### 3. 리모트 캐시 비활성
+
+가장 큰 문제다. `TURBO_TOKEN`과 `TURBO_TEAM`이 CI 환경에 등록되어 있지 않았다.
+
+Turborepo의 로컬 캐시는 `.turbo/` 디렉토리에 저장된다. 하지만 GitHub Actions의 각 Job은 독립적인 러너에서 실행되기 때문에 로컬 캐시가 Job 간에 공유되지 않는다.
+
+```
+Job 1 (lint):  pnpm turbo run check → 빌드 from scratch
+Job 2 (test):  pnpm turbo run test → 빌드 from scratch
+Job 3 (build): pnpm turbo run build → 빌드 from scratch
+```
+
+같은 커밋에서 같은 코드를 3번 빌드하는 셈이다. 리모트 캐시가 없으면 이전 CI 실행의 결과도 재활용할 수 없다.
+
+참고로 Turbo 2.x부터는 리모트 캐시 설정 방식이 달라졌다. 이전에는 `turbo.json`에 `remoteCache` 설정을 직접 넣었지만, 2.x에서는 환경변수(`TURBO_TOKEN`, `TURBO_TEAM`)만으로 자동 활성화된다.
+
+캐시가 제대로 동작하는지 확인하고 싶다면 `--dry-run` 플래그를 사용하면 된다.
+
+```bash
+pnpm turbo run build --dry-run
+```
+
+실제로 태스크를 실행하지 않고, 각 태스크가 캐시 히트인지 미스인지만 보여준다. 캐시 설정을 변경한 뒤 이 명령어로 검증하는 습관을 들이면 삽질을 줄일 수 있다.
+
+---
+
+## 해결 방법
+
+### 1. globalDependencies에 pnpm-lock.yaml 추가
+
+```jsonc
+// turbo.json (After)
+{
+  "globalDependencies": [
+    "package.json",
+    "pnpm-workspace.yaml",
+    "pnpm-lock.yaml",
+    "tsconfig.json",
+    ".env.example"
+  ]
+}
+```
+
+이 한 줄로 의존성 변경 시 캐시가 정확히 무효화된다.
+
+#### 라이브러리 하나 설치할 때마다 전체 캐시가 날아가는 거 아닌가?
+
+맞다. `globalDependencies`에 포함된 파일이 바뀌면 **모든 워크스페이스의 모든 태스크** 캐시가 무효화된다. `pnpm add zod`를 실행하는 순간 lock 파일이 바뀌니까, 다음 CI에서는 lint, test, build 전부 다시 돌아간다.
+
+이건 의도된 트레이드오프다. 선택지는 두 가지다.
+
+| 전략 | 장점 | 단점 |
+|:-----|:-----|:-----|
+| lock 파일을 `globalDependencies`에 넣기 | 의존성 변경 시 캐시 정확성 보장 | 의존성 변경 시 전체 캐시 미스 |
+| lock 파일을 `globalDependencies`에 안 넣기 | 의존성 변경해도 캐시 유지 | 오래된 캐시 사용 → 런타임 불일치 위험 |
+
+우리는 **정확성**을 택했다. 이유는 세 가지다.
+
+1. **의존성 변경은 자주 일어나지 않는다.** 일상적인 커밋의 대부분은 소스 코드 변경이지, `pnpm add`가 아니다. lock 파일이 바뀌는 빈도는 전체 커밋의 5~10% 정도다.
+2. **잘못된 캐시 히트의 디버깅 비용이 훨씬 크다.** 의존성 업데이트 후 CI는 통과하는데 런타임에서 에러가 나면, 캐시 문제인지 코드 문제인지 판단하는 데 시간을 많이 쓰게 된다.
+3. **전체 캐시 미스여도 리모트 캐시 없을 때보다 빠르다.** 리모트 캐시가 없던 시절에는 매번 전체 빌드였으니, lock 파일 변경 시 한 번 전체 빌드하는 건 이전 상태로 돌아가는 것일 뿐이다.
+
+정리하면, **90%의 커밋에서 캐시 히트를 100% 정확하게 보장하는 것**이, 100%의 커밋에서 부정확한 캐시를 쓰는 것보다 낫다.
+
+### 2. apps/api 전용 turbo.json 생성
+
+Turborepo는 워크스페이스별 `turbo.json`을 지원한다. `extends: ["//"]`로 루트 설정을 상속하면서 해당 워크스페이스에만 필요한 `inputs`를 추가할 수 있다.
+
+```jsonc
+// apps/api/turbo.json (신규 생성)
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "inputs": [
+        "src/**",
+        "prisma/**",
+        "package.json",
+        "tsconfig.json",
+        "nest-cli.json"
+      ]
+    },
+    "test": {
+      "inputs": ["src/**", "test/**", "prisma/**", "jest.config.*"]
+    },
+    "test:e2e": {
+      "inputs": ["src/**", "test/**", "prisma/**", "jest.config.*"]
+    },
+    "typecheck": {
+      "inputs": ["src/**", "prisma/**", "tsconfig.json"]
+    }
+  }
+}
+```
+
+핵심은 모든 태스크의 `inputs`에 `prisma/**`를 포함시킨 것이다. 이제 Prisma 스키마가 바뀌면 build, test, typecheck 캐시가 모두 무효화된다.
+
+`extends: ["//"]` 덕분에 `dependsOn`, `outputs` 같은 공통 설정은 루트에서 그대로 상속받고, API 워크스페이스에만 해당하는 `inputs`만 오버라이드한다.
+
+### 3. 리모트 캐시 활성화
+
+#### Vercel 리모트 캐시 연결
+
+```bash
+npx turbo login   # Vercel 계정 인증
+npx turbo link    # 프로젝트를 Vercel에 연결
+```
+
+#### GitHub Secrets/Variables 등록
+
+- `TURBO_TOKEN` → GitHub **Secrets** (비밀 토큰)
+- `TURBO_TEAM` → GitHub **Variables** (팀 식별자)
+
+#### CI 워크플로우에 환경변수 주입
+
+```yaml
+# .github/workflows/ci.yml
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+```
+
+`env`를 최상위에 선언하면 모든 Job에서 자동으로 참조한다. Turborepo는 이 두 환경변수를 감지하면 자동으로 리모트 캐시를 사용한다. 별도의 `--remote-cache` 플래그가 필요 없다.
+
+이제 캐시 흐름은 이렇게 바뀐다.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   Vercel Remote Cache                    │
+│                                                         │
+│   hash:abc123 → lint 결과                               │
+│   hash:def456 → test 결과                               │
+│   hash:ghi789 → build 결과                              │
+└──────────────▲──────────────────────────▲────────────────┘
+               │ PUT (miss)               │ GET (hit)
+               │                          │
+    ┌──────────┴──────────┐    ┌──────────┴──────────┐
+    │   CI Run #1         │    │   CI Run #2         │
+    │   (코드 변경 없음)   │    │   (코드 변경 없음)   │
+    │                     │    │                     │
+    │   lint:  빌드 → PUT │    │   lint:  캐시 히트!  │
+    │   test:  빌드 → PUT │    │   test:  캐시 히트!  │
+    │   build: 빌드 → PUT │    │   build: 캐시 히트!  │
+    └─────────────────────┘    └─────────────────────┘
+```
+
+### 4. 기타 개선
+
+#### .gitignore에 .turbo 추가
+
+```gitignore
+# Turborepo
+.turbo
+```
+
+로컬 캐시 디렉토리가 Git에 추적되지 않도록 한다.
+
+#### E2E 테스트 환경변수 설정 — passThroughEnv
+
+```jsonc
+// turbo.json
+{
+  "test:e2e": {
+    "passThroughEnv": [
+      "DATABASE_URL",
+      "REDIS_URL"
+      // ...
+    ]
+  }
+}
+```
+
+E2E 테스트에서 Redis를 사용하는데, `REDIS_URL`을 `env`에 넣으면 CI 환경마다 값이 달라질 때 불필요한 캐시 미스가 발생한다. `passThroughEnv`는 "캐시 키에는 포함하지 않되, 태스크 실행 시 통과시켜라"는 설정이다.
+
+참고로 Turborepo에는 두 가지 환경변수 모드가 있다.
+
+| env 모드 | 동작 |
+|:---------|:-----|
+| `loose` (기본값) | 모든 환경변수가 태스크에 전달됨. `env`에 명시된 것만 캐시 키에 포함 |
+| `strict` | `env` + `passThroughEnv`에 명시된 것만 전달. 나머지는 제거 |
+
+기본값이 `loose`이므로 `passThroughEnv`에 안 넣어도 환경변수 자체는 전달된다. 그럼 왜 굳이 넣는가? 두 가지 이유다.
+
+1. **문서화 역할을 한다.** `turbo.json`만 보면 이 태스크가 어떤 외부 환경변수에 의존하는지 한눈에 파악할 수 있다.
+2. **`strict` 모드 전환에 대비한다.** 나중에 `strict` 모드로 바꾸면 명시하지 않은 변수는 전달되지 않는다. 그때 가서 하나씩 찾아 넣는 것보다 미리 선언해두는 게 낫다.
+
+그리고 `env`와 `passThroughEnv`의 차이는 이렇다.
+
+| 설정 | 캐시 키에 포함? | 태스크에 전달? |
+|:-----|:-:|:-:|
+| `env` | O | O |
+| `passThroughEnv` | X | O |
+
+`DATABASE_URL`이나 `REDIS_URL`처럼 CI 환경마다 값이 달라지지만 빌드 결과에는 영향을 주지 않는 변수는 `passThroughEnv`가 적합하다.
+
+#### --affected로 변경된 패키지만 실행
+
+```yaml
+- name: Biome Check
+  run: pnpm turbo run check --affected
+
+- name: Type Check
+  run: pnpm turbo run typecheck --affected
+
+- name: Run unit tests
+  run: pnpm turbo run test --affected
+```
+
+`--affected`는 `main` 브랜치 대비 변경된 파일이 속한 워크스페이스만 실행한다. PR에서 `apps/api`만 수정했으면 `apps/mobile`의 lint/test는 건너뛴다.
+
+이를 위해 setup action에서 `main` 브랜치를 fetch해야 한다.
+
+```yaml
+# .github/actions/setup/action.yml
+- name: Fetch main branch for turbo --affected
+  if: github.event_name == 'pull_request'
+  run: git fetch origin main:main
+```
+
+---
+
+## 결과
+
+| 항목 | Before | After | 개선율 |
+|:-----|:------:|:-----:|:------:|
+| Lint & Type Check | 45s | 28s | 38% ↓ |
+| Test | 3m 22s | 48s | 76% ↓ |
+| Build | 41s | 24s | 41% ↓ |
+| **전체 (가장 긴 Job 기준)** | **3m 26s** | **53s** | **74% ↓** |
+
+캐시가 완전히 히트하면 Turborepo 로그에 이런 메시지가 뜬다.
+
+```bash
+ Tasks:    6 successful, 6 total
+Cached:    6 cached, 6 total
+  Time:    1.2s
+
+>>> FULL TURBO
+```
+
+`FULL TURBO` — 모든 태스크가 캐시에서 복원되어 실제 빌드를 하나도 수행하지 않았다는 뜻이다.
+
+---
+
+## 삽질 로그
+
+### --filter와 --affected는 동시에 쓸 수 없다
+
+처음에는 build Job에서 이렇게 썼다.
+
+```yaml
+# 이렇게 하면 에러!
+run: pnpm turbo run build --filter='!@aido/mobile' --affected
+```
+
+`--filter`는 "이 패턴에 매칭되는 워크스페이스만 실행", `--affected`는 "변경된 워크스페이스만 실행". 둘 다 실행 대상을 필터링하는 옵션인데, Turbo 2.x에서는 동시 사용 시 충돌이 발생한다.
+
+결국 build Job에서는 `--affected`를 제거하고 `--filter`만 사용하는 것으로 해결했다.
+
+```yaml
+- name: Build
+  run: pnpm turbo run build --filter='!@aido/mobile'
+```
+
+어차피 리모트 캐시가 활성화되면 변경되지 않은 패키지는 캐시 히트로 빠르게 넘어가므로, `--affected` 없이도 충분히 빠르다.
+
+### .gitignore에 있어도 이미 tracked면 소용없다
+
+`.turbo/` 디렉토리를 `.gitignore`에 추가하기 전에 이미 커밋된 상태였다면, `.gitignore`에 추가해도 Git은 계속 추적한다. 이 경우 다음과 같이 해결한다.
+
+```bash
+git rm -r --cached .turbo
+git commit -m "chore: untrack .turbo directory"
+```
+
+`--cached` 플래그로 파일 시스템에서는 삭제하지 않고 Git 추적만 해제할 수 있다.
+
+### passThroughEnv를 빠뜨리면 생기는 일
+
+`REDIS_URL`을 `passThroughEnv`에 넣지 않으면, Turborepo의 strict 환경변수 모드에서 E2E 테스트 프로세스에 해당 변수가 전달되지 않는다. 테스트가 Redis 연결에 실패하면서 `Connection refused` 에러가 나는데, 코드 문제가 아니라 Turbo 설정 문제인 줄 몰라서 한참 헤맸다.
+
+---
+
+## 마무리
+
+정리하면 변경한 것은 4가지다.
+
+1. `pnpm-lock.yaml` → `globalDependencies`에 추가
+2. `apps/api/turbo.json` → Prisma 스키마를 `inputs`에 추가
+3. `TURBO_TOKEN` + `TURBO_TEAM` → CI 환경변수로 리모트 캐시 활성화
+4. `passThroughEnv` → 누락된 `REDIS_URL` 추가
+
+설정 파일 몇 줄 수정한 것치고 효과가 크다. CI 3분 26초 → 53초. 매일 수십 번 도는 CI에서 매번 2분 30초를 절약하면, 한 달이면 꽤 유의미한 시간이 된다.
+
+리모트 캐시의 진짜 가치는 단순한 시간 절약이 아니라, **피드백 루프를 단축**하는 데 있다. PR 올리고 CI 결과를 3분 넘게 기다리는 것과 1분 안에 받는 것은 개발 흐름에서 체감이 완전히 다르다.
+
+토스에서 감명 깊게 본 영상이 있다. 화면 렌더링 속도 0.1초를 개선하는 건 대단해 보이지 않을 수 있다. 하지만 그 0.1초를 수천 명의 사용자가 하루에도 수십 번 경험한다면, 그건 0.1초가 아니라 엄청난 시간이 된다. CI도 마찬가지다. 한 번의 4분은 대수롭지 않아 보이지만, 팀원 전체가 매일 수십 번 겪는 4분은 하루 이틀씩 증발하는 시간이다.
+
+사실 이 문제가 있다는 건 진작부터 알고 있었다. 다른 기능 개발에 밀려 계속 미뤘을 뿐이다. 막상 손을 대니 반나절이면 끝나는 일이었다. 대부분의 개발 환경 문제가 그렇다. 어렵지 않은데 귀찮아서, 혹은 당장 급하지 않아서 미루다가 결국 팀 전체가 매일 비용을 치른다.
+
+코드를 빠르게 작성하는 것만큼, 그 코드가 빠르게 검증되고 배포되는 환경을 만드는 것도 개발자의 역할이다. 이 글이 비슷한 병목을 겪고 있는 누군가에게 도움이 되었으면 한다.
+
+다음으로 개선할 것들도 남아 있다.
+
+- `inputs` 더 세밀하게 튜닝 — 예를 들어 README 수정이 build를 트리거하지 않도록
+- Docker layer 캐시 연계 — 배포 파이프라인의 Docker 빌드에도 캐시 적용
