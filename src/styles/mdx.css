@@ -708,3 +708,10 @@ html.dark pre.astro-code span.highlighted span {
 .mdx .callout.danger {
 	--callout-rgb: 233, 49, 71;
 }
+
+/* image grid */
+.mdx .image-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 12px;
+}

@@ -1,0 +1,432 @@
+---
+title: 추상화란 무엇인가?
+date: 2026-03-17
+updatedDate: 2026-03-17
+tags:
+  [
+    추상화,
+    추상화 수준,
+    클린 코드,
+    리팩토링,
+    컴포넌트 설계,
+  ]
+category: DEVELOPMENT
+image: '/images/abstraction/thumbnail.webp'
+---
+
+"계획만 세우고 실행하지 못하는 사람들을 끝까지 함께 마무리할 수 있게 도와주는 서비스가 있으면 좋겠다." 이런 고민에서 시작하여, 약 1달 반 동안 풀스택으로 "아이두"라는 애플리케이션을 개발하고 출시하는 경험을 최근에 했습니다.
+
+언젠가, 서비스가 잘 된다면 이런 것들도 나중에 좋은 이야기가 될 것 같아, 앞으로 매주 서비스를 실제로 운영하면서 마주한 이야기들에 대해 개발이나, 개발 외적인 이야기들에 대해서 적어볼려고 합니다.
+
+그 첫 번째 주제는 **추상화**입니다.
+
+실무에서도 항상 중요하다고 느꼈고 너무나 어렵다고 생각해 이번 사이드 프로젝트를 진행하면서 조금 더 추상화 실력을 늘리고 싶은 마음이 있었습니다.
+
+이번 블로그에서는 추상화가 무엇인지, 왜 중요한지, 그리고 어떻게 하면 좋은 추상화를 할 수 있는지 정리해보려 한다.
+
+---
+
+### 아이두 - 친구와 함께 하는 AI 투두 서비스 (막간 홍보)
+
+본격적인 글에 앞서, `아이두(Aido)`가 궁금하다면 **iPhone, Android, Mac, Tablet 등 다양한 기기에서 호환 가능**하니 한 번 써보시면 좋을 것 같습니다. 
+
+친구들과 함께 할 일을 관리하며 서로 자극을 주고받을 수 있는 AI 할일 관리 서비스인데 혹여나 주변에 같이 쓸 친구가 없다면 초대 코드 `WNTQJEEE`로 들어와서 함께 자극을 나누며 성장하면 좋을 것 같습니다!
+
+[App Store](https://apps.apple.com/kr/app/%EC%95%84%EC%9D%B4%EB%91%90-ai-%ED%88%AC%EB%91%90-%ED%94%8C%EB%9E%98%EB%84%88/id6757722325) | [Google Play](https://play.google.com/store/apps/details?id=com.aido.mobile&pcampaignid=web_share&pli=1) | [아이두(Aido) 공식 웹사이트](https://www.aido.kr/) | [공식 인스타그램](https://www.instagram.com/aiddoo_official/)
+
+---
+
+## 추상화란 무엇인가?
+
+추상화는 **복잡한 세부 사항을 숨기고, 핵심만 드러내는 것**을 의미합니다. 말 자체는 어렵지 않지만, 조금 더 쉽게 설명해보겠습니다.
+
+서비스를 앱 스토어에 출시하면서 앱 로고에 마스코트인 고양이를 넣어야 한다고 생각해봅시다.
+
+![아이두의 귀여운 고양이 로고](/images/abstraction/1.webp)
+
+많은 사람들이 위 로고를 보고 "고양이"라고 인식할 것입니다. 왜일까요?
+
+실제 고양이는 정말 많은 특징을 가지고 있습니다.
+
+1. 털 한 올 한 올의 색상과 결
+2. 발바닥 젤리의 질감
+3. 특유의 울음소리
+
+이처럼 수많은 세부 정보가 있지만, 위 로고처럼 둥근 얼굴 + 귀 + 줄무늬 정도만으로도 "고양이"라는 것을 충분히 인식할 수 있습니다. 
+복잡한 디테일을 걷어내고 핵심 특징만 남긴 것, 이것이 바로 추상화입니다.
+
+반면 "러시안 블루"라는 특정 품종을 설명하려면 어떨까요? 
+위 로고 하나로는 부족합니다. "털이 짧고, 은회색이며, 눈이 초록색이다"와 같은 추가 설명이 필요합니다. 
+추상화의 수준을 낮춰서 더 많은 세부 사항을 드러내야 하는 것입니다.
+
+즉, 추상화란 다양한 특징들 중에서 **핵심적인 것만 뽑아 표현하는 것**입니다. 
+"줄무늬"만으로는 얼룩말인지 호랑이인지 알 수 없지만, "둥근 얼굴 + 귀 + 줄무늬"라고 하면 고양이를 떠올릴 수 있습니다. 
+어떤 특징을 남기고 어떤 특징을 숨기느냐가 좋은 추상화의 핵심입니다.
+
+---
+
+## 코드에서의 추상화
+
+코드에서도 추상화는 똑같이 적용됩니다. 추상화가 잘 되어 있으면 코드를 읽는 사람은 내부 동작을 몰라도 의도를 이해할 수 있습니다.
+
+예를 들어, 삭제 확인 Dialog를 띄우는 코드를 보겠습니다.
+
+```tsx
+const [isOpen, setIsOpen] = useState(false);
+const [confirmed, setConfirmed] = useState(false);
+
+const handleDelete = () => {
+  setIsOpen(true);
+};
+
+const handleConfirm = () => {
+  setConfirmed(true);
+  setIsOpen(false);
+  deleteItem();
+};
+
+const handleCancel = () => {
+  setConfirmed(false);
+  setIsOpen(false);
+};
+
+// JSX
+{isOpen && (
+  <ConfirmDialog onConfirm={handleConfirm} onCancel={handleCancel} />
+)}
+```
+
+`isOpen`과 `confirmed`라는 상태를 직접 관리하고, 열기/닫기/확인/취소 각각에 대한 상태 변경을 수동으로 하고 있습니다. 
+
+Dialog가 하나라면 이 정도는 괜찮겠지만, "정말 나가시겠습니까?", "변경사항을 저장할까요?" 같은 Dialog가 추가될 때마다 `isOpen2`, `isOpen3` 같은 상태가 늘어나고, 핸들러도 매번 복사·붙여넣기하게 됩니다.
+
+### 추출과 추상화는 다르다
+
+이 문제를 해결하기 위해 커스텀 훅으로 개선해보겠습니다.
+
+```tsx
+const { isOpen, openConfirmDialog, closeConfirmDialog } = useConfirmDialog({
+  onConfirm: () => deleteItem(),
+  onCancel: () => console.log('취소됨'),
+});
+
+const handleDelete = () => {
+  openConfirmDialog();
+};
+```
+
+`isOpen`, `setIsOpen` 같은 상태를 `useConfirmDialog`라는 커스텀 훅 안에 숨겼습니다. 꽤 괜찮아 보이는 코드가 된 것 같습니다.
+
+하지만 여전히 주목할 점이 있습니다. `openConfirmDialog`, `closeConfirmDialog`라는 함수 이름이 내부에 "Dialog를 열고 닫는" 상태 관리가 있다는 정보를 그대로 노출하고 있습니다. 또한 `isOpen`이라는 상태를 외부에 반환하고 있기 때문에, 사용처에서 Dialog의 열림/닫힘 상태를 여전히 직접 다뤄야 합니다.
+
+코드 길이가 줄어드는 것은 "추출"이지, "추상화"가 아닙니다. 
+추출은 코드를 다른 곳으로 옮기는 것이고, 추상화는 내부 구현을 감추고 **본질적인 인터페이스만 노출**하는 것입니다. 
+
+이 차이를 인식하는 것이 중요합니다.
+
+### 진짜 추상화 — 내부 구현을 완전히 감추기
+
+그렇다면 한 단계 더 높은 수준으로 추상화해보겠습니다.
+
+```tsx
+const overlay = useOverlay();
+
+const handleDelete = async () => {
+  const confirmed = await overlay.open(({ onResolve, onClose }) => (
+    <ConfirmDialog
+      onConfirm={() => onResolve(true)}
+      onCancel={() => onClose()}
+    />
+  ));
+
+  if (confirmed) {
+    deleteItem();
+  }
+};
+```
+
+여기서 주목할 점은 추상화 수준의 차이입니다.
+
+`useOverlay`는 열림/닫힘 상태, 콜백 관리, 다중 오버레이와 같은 복잡한 내부 구현을 완전히 숨기고, `open()` 하나만 노출합니다. 앞의 `useConfirmDialog`는 "Dialog를 열고 닫는다"는 내부 메커니즘이 이름에 드러나 있지만, `useOverlay`는 **무언가를 열고, 결과를 기다린다**는 본질만 표현합니다.
+
+`open()`이 `Promise`를 반환하기 때문에, 사용처에서는 `isOpen` 상태를 추적하거나 콜백 체인을 관리할 필요 없이 `await`로 결과를 받아 동기 코드처럼 읽을 수 있습니다.
+
+서비스를 만들다 보면 `Dialog` 외에도 `Toast`, `BottomSheet`, `Modal` 등 다양한 오버레이 컴포넌트가 필요할 때가 있습니다. 
+`overlay.open()`에 컴포넌트만 바꿔서 넘겨주면 되기 때문에, 코드의 재사용성과 유지보수성이 크게 향상됩니다.
+
+덕분에 지금 아이두 서비스도 추상화된 `useOverlay` 훅을 여러 군데에서 활용하고 있습니다.
+
+<div class="image-grid">
+  <img src="/images/abstraction/bottomsheet.webp" alt="아이두 앱의 날짜 선택 BottomSheet" />
+  <img src="/images/abstraction/detached-bottomsheet.webp" alt="아이두 앱의 프로필 이미지 선택 BottomSheet" />
+  <img src="/images/abstraction/dialog.webp" alt="아이두 앱의 회원 탈퇴 확인 Dialog" />
+  <img src="/images/abstraction/toast.webp" alt="아이두 앱의 할 일 추가 완료 Toast" />
+</div>
+
+여러분이 사용하는 유명한 라이브러리들도 결국 훌륭하게 추상화된 API를 제공하기 때문에, 내부 구현을 몰라도 편리하게 활용할 수 있는 것입니다.
+
+다만, 추상화의 느낌은 이제 어느 정도 와닿지만, 자칫하면 오버엔지니어링이 될 수 있습니다. "적절한 추상화 수준"을 찾는 것이야말로 정말 어려운 일입니다.
+
+---
+
+## 추상화 수준이란 무엇인가?
+
+추상화에는 `수준(Level)`이 있습니다.
+앞서 고양이 로고 예시에서 "고양이"라고 인식하는 것은 높은 수준의 추상화이고
+"러시안 블루"라는 품종까지 구분하는 것은 낮은 수준의 추상화라고 했습니다.
+
+코드에서도 마찬가지입니다.
+실제 제가 운영하는 "아이두" 앱에서의 "할 일 생성" 흐름을 예로 들어보겠습니다.
+
+**높은 수준의 추상화** - "무엇을 하는지"만 표현합니다.
+```
+사용자가 할 일을 입력한다 -> 서버에 저장한다 -> 목록에 반영한다.
+```
+
+낮은 수준의 추상화 - "어떻게 하는지"까지 드러냅니다.
+
+```
+1. 폼 값을 Zod로 검증한다 
+2. 날짜를 'YYYY-MM-DD' 형식으로 변환한다
+3. httpClient.post()로 API를 호출한다.
+4. 응답을 Zod로 파싱하고 Mapper로 도메인 모델로 변환한다
+5. React Query의 invalidateQueries()로 목록을 갱신한다.
+6. 성공/실패(예측 가능, 예측 불가능 한)에 따라 Toast 또는 적절한 UI 피드백을 보여준다.
+```
+
+둘 다 같은 기능을 설명하지만, 표현하는 수준이 다릅니다.
+높은 수준은 전체 흐름을 빠르게 파악할 수 있고, 낮은 수준은 구현 세부 사항을 정확히 알 수 있습니다.
+
+실제로 "아이두"의 프론트엔드는 이 수준 차이를 계층으로 분리하고 있습니다.
+
+```tsx
+// 컴포넌트 — 높은 수준: "무엇을" 하는지만 표현
+const createMutation = useMutation(useCreateTodoMutationOptions());
+
+const onSubmit = (data: AddTodoFormInput) => {
+  createMutation.mutate(
+    {
+      input: {
+        title: data.title,
+        startDate: formatDate(data.startDate),
+        isAllDay: data.isAllDay,
+        categoryId: data.categoryId,
+      },
+    },
+    { onSuccess: onClose },
+  );
+};
+```
+
+```ts
+// Mutation Hook — 중간 수준: 성공/실패 시나리오를 표현
+export const useCreateTodoMutationOptions = () => {
+  const todoService = useTodoService();
+  const queryClient = useQueryClient();
+  const toast = useAppToast();
+
+  return mutationOptions({
+    mutationFn: async ({ input }: CreateTodoParams) => {
+      const result = await todoService.createTodo(input);
+      return unwrap(result);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TODO_QUERY_KEYS.all });
+      toast.success('할 일을 추가했어요!');
+    },
+    onError: (error) => {
+      if (isApiError(error) && error.hasCode(ErrorCode.TODO_0811)) {
+        toast.error('카테고리의 할 일이 최대 한도에 도달했어요.');
+        return;
+      }
+      toast.error(undefined, { fallback: '잠시 후 다시 추가해 보세요' });
+    },
+  });
+};
+````
+
+```ts
+// Service — 낮은 수준: 데이터 전송과 검증 방법을 표현
+// 서버에 호출하기 전 클라이언트 검증 로직도 체크 할려면 할 수 있음.
+createTodo = async (params: CreateTodoInput): Promise<Result<TodoItem, ApiError>> => {
+  const result = await this.#httpClient.post<{ todo: Todo }>('v1/todos', params);
+  if (!result.ok) return result;
+
+  const parsed = todoSchema.safeParse(result.value.todo);
+  if (!parsed.success) {
+    throw new ParseError(`Invalid createTodo response: ${parsed.error.message}`);
+  }
+  return ok(toTodoItem(parsed.data));
+};
+```
+
+컴포넌트는 "할 일을 생성하고 시트를 닫는다"라는 높은 수준만 표현하고,
+Mutation Hook은 "API 호출 → 캐시 무효화 → 토스트 → 에러 분기"라는 시나리오를 표현하며, 
+Service는 "HTTP 요청 → Zod 파싱 → 도메인 모델 변환"이라는 낮은 수준의 세부 사항을 담당합니다.
+
+각 계층이 자신의 추상화 수준에 맞는 일만 하기 때문에, 컴포넌트를 읽을 때 HTTP 요청이 어떻게 구성되는지 신경 쓸 필요가 없습니다. 
+이것이 추상화 수준을 분리하는 핵심적인 이유입니다.
+
+---
+
+## 한 함수 안에서 추상화 수준 맞추기
+
+이처럼 계층 간 분리는 비교적 명확하지만, 하나의 컴포넌트 안에서는 추상화 수준이 뒤섞이기 쉽습니다. 
+
+흔히 볼 수 있는 사례를 하나 보겠습니다.
+
+### Before: 추상화 수준이 뒤섞인 컴포넌트
+
+```tsx
+const ProductCard = ({ productId }: { productId: string }) => {
+  const { data: product } = useSuspenseQuery(getProductQueryOptions(productId));
+
+  // 🔽 낮은 수준: 할인율 계산
+  const discountRate = Math.round((1 - product.salePrice / product.originalPrice) * 100);
+
+  // 🔽 낮은 수준: 가격 포맷팅
+  const formattedPrice = `${product.salePrice.toLocaleString()}원`;
+
+  // 🔽 낮은 수준: 재고 상태 결정
+  const stockText =
+    product.stock === 0
+      ? '품절'
+      : product.stock <= 5
+        ? `${product.stock}개 남음`
+        : '재고 있음';
+
+  // 🔼 높은 수준: 선언적 UI
+  return (
+    <Card>
+      <Image src={product.image} />
+      <h3>{product.name}</h3>
+      <span>{discountRate}%</span>
+      <span>{formattedPrice}</span>
+      <Badge>{stockText}</Badge>
+      <Button>구매</Button>
+    </Card>
+  );
+};
+```
+
+이 컴포넌트 안에서 무슨 일이 벌어지고 있는지 살펴보면:
+- `useSuspenseQuery`, `<Thumbnail>`, `<StockBadge>`, `<CartButton>` — **높은 수준**: 데이터 조회, UI 렌더링
+- 할인율 계산, 가격 포맷팅, 재고 상태 삼항 연산 — **낮은 수준**: 구현 세부 사항
+
+한 컴포넌트 안에서 "무엇을 하는지"와 "어떻게 하는지"가 뒤섞여 있기 때문에, 전체 흐름을 파악하려면 세부 구현까지 머릿속에 담아야 합니다.
+지금은 간단한 예시라 크게 문제를 못 느낄 수 있습니다. 
+
+하지만 실제 서비스에서는 할인 조건이 복잡해지고, 포맷팅 규칙이 늘어나고, 재고 상태에 "예약 가능", "입고 예정" 같은 분기가 추가됩니다. 
+그때 이런 뒤섞임은 코드를 읽는 사람의 사고 흐름을 방해하는 큰 장애물이 됩니다.
+
+### After: 추상화 수준을 통일한 리팩토링
+
+```tsx
+const ProductCard = ({ productId }: { productId: string }) => {
+  const { data: product } = useSuspenseQuery(getProductQueryOptions(productId));
+
+  return (
+    <Card>
+      <Image src={product.image} />
+      
+      <h3>{product.name}</h3>
+      
+      <span>{ProductPolicy.discountRate(product)}%</span>
+      
+      <span>{ProductPolicy.formattedPrice(product)}</span>
+      
+      <Badge>{ProductPolicy.stockText(product)}</Badge>
+      
+      <Button>구매</Button>
+    </Card>
+  );
+};
+```
+
+달라진 점을 보겠습니다.
+
+- `useSuspenseQuery` — 데이터 조회는 컴포넌트에서 직접 합니다. 높은 수준의 관심사입니다.
+- `ProductPolicy.discountRate(product)`, `ProductPolicy.formattedPrice(product)` — 할인율 계산, 가격 포맷팅, 재고 상태 결정이라는 세부 사항을 숨기고, "무엇을 보여줄지"만 표현합니다. 구체적인 비즈니스 로직은 `ProductPolicy` 안에 모여 있기 때문에, 나중에 할인 정책이 바뀌거나 재고 상태 분기가 추가되더라도 `ProductPolicy`만 찾아서 수정하면 됩니다.
+
+이제 컴포넌트의 모든 코드가 **같은 추상화 수준**에 있습니다. 
+"상품 데이터를 가져오고, 정책에 따라 표시하고, UI를 렌더링한다." 한 줄씩 읽으면 전체 흐름이 자연스럽게 파악됩니다. 
+개발자가 아니더라도, 영어를 읽을 줄 아는 사람이면 이 컴포넌트가 어떤 역할을 하는지 대략 이해할 수 있습니다. 
+앞에서 설명한 고양이 로고처럼, 핵심만 남기고 나머지를 숨긴 결과입니다.
+
+핵심 원칙은 간단합니다. **한 함수(또는 컴포넌트) 안에서는 같은 추상화 수준을 유지하라.**
+
+길 안내를 떠올려 보면 이해가 쉽습니다. "1. 강남역 2번 출구로 나간다. 2. GPS 위성의 삼각측량 원리로 현재 위치를 보정한다. 3. 200m 직진 후 우회전한다." 2번에서 갑자기 "삼각측량...?"이 되면서 사고가 멈춥니다. 코드도 마찬가지입니다. 높은 수준의 흐름을 읽다가 갑자기 가격 포맷팅 로직이 나오면, 독자는 거기서 멈추게 됩니다.
+
+---
+
+## 적절한 추상화는 어디에?
+
+여기까지 읽으면 "그러면 다 추상화하면 되지 않나?"라는 생각이 들 수 있습니다. 하지만 추상화에는 **비용**이 있습니다.
+
+### 성급한 추상화의 위험
+
+위의 상품 카드를 만들면서 이런 생각을 할 수 있습니다. "나중에 주문 내역 카드에서도 가격 포맷팅이 필요하겠지?" 그래서 범용 포맷터를 만듭니다.
+
+```tsx
+// 성급한 추상화 — 주문 내역 화면이 아직 없는데 미리 범용으로 만듦
+const formatPrice = (price: number, type: 'product' | 'order') => {
+  if (type === 'order') {
+    return `총 ${price.toLocaleString()}원 (배송비 포함)`;
+  }
+
+  return `${price.toLocaleString()}원`;
+};
+```
+
+문제는 미래를 정확히 예측할 수 없다는 것입니다. 비즈니스 방향이 바뀌면서 주문 내역의 요구사항이 전혀 다른 모습으로 나타날 수 있습니다. 
+
+환불 금액, 포인트 차감, 할인 내역 등 `formatPrice` 하나로는 감당할 수 없는 분기가 쏟아지고, 억지로 끼워 맞추다 결국 분리하는 데 더 많은 시간이 걸립니다. 
+
+심지어 열심히 만든 기능이 하루 만에 사라지기도 합니다.
+
+두 가지 경우밖에 없다고 확신하며 만들었던 코드가, 어느 순간 발목을 잡는 족쇄가 되어버리는 것입니다.
+
+### 추상화의 비용
+
+추상화가 공짜가 아닌 이유는 명확합니다.
+
+1. **간접성(Indirection)이 증가합니다.** `ProductPolicy.discountRate(product)`를 보고 "이게 실제로 어떻게 계산되지?"라고 궁금해지면, 정의를 찾아가야 합니다. 추상화 계층이 깊어질수록 이 탐색 비용이 커집니다.
+2. **잘못된 추상화는 변경을 어렵게 만듭니다.** 하나의 추상화에 여러 use case를 끼워 넣으면, 한 곳을 고칠 때 다른 곳이 깨질까 두려워집니다.
+3. **코드량이 늘어납니다.** 인터페이스 정의, 타입, 훅 파일 등 부수적인 코드가 생깁니다.
+
+### 그래서 언제 추상화해야 할까?
+
+물론 경험이 있는 개발자라면 어느정도는 개발하다보면 반복되는 부분이 있기에 미리 만들어두는 게 자연스럽습니다. 
+하지만 실제로 개발하다 보면 "이걸 지금 추상화해야 하나?"라고 고민되는 순간이 반드시 옵니다. 
+
+그때 유용한 기준이 `"세 번의 법칙"`입니다.
+
+1. **처음** 작성할 때는 그냥 직접 구현합니다.
+2. **두 번째** 비슷한 코드가 나오면, 약간 불편하더라도 참습니다.
+3. **세 번째** 반복이 생기면 그때 패턴이 보이기 시작합니다. 이때 추상화합니다.
+
+예를 들어, `ConfirmDialog`를 만들 때는 그냥 상태를 직접 관리했습니다. 
+
+`DatePicker`를 만들 때 비슷한 코드가 나왔지만 참았습니다. `EditSheet`까지 만들고 나서야 "오버레이를 열고, 결과를 기다린다"라는 반복 패턴이 명확해졌고, 그제서야 `useOverlay`라는 추상화가 자연스럽게 나왔습니다.
+
+두 번째 반복에서 성급하게 추상화했다면, 세 번째 use case의 요구사항을 반영하지 못하는 어설픈 추상화가 되었을 수도 있었겠죠.
+
+---
+
+## 마무리
+
+추상화는 결국 **"읽는 사람이 지금 이 수준에서 알아야 할 것만 보여주기"**입니다.
+
+- 고양이 로고처럼, 핵심 특징만 남기고 나머지를 숨기는 것
+- `useOverlay`처럼, 내부 구현을 감추고 본질적인 인터페이스만 노출하는 것
+- 컴포넌트 → Hook → Service처럼, 각 계층이 자신의 수준에 맞는 일만 하는 것
+
+좋은 추상화의 기준은 단순합니다. **사용하는 사람이 내부를 몰라도 되는 것.** 
+
+우리가 흔히 JS에서 제공해주는 `Array.map()`을 쓸 때 V8 엔진의 내부 구현을 알 필요가 없듯이, 잘 추상화된 코드는 "어떻게"가 아닌 "무엇을" 수준에서 읽힙니다.
+
+다만 적절한 추상화 수준을 찾는 것은 시간과 경험이 필요합니다. 
+너무 이른 추상화는 족쇄가 되고, 너무 늦은 추상화는 중복을 낳습니다. 
+코드를 반복해서 작성하고, 리팩토링하고, 때로는 잘못된 추상화를 걷어내는 과정 속에서 감각이 길러진다고 생각합니다.
+
+결국 중요한 건, 추상화를 "해야 하느냐 말아야 하느냐"가 아니라 **"지금이 적절한 타이밍인가"**를 판단하는 것입니다.
