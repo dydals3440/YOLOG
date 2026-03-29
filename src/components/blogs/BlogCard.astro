@@ -8,7 +8,7 @@ export interface Props extends BlogCardProps {}
 
 const { post } = Astro.props;
 const { title, description, date, category } = post.data;
-const slug = post.slug.replace("blog/", "");
+const slug = post.id.replace("blog/", "");
 ---
 
 <article class="group">

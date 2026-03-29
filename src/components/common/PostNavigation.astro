@@ -11,7 +11,7 @@ const { prevPost, nextPost } = Astro.props
   {prevPost && (
     <a
       class="group flex flex-col gap-1"
-      href={`/post/${resolveSlug(prevPost.slug)}`}
+      href={`/post/${resolveSlug(prevPost.id)}`}
       aria-label={`이전 글: ${prevPost.data.title}`}
     >
       <div class="text-disabled transition-colors group-hover:text-second">이전 글</div>
@@ -23,7 +23,7 @@ const { prevPost, nextPost } = Astro.props
   {nextPost && (
     <a
       class="group ml-auto flex flex-col gap-1 text-right text-second hover:text-body"
-      href={`/post/${resolveSlug(nextPost.slug)}`}
+      href={`/post/${resolveSlug(nextPost.id)}`}
       aria-label={`다음 글: ${nextPost.data.title}`}
     >
       <div class="text-disabled transition-colors group-hover:text-second">다음 글</div>

@@ -1,7 +1,7 @@
 ---
 import '@/styles/mdx.css'
 
-import type { CollectionEntry } from 'astro:content'
+import { type CollectionEntry, render } from 'astro:content'
 import { formatDate } from '@/lib/blog-utils'
 
 import CopyCodeScript from '@/components/post/CopyCodeScript.astro'
@@ -35,7 +35,7 @@ const description = post.data.description || generateDescription(post.body)
 const formattedDate = formatDate(date)
 const toc = parseToc(post.body)
 
-const { Content } = await post.render()
+const { Content } = await render(post)
 
 // BlogPosting JSON-LD Schema
 const blogPostingSchema = {

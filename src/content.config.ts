@@ -1,4 +1,5 @@
 import { defineCollection, z } from 'astro:content'
+import { glob } from 'astro/loaders'
 import { BLOG_CATEGORIES, type BlogCategory } from './consts'
 
 // BLOG_CATEGORIES의 키들을 타입으로 추출 (ALL 제외)
@@ -12,7 +13,7 @@ if (categoryKeys.length === 0) {
 const categoryValues = categoryKeys as [BlogCategory, ...BlogCategory[]]
 
 const post = defineCollection({
-  type: 'content',
+  loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/post' }),
   schema: z.object({
     title: z.string(),
     description: z.string().optional(),

@@ -13,7 +13,7 @@ export const getStaticPaths = async () => {
   return posts.map((post: CollectionEntry<'post'>, _, list) => {
     const postList = list.filter(item => isBlogPost(item))
     const postIndex = postList.findIndex((item) => item.id === post.id)
-    const slug = resolveSlug(post.slug)
+    const slug = resolveSlug(post.id)
     
     return {
       params: { slug },

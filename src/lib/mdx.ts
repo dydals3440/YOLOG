@@ -4,8 +4,8 @@ import type { PostInfoModel, TOCSectionModel } from "@/types";
 
 export type { TOCSectionModel };
 
-export const isBlogPost = (post: { slug: string }) => {
-  return post.slug.includes("blog/");
+export const isBlogPost = (post: { id: string }) => {
+  return post.id.includes("blog/");
 };
 
 export const getPostCollection = async (): Promise<
@@ -28,7 +28,7 @@ export const getPostInfoList = async (): Promise<PostInfoModel[]> => {
     .map<PostInfoModel>((post) => ({
       title: post.data.title,
       description: post.data.description,
-      href: `/post/${resolveSlug(post.slug)}`,
+      href: `/post/${resolveSlug(post.id)}`,
       date: post.data.date,
       updatedDate: post.data.updatedDate,
       category: post.data.category,
