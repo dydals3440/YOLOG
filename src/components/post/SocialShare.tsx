@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   TwitterXIcon,
   FacebookIcon,
@@ -55,25 +55,7 @@ const SocialShare = ({ title, url }: SocialShareProps) => {
 
   const shareUrls = useMemo(() => createShareUrls(title, url), [title, url]);
 
-  const handleNativeShare = useCallback(async () => {
-    try {
-      await shareNative(title, url);
-    } catch (error) {
-      // 에러는 shareNative 함수 내에서 처리됨
-    }
-  }, [title, url]);
-
-  const handleShare = useCallback(
-    async (platform: SharePlatform) => {
-      if (platform === "native") {
-        return handleNativeShare();
-      }
-      openShareWindow(shareUrls[platform]);
-    },
-    [handleNativeShare, shareUrls],
-  );
-
-  const handleCopyLink = useCallback(async () => {
+  const handleCopyLink = async () => {
     setIsSharing(true);
     try {
       await copyToClipboard(url);
@@ -91,7 +73,7 @@ const SocialShare = ({ title, url }: SocialShareProps) => {
     } finally {
       setIsSharing(false);
     }
-  }, [url, toast, setIsCopied]);
+  };
 
   const isNativeShareSupported =
     typeof navigator !== "undefined" && "share" in navigator;
@@ -102,7 +84,7 @@ const SocialShare = ({ title, url }: SocialShareProps) => {
       {isNativeShareSupported && (
         <>
           <ShareButton
-            onClick={() => handleShare("native")}
+            onClick={() => shareNative(title, url)}
             title="공유하기"
             ariaLabel="네이티브 공유"
           >
@@ -117,7 +99,7 @@ const SocialShare = ({ title, url }: SocialShareProps) => {
         {SHARE_OPTIONS.map(({ platform, icon, label }) => (
           <ShareButton
             key={platform}
-            onClick={() => handleShare(platform)}
+            onClick={() => openShareWindow(shareUrls[platform])}
             title={label}
             ariaLabel={label}
           >

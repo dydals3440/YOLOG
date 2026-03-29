@@ -1,5 +1,5 @@
 import { throttle } from "es-toolkit";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 
 import type { TOCSectionModel } from "@/lib/mdx";
 import { cn } from "@/lib/utils";
@@ -39,10 +39,7 @@ const SCROLL_THROTTLE_MS = 50;
 const useTocScroll = (tableOfContents: TOCSectionModel[]) => {
   const [currentSectionSlug, setCurrentSectionSlug] = useState<string>();
 
-  const hasContent = useMemo(
-    () => tableOfContents.length > 0,
-    [tableOfContents],
-  );
+  const hasContent = tableOfContents.length > 0;
 
   useEffect(() => {
     if (!hasContent) return;
