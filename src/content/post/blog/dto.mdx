@@ -1,0 +1,602 @@
+---
+title: 프론트엔드에서 DTO가 필요한 이유
+date: 2026-04-02
+updatedDate: 2026-04-02
+tags: [DTO, Mapper, 프론트엔드 아키텍처, TypeScript, Zod, 관심사 분리, React Native]
+category: DEVELOPMENT
+image: '/images/abstraction/thumbnail.webp'
+---
+
+# 프론트엔드에서 DTO가 필요한 이유
+
+지난 글에서는 사이드 프로젝트 ["아이두"](https://www.aido.kr/ko)를 만들면서 마주한 [**부수 효과**](https://www.yolog.co.kr/post/side-effect)에 대해 다뤘는데,
+이번 주제는 **DTO(Data Transfer Object)** 입니다.
+
+DTO라고 하면 보통 백엔드에서 쓰는 개념이라고 생각하죠.
+서버에서 요청을 받고, 응답을 내려줄 때 데이터의 형태를 정의하는 것.
+그래서 "프론트엔드에 DTO가 왜 필요해?"라는 반응이 나올 수 있는데요.
+
+소프트웨어의 각 계층이나 모듈은 종종 서로 다른 **'언어'**, 즉 서로 다른 데이터 구조를 사용합니다.
+서버는 JSON 직렬화에 맞춘 구조를 쓰고, 화면은 렌더링에 최적화된 구조를 원하죠.
+DTO는 바로 이 **통역사 역할**을 하는 객체입니다.
+한쪽 계층에서 사용하는 데이터를 다른 계층이 이해하기 쉬운, 정해진 구조로 변환해서 전달하는 것이죠.
+
+이 글에서는 실제 프로젝트에 적용한 DTO 패턴을 통해,
+프론트엔드에서 왜 이 통역 계층이 필요한지 살펴보겠습니다.
+
+---
+
+### 아이두 - 친구와 함께 하는 AI 투두 서비스
+
+본격적인 글에 앞서, `아이두(Aido)`가 궁금하다면 **iPhone, Android, Mac, Tablet 등 다양한 기기에서 호환 가능**하니 한 번 써보시면 좋을 것 같습니다.
+
+친구들과 함께 할 일을 관리하며 서로 자극을 주고받을 수 있는 AI 할일 관리 서비스인데 혹여나 주변에 같이 쓸 친구가 없다면 초대 코드 `WNTQJEEE`로 들어와서 함께 자극을 나누며 성장하면 좋을 것 같습니다!
+
+![아이두~ 아이두~](/images/abstraction/thumbnail.webp)
+
+
+[App Store](https://apps.apple.com/kr/app/%EC%95%84%EC%9D%B4%EB%91%90-ai-%ED%88%AC%EB%91%90-%ED%94%8C%EB%9E%98%EB%84%88/id6757722325) | [Google Play](https://play.google.com/store/apps/details?id=com.aido.mobile&pcampaignid=web_share&pli=1) | [아이두(Aido) 공식 웹사이트](https://www.aido.kr/) | [공식 인스타그램](https://www.instagram.com/aiddoo_official/)
+
+---
+
+## DTO가 필요한 순간
+
+코드로 바로 들어가기 전에, DTO가 왜 필요한지 감을 잡아보겠습니다.
+
+할 일 관리 앱을 만들고 있다고 가정해보겠습니다.
+오늘의 할 일 목록을 보여주는 화면에서 `todos` 데이터를 사용해 목록을 렌더링하고 있는 상황이에요.
+
+```ts
+interface Todo {
+  id: number;
+  title: string;
+  completed: boolean;
+  category: { id: number; name: string; color: string };
+  scheduledTime: string | null;
+  startDate: string;
+}
+
+const todos: Todo[] = [/* ... */];
+```
+
+잘 동작하죠. 그런데 여기에 **오늘의 달성률 요약 영역**을 추가해야 합니다.
+전체 할 일 수, 완료한 개수, 달성률을 보여주는 영역인데요.
+데이터는 이미 `todos`에 있으니, 이를 활용해서 요약을 렌더링하는 함수를 만들어봅니다.
+
+```ts
+function renderSummary(todos: Todo[]) {
+  const total = todos.length;
+  const completed = todos.filter(t => t.completed).length;
+  const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  return `${completed}/${total} 완료 (${rate}%)`;
+}
+```
+
+동작은 합니다. 하지만 이 코드에는 미래의 문제가 숨어 있어요.
+
+`renderSummary`는 `title`이나 `scheduledTime`에 관심이 없는데, `todos` 전체를 받고 있죠. 나중에 할 일 목록의 필요에 의해 `title`의 타입이 바뀌거나 `scheduledTime`의 형식이 달라지면? `renderSummary`는 건드린 적도 없는데 갑자기 검토 대상이 됩니다.
+
+또한 `renderSummary` 안에서는 "달성률을 계산하는 일"과 "결과를 화면에 그리는 일"이 뒤섞여 있어 **응집도가 낮습니다**.
+
+하나의 함수가 두 가지 관심사를 동시에 떠안고 있는 셈이죠. 지금이야 계산이 단순하지만, 서브투두를 포함할지, 반복 할 일은 어떻게 셀지 같은 요구사항이 추가되면 렌더링 함수가 점점 비대해집니다.
+
+### 관심사별로 데이터 구조 나누기
+
+해결은 간단합니다. 요약 영역이 실제로 필요한 것만 담은 별도의 타입을 만들고, 변환 함수를 하나 두면 되죠.
+
+```ts
+// 요약 영역이 필요로 하는 데이터 구조 (DTO)
+interface DailyProgress {
+  totalTodos: number;
+  completedTodos: number;
+  completionRate: number;
+  categoryColors: string[];
+}
+
+// 원본 → 요약 데이터로 변환
+function toDailyProgress(todos: Todo[]): DailyProgress {
+  const completed = todos.filter(t => t.completed).length;
+  return {
+    totalTodos: todos.length,
+    completedTodos: completed,
+    completionRate: todos.length > 0 ? completed / todos.length : 0,
+    categoryColors: [...new Set(todos.map(t => t.category.color))],
+  };
+}
+
+// 렌더링 함수는 자기가 필요한 구조만 받는다
+function renderSummary(progress: DailyProgress) {
+  const rate = Math.round(progress.completionRate * 100);
+  return `${progress.completedTodos}/${progress.totalTodos} 완료 (${rate}%)`;
+}
+```
+
+이제 `renderSummary`는 `Todo`의 존재 자체를 모릅니다. `DailyProgress`라는 자기만의 데이터 구조만 알면 되죠. 달성률 계산이 아무리 복잡해지더라도, 그 복잡함은 `toDailyProgress` 안에 머물고 렌더링 함수로 새어나오지 않습니다.
+
+### 원본이 바뀌어도 사용하는 쪽은 모른다
+
+이 구조의 진짜 가치는 **원본 데이터가 바뀔 때** 드러납니다.
+
+실제로 아이두 서비스에서 일어난 일인데요. 경쟁사 앱을 사용하시던 유저분께서 저희 서비스로 넘어오시면서, 할 일 밑에 또 할 일을 기록할 수 있는 "서브투두" 기능이 있으면 좋겠다고 피드백을 주셨습니다.
+
+최대한 빠르게 대응하기 위해 바로 기능 개발에 들어갔고, 아래 이미지처럼 하나의 할 일 안에 세부 항목을 둘 수 있는 **하위 항목(서브투두)** 이 추가되었습니다.
+
+<img src="/images/dto/1.webp" alt="아이두 앱의 서브투두 - 할 일 하위에 세부 항목이 있는 모습" style="max-width: 200px;" />
+
+"운동하기" 아래에 "스트레칭", "달리기 30분" 같은 세부 항목이 생긴 거죠.
+
+```ts
+interface Todo {
+  id: number;
+  title: string;
+  completed: boolean;
+  category: { id: number; name: string; color: string };
+  scheduledTime: string | null;
+  startDate: string;
+  items: { id: number; title: string; completed: boolean }[];  // 추가됨 // [!code error]
+  itemStats: { total: number; completed: number };              // 추가됨 // [!code error]
+}
+```
+
+`toDailyProgress`가 없었다면 "서브투두도 달성률에 포함해야 하나?"라는 질문이 `renderSummary`까지 퍼지고, 요약을 쓰는 모든 곳을 수정해야 하죠. 하지만 변환 함수가 있으면 **한 곳만 고치면 끝입니다.**
+
+```ts
+function toDailyProgress(todos: Todo[]): DailyProgress {
+  const completed = todos.filter(t => t.completed).length;
+  const subTotal = todos.reduce((sum, t) => sum + t.itemStats.total, 0);      // 서브투두 반영
+  const subCompleted = todos.reduce((sum, t) => sum + t.itemStats.completed, 0);
+  return {
+    totalTodos: todos.length + subTotal,                // 서브투두 포함
+    completedTodos: completed + subCompleted,
+    completionRate: (todos.length + subTotal) > 0
+      ? (completed + subCompleted) / (todos.length + subTotal)
+      : 0,
+    categoryColors: [...new Set(todos.map(t => t.category.color))],
+  };
+}
+```
+
+`renderSummary`는 여전히 `DailyProgress`만 바라보고 있기 때문에 한 글자도 바꿀 필요가 없습니다. 변환 함수가 **변경의 충격을 흡수**하고, 그 너머로는 파급이 일어나지 않는 것이죠. 이것이 DTO의 핵심 가치입니다.
+
+---
+
+## 실전: 서버 응답에 적용하기
+
+앞에서 살펴본 `toDailyProgress` 패턴을 가장 자주 적용하게 되는 곳이 **API 응답**입니다.
+
+처음에는 서버가 화면에 딱 맞는 데이터를 내려주죠. 하지만 앱이 커지면서 사정이 달라집니다. 화면은 매주 바뀌는데 API는 한 번 배포하면 기존 클라이언트와의 호환 때문에 쉽게 못 바꾸거든요. 게다가 같은 API를 할 일 목록, 피드, 달성률 화면에서 동시에 쓰게 되면서, 한 화면에 맞춰 구조를 바꾸면 다른 화면이 깨지는 상황이 생깁니다.
+
+그래서 서버 응답을 컴포넌트에 직접 넘기지 않고, **Mapper를 통해 클라이언트 전용 모델로 변환**한 뒤 사용합니다. 앞서 `Todo`를 `DailyProgress`로 바꿨던 것과 같은 원리입니다.
+
+### API 응답을 그대로 컴포넌트에 넘기면
+
+```ts
+// 서버가 내려주는 응답
+interface TodoResponse {
+  id: number;
+  title: string;
+  scheduledTime: string | null;  // ISO 8601 문자열
+  isAllDay: boolean;
+  items: SubTodoResponse[];      // 서버에서는 "items"라고 부른다
+  itemStats: { total: number; completed: number };
+}
+```
+
+이 응답을 컴포넌트에서 바로 쓰면 어떻게 될까요?
+
+```tsx
+function TodoItem({ todo }: { todo: TodoResponse }) {
+  // 컴포넌트에서 직접 날짜 변환
+  const time = todo.scheduledTime
+    ? new Date(todo.scheduledTime)
+    : null;
+
+  // "items"를 서브투두로 사용하는데, 이름이 직관적이지 않다
+  const hasSubTodos = todo.items.length > 0;
+
+  return (
+    <View>
+      <Text>{todo.title}</Text>
+      {time && <Text>{format(time, "HH:mm")}</Text>}
+      {hasSubTodos && <Text>{todo.items.length}개의 하위 항목</Text>}
+    </View>
+  );
+}
+```
+
+얼핏 보면 문제가 없어 보이죠. 하지만 앞서 `renderSummary`에서 봤던 문제가 여기서도 반복됩니다.
+
+**변환 로직이 흩어집니다.** 
+
+`scheduledTime`을 `Date` 객체로 변환하는 코드가 이 컴포넌트뿐 아니라, 이 데이터를 사용하는 **모든 곳**에 중복되죠. 할 일 목록 화면, 상세 화면, 알림 설정 화면 등에서 매번 `new Date(todo.scheduledTime)`을 호출해야 합니다.
+
+**서버 변경이 앱 전체로 퍼집니다.** 
+
+서버에서 `items`를 `checklistItems`로 바꾸면, `todo.items`를 사용하는 **모든 컴포넌트**를 찾아서 수정해야 하죠.
+
+**타입이 일관되지 않습니다.** 
+
+서버는 날짜를 `"2024-01-15T09:00:00.000Z"` 같은 **문자열**로 내려주는데요. JSON은 `Date` 타입을 지원하지 않으니까요. 이 변환을 컴포넌트마다 직접 하면, "여기서는 변환했는데 저기서는 안 했다"는 상황이 생깁니다. 같은 데이터인데 어떤 곳에서는 `string`이고 어떤 곳에서는 `Date`인 셈이죠.
+
+지난 글에서 다뤘던 **부수 효과의 전염성**을 떠올려보면, 이것도 비슷한 문제입니다. 서버 응답의 형태에 대한 **의존성**이 컴포넌트 전체로 퍼져나가는 거죠.
+
+---
+
+## Mapper: 계층 사이의 통역사
+
+해결 방법은 앞서 `toDailyProgress`를 만들었던 것과 같습니다. 서버 응답을 받아서 클라이언트가 사용하기 좋은 형태(도메인 모델)로 변환하는 순수 함수를 두는 것. 이것이 **Mapper**입니다.
+
+실제 코드를 살펴볼까요?
+
+먼저, 서버가 내려주는 DTO의 타입입니다. `@aido/validators`라는 공유 패키지에 Zod 스키마로 API 계약을 정의하고, 서버와 클라이언트가 함께 사용하고 있어요.
+
+```ts
+// @aido/validators — 서버 응답 타입 (Zod 스키마, 서버·클라이언트 공유)
+const todoSchema = z.object({
+  id: z.number().int(),
+  title: z.string(),
+  scheduledTime: nullableDatetimeSchema,       // ISO 8601 문자열 | null
+  items: z.array(todoItemResponseSchema),      // 서버에서는 "items"
+  itemStats: todoItemStatsSchema,
+  // ... startDate, isAllDay 등
+});
+```
+
+클라이언트 도메인 모델은 서버 DTO와 **독립적**으로, 앱에서 사용하기 편한 형태로 정의하고요.
+
+```ts
+// models/todo.model.ts — 클라이언트 도메인 모델 (역시 Zod 스키마)
+const todoItemSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  scheduledTime: z.date().nullable(),  // Date 객체!
+  subTodos: z.array(subTodoSchema),    // "subTodos"로 이름 변경
+  subTodoStats: subTodoStatsSchema,
+  // ... startDate, isAllDay 등
+});
+```
+
+두 타입의 차이가 보이시나요?
+
+| 서버 DTO (`Todo`) | 클라이언트 모델 (`TodoItem`) | 변환 |
+|-------------------|---------------------------|------|
+| `scheduledTime: string` | `scheduledTime: Date` | ISO 문자열 → Date 객체 |
+| `items: TodoItemResponse[]` | `subTodos: SubTodo[]` | 필드명 변경 + 재귀 변환 |
+| `itemStats` | `subTodoStats` | 필드명 변경 |
+
+이제 이 차이를 흡수하는 Mapper를 보겠습니다.
+
+```ts
+// services/todo.mapper.ts
+export const toTodoItem = (dto: Todo): TodoItem => ({
+  id: dto.id,
+  title: dto.title,
+  // ... 단순 매핑 필드 생략
+  scheduledTime: dto.scheduledTime ? new Date(dto.scheduledTime) : null,  // 핵심: 문자열 → Date
+  subTodos: dto.items.map(toSubTodo),     // 핵심: 필드명 변경 + 재귀 변환
+  subTodoStats: dto.itemStats,            // 핵심: 필드명 변경
+});
+```
+
+Mapper는 **순수 함수**입니다. 같은 서버 응답을 넣으면 항상 같은 도메인 모델이 나오죠. 외부 상태를 변경하지도, 의존하지도 않습니다. 지난 글에서 다뤘던 `getTodoStatusText`와 같은 원리예요.
+
+이제 서버가 `items`를 `checklistItems`로 바꾸더라도, Mapper 한 곳만 수정하면 됩니다.
+
+```ts
+// 서버 필드명이 변경되어도 Mapper만 수정
+export const toTodoItem = (dto: Todo): TodoItem => ({
+  // ...
+  subTodos: dto.checklistItems.map(toSubTodo),  // 여기만 바뀜
+  // ...
+});
+```
+
+앱의 나머지 코드는 여전히 `subTodos`를 사용하기 때문에 아무것도 바꿀 필요가 없습니다.
+
+---
+
+## Service: 검증과 변환의 관문
+
+Mapper가 데이터를 변환하는 순수 함수라면, 이 함수를 **어디서** 호출해야 할까요? 컴포넌트에서? 커스텀 훅에서?
+
+**Service 레이어**가 이 역할을 담당합니다. Service는 HTTP 호출, 데이터 검증, 그리고 Mapper 변환을 한 곳에서 처리하는 관문이에요.
+
+```ts
+// services/todo.service.ts
+getTodos = async (params: GetTodosQuery): Promise<Result<TodosResult, ApiError>> => {
+  // 1단계: HTTP 호출
+  const result = await this.#httpClient.get<TodoListResponse>('v1/todos', { params });
+  if (!result.ok) return result;
+
+  // 2단계: Zod 스키마로 응답 검증 (실패 시 ParseError throw)
+  const parsed = todoListResponseSchema.safeParse(result.value);
+  if (!parsed.success) { /* ... */ }
+
+  // 3단계: Mapper로 DTO → 도메인 모델 변환
+  return ok({
+    todos: toTodoItems(parsed.data.items),
+    hasNext: parsed.data.pagination.hasNext,
+    nextCursor: parsed.data.pagination.nextCursor,
+  });
+};
+```
+
+이 패턴을 흐름으로 정리하면 다음과 같은데요.
+
+```
+ 서버 응답 (JSON)
+    │
+    ▼
+ 1. HTTP 호출 — 서버에서 데이터를 가져온다
+    │
+    ▼
+ 2. Zod 검증 — 응답이 기대한 형태인지 확인한다
+    │
+    ▼
+ 3. Mapper 변환 — DTO를 클라이언트 도메인 모델로 바꾼다
+    │
+    ▼
+ 도메인 모델 (TodoItem)
+```
+
+여기서 **2단계 Zod 검증**이 중요합니다. 서버가 예상과 다른 형태의 데이터를 내려보내면, Mapper에 도달하기 전에 여기서 잡히거든요. 런타임에 "undefined is not a function" 같은 에러가 컴포넌트에서 터지는 대신, 데이터가 앱에 진입하는 시점에서 명확한 에러 메시지와 함께 실패합니다.
+
+이렇게 Service를 거친 데이터는 **검증되고 변환된 상태**이기 때문에, 이 이후의 코드(UI, 비즈니스 로직)에서는 서버 응답의 형태를 전혀 신경 쓰지 않아도 되죠. 초기 개발 시 API가 아직 완성되지 않았더라도, Mapper만 준비해두면 임의 데이터로 화면을 먼저 만들고 나중에 Service 내부만 연결하면 됩니다.
+
+---
+
+## 변경에 강한 구조
+
+Todo 말고도 알림, 친구, 날씨 등 여러 기능이 있고, 각 기능마다 Mapper가 존재하는데요. 이 Mapper들이 실제로 어떻게 변경을 흡수하는지 살펴보겠습니다.
+
+### 알림: 날짜 타입 통일
+
+서버는 알림의 생성 시각과 읽은 시각을 ISO 문자열로 내려주는데, 클라이언트에서는 이를 `Date` 객체로 통일합니다.
+
+```ts
+// services/notification.mapper.ts
+export const toNotification = (server: ServerNotification): Notification => ({
+  // ... id, userId, type, title, body 등 단순 매핑
+  createdAt: new Date(server.createdAt),                    // 문자열 → Date
+  readAt: server.readAt ? new Date(server.readAt) : null,   // nullable 처리
+});
+```
+
+이 변환이 Mapper에 집중되어 있기 때문에, 알림 목록이든 뱃지 카운트든 알림 상세든 모두 `Date` 객체를 받아서 사용하게 됩니다. "여기서는 문자열이고 저기서는 Date"인 상황이 원천적으로 발생하지 않죠.
+
+### 친구: 구조 변환
+
+서버가 내려주는 친구 목록의 구조는 서버 나름의 형태를 가지고 있는데요. Mapper는 이를 클라이언트의 표준 페이지네이션 구조인 `Page<T>`로 변환합니다.
+
+```ts
+// services/friend.mapper.ts
+export const toFriendUser = (dto: FriendUserDTO): FriendUser => ({
+  // ... id, userTag, name 등 단순 매핑
+  friendsSince: new Date(dto.friendsSince),   // 문자열 → Date
+});
+
+export const toFriendsPage = (dto: FriendsListResponse): Page<FriendUser> => ({
+  items: dto.friends.map(toFriendUser),       // "friends" → "items" 구조 변환
+  totalCount: dto.totalCount,
+  hasMore: dto.hasMore,
+});
+```
+
+서버 응답에서는 `friends`라는 필드명을 쓰지만, 클라이언트에서는 `Page<T>`라는 공통 구조의 `items`로 통일하죠. 이렇게 하면 친구 목록이든, 알림 목록이든, 할 일 목록이든 페이지네이션을 다루는 로직을 재사용할 수 있습니다.
+
+DTO가 **외부의 변화를 흡수하는 계층** 역할을 하는 셈이에요. DTO를 사용하는 컴포넌트 입장에서 보면, API 응답의 변화에 대응할 필요 없이 자신의 렌더링 로직에만 집중할 수 있습니다.
+
+---
+
+## Mapper와 ViewModel을 왜 나눌까?
+
+여기서 한 가지 의문이 들 수 있습니다. "Mapper에서 날짜도 바꾸고, 필드명도 바꾸는데, 거기서 포맷팅이나 파생 값까지 다 해주면 안 돼?"
+
+결론부터 말하면, **할 수는 있지만 하지 않는 편이 낫습니다**. 이유를 살펴보겠습니다.
+
+### Mapper가 해야 할 일: "서버의 언어를 클라이언트의 언어로 바꾸는 것"
+
+Mapper의 관심사는 **서버와 클라이언트 사이의 형태 차이를 흡수**하는 것이에요. ISO 문자열을 `Date` 객체로 바꾸고, `items`를 `subTodos`로 이름을 바꾸고, 서버 고유의 응답 구조를 클라이언트 표준 구조로 정규화하는 것. 이것이 Mapper의 전부입니다.
+
+```ts
+// Mapper의 역할: 서버 형태 → 클라이언트 형태
+export const toTodoItem = (dto: Todo): TodoItem => ({
+  // ...
+  scheduledTime: dto.scheduledTime ? new Date(dto.scheduledTime) : null,  // 타입 변환
+  subTodos: dto.items.map(toSubTodo),    // 필드명 + 구조 변환
+  subTodoStats: dto.itemStats,           // 필드명 변환
+});
+```
+
+변환된 `TodoItem`은 **화면과 무관한 순수한 도메인 모델**이에요. 할 일의 시작 시각이 `Date` 객체라는 것은 "오전 9:00"이라는 포맷과는 아무 관계가 없죠. `TodoItem`은 서비스 로직에서도, Policy 검증에서도, 캐시에서도 동일하게 사용됩니다.
+
+### ViewModel이 해야 할 일: "도메인 모델을 특정 화면에 맞게 가공하는 것"
+
+반면 "오전 9:00"이라는 문자열은 **특정 화면**에서만 필요하죠. 사용자가 12시간제를 쓰면 "오전 9:00"이고, 24시간제를 쓰면 "09:00"입니다. 같은 `TodoItem`인데 사용자 설정에 따라 보여주는 값이 달라지는 거예요.
+
+`recurrenceGroupId !== null`을 `isRecurring: true`로 바꾸는 것도 마찬가지입니다. 도메인 모델에는 `recurrenceGroupId`라는 원본 데이터가 있어야 하지만, 컴포넌트는 "이 할 일이 반복인지 아닌지"만 알면 되죠.
+
+이 역할을 하는 것이 **ViewModel**입니다. 도메인 모델과는 독립적으로, 화면이 실제로 필요한 필드만 담은 타입을 정의해요.
+
+```ts
+// presentations/view-models/todo-item.view-model.ts
+export interface TodoItemViewModel {
+  id: number;
+  title: string;
+  completed: boolean;
+  formattedTime: string | null;  // "오전 9:00" — 사용자 설정에 따라 달라짐
+  color: string;                 // 카테고리에서 추출
+  isRecurring: boolean;          // recurrenceGroupId !== null
+  hasSubTodos: boolean;          // subTodoStats.total > 0
+  subTodoCount: number;
+}
+
+export const toTodoItemViewModel = (
+  todo: TodoItem,
+  timeFormat: 'TWELVE_HOUR' | 'TWENTY_FOUR_HOUR',
+): TodoItemViewModel => ({
+  id: todo.id,
+  title: todo.title,
+  completed: todo.completed,
+  formattedTime: todo.scheduledTime ? formatTime(todo.scheduledTime, timeFormat) : null,
+  color: todo.category.color,
+  isRecurring: todo.recurrenceGroupId !== null,
+  hasSubTodos: todo.subTodoStats.total > 0,
+  subTodoCount: todo.subTodoStats.total,
+});
+```
+
+ViewModel을 `extends TodoItem`으로 확장할 수도 있지만, 그러면 컴포넌트가 도메인 모델의 모든 필드(`recurrenceGroupId`, `visibility` 등)에 접근할 수 있게 되죠. `isRecurring`으로 대체한 의미가 퇴색됩니다. 독립 타입으로 정의하면 컴포넌트는 **ViewModel이 열어준 필드만** 사용할 수 있어서, 도메인 모델이 바뀌어도 ViewModel 변환 함수만 수정하면 돼요.
+
+### 만약 Mapper에서 이것까지 했다면?
+
+Mapper가 `formattedTime: "오전 9:00"`까지 만들어준다고 가정해볼까요?
+
+```ts
+// Mapper에서 ViewModel 역할까지 하면?
+export const toTodoItem = (dto: Todo): TodoItem => ({
+  // ...
+  scheduledTime: dto.scheduledTime ? new Date(dto.scheduledTime) : null,
+  formattedTime: dto.scheduledTime                                        // [!code error]
+    ? formatTime(new Date(dto.scheduledTime), ???)  // 12시간? 24시간?   // [!code error]
+    : null,                                                               // [!code error]
+  isRecurring: dto.recurrenceGroupId !== null,                            // [!code error]
+});
+```
+
+문제가 보이시죠. `formatTime`에 시간 포맷을 넘겨야 하는데, Mapper는 **사용자 설정을 모릅니다**. Mapper는 Service 안에서 호출되고, Service는 서버 응답을 도메인 모델로 바꾸는 계층이지 UI 설정을 알고 있는 계층이 아니거든요.
+
+결국 Mapper에 `timeFormat` 파라미터를 추가해야 하고, Service에도 이 값을 넘겨야 하고, Service를 호출하는 쪽에서도 사용자 설정을 주입해야 합니다. **서버 응답 변환이라는 원래 책임과 관계없는 의존성**이 Mapper와 Service에 스며드는 거죠.
+
+두 계층의 차이를 정리하면 이렇습니다.
+
+| | Mapper | ViewModel |
+|---|--------|-----------|
+| **관심사** | 서버 형태 → 클라이언트 형태 | 도메인 → 특정 화면 |
+| **입력** | 서버 DTO | 도메인 모델 + UI 설정 |
+| **호출 위치** | Service (서버 응답 직후) | Presentation (화면 렌더링 직전) |
+| **예시** | `string → Date`, 필드명 변환 | `Date → "오전 9:00"`, 파생 상태 계산 |
+| **외부 의존** | 없음 (서버 DTO만 알면 됨) | UI 설정 (시간 포맷 등) |
+
+Mapper는 **"서버가 뭐라고 말했는지"** 를 정리하고, ViewModel은 **"그걸 사용자에게 어떻게 보여줄지"** 를 결정합니다. 관심사가 다르기 때문에, 분리하는 것이 자연스럽습니다.
+
+### 컴포넌트는 단순해진다
+
+이렇게 나누면 컴포넌트에는 조건 분기도, 타입 변환도, 포맷팅 로직도 남지 않습니다.
+
+```tsx
+function TodoCard({ todo }: { todo: TodoItemViewModel }) {
+  return (
+    <View>
+      <Text>{todo.title}</Text>
+      {todo.formattedTime && <Text>{todo.formattedTime}</Text>}
+      {todo.isRecurring && <RepeatIcon />}
+      {todo.hasSubTodos && <Text>{todo.subTodoCount}개의 하위 항목</Text>}
+    </View>
+  );
+}
+```
+
+ViewModel이 미리 계산해둔 값을 그대로 보여주기만 합니다.
+
+### ViewModel은 항상 필요한 건 아니다
+
+한 가지 짚고 넘어갈 점이 있는데요. ViewModel도 결국 **하나의 계층**입니다. Mapper와 마찬가지로, 무조건 만드는 것이 능사는 아니에요.
+
+도메인 모델의 필드를 그대로 화면에 보여주면 되는 경우 — 예를 들어 `Notification`의 `title`과 `body`를 그냥 표시하는 알림 목록 같은 경우 — 에는 ViewModel 없이 도메인 모델을 컴포넌트에 바로 넘겨도 됩니다. 포맷팅도, 파생 상태 계산도 필요 없다면 변환 계층을 두는 것이 오히려 코드만 늘리는 일이죠.
+
+ViewModel이 가치를 갖는 건 **도메인 모델과 화면 사이에 간극이 있을 때**입니다. 시간 포맷팅이 필요하거나, 여러 필드를 조합해서 파생 상태를 만들어야 하거나, 사용자 설정에 따라 보여주는 값이 달라질 때. 그런 간극이 없다면 도메인 모델을 그대로 쓰는 게 가장 단순한 선택입니다.
+
+---
+
+## 전체 데이터 흐름
+
+지금까지 살펴본 내용을 하나의 흐름으로 정리해보겠습니다.
+
+```
+ 서버 (API Response)
+   │  JSON — 날짜는 문자열, 서버 네이밍 규칙
+   ▼
+ Service Layer
+   ├── HTTP 호출
+   ├── Zod 검증 — 응답 형태 계약 확인
+   └── Mapper 변환 — DTO → Domain Model
+   │  Date 객체, 클라이언트 네이밍, 구조 정규화
+   ▼
+ Domain Model (TodoItem, Notification, FriendUser ...)
+   │  앱 전체에서 사용하는 표준 타입
+   ▼
+ ViewModel 변환 — Domain → UI Model
+   │  포맷된 문자열, 파생 상태, UI 전용 필드
+   ▼
+ Component (화면)
+   │  값을 받아서 보여주기만 한다
+```
+
+각 단계에는 명확한 책임이 있습니다.
+
+| 단계 | 역할 | 예시 |
+|------|------|------|
+| **Zod 검증** | 서버 응답이 계약을 지키는지 확인 | `todoListResponseSchema.safeParse(...)` |
+| **Mapper** | 서버 형태 → 클라이언트 형태 | ISO 문자열 → Date, `items` → `subTodos` |
+| **ViewModel** | 도메인 → 화면 표시용 | `Date` → `"오전 9:00"`, `id !== null` → `isRecurring` |
+| **Component** | ViewModel을 렌더링 | `todo.formattedTime`을 그대로 표시 |
+
+이 구조에서는 서버 응답의 변경이 **Mapper 이후로 전파되지 않습니다**. 마찬가지로 화면 요구사항의 변경은 **ViewModel 이전으로 전파되지 않고요**. 각 계층이 변경의 방파제 역할을 하는 셈이죠.
+
+---
+
+## 도메인 모델에 비즈니스 규칙 담기
+
+Mapper로 변환한 도메인 모델에는 한 가지 더 중요한 역할이 있는데요. **비즈니스 규칙**을 모델 가까이에 배치할 수 있다는 것입니다. 저는 이를 **Policy**라는 패턴으로 사용하고 있어요.
+
+```ts
+// models/todo.model.ts
+export const AiUsagePolicy = {
+  /** 무료 사용자의 AI 파싱 한도에 도달했는지 */
+  isLimitReached(usage: AiUsage): boolean {
+    return usage.limit != null && usage.used >= usage.limit;
+  },
+} as const;
+```
+
+Policy 함수는 도메인 모델을 인자로 받아서 비즈니스 규칙에 따른 결과를 반환하는 **순수 함수**예요. "AI 사용량 한도 로직"이나 "알림 타입별 라우팅 로직" 같은 판단이 컴포넌트 여기저기에 흩어지지 않고, 도메인 모델 옆에 **한 곳**에 정리됩니다.
+
+---
+
+## 실전에서 느낀 주의점
+
+DTO가 유용한 패턴인 것은 분명하지만, 직접 적용하면서 몇 가지 스스로 정한 원칙이 생겼는데요.
+
+### Mapper는 단순하게 유지하기
+
+Mapper에 비즈니스 로직이 들어가기 시작하면 순수 함수의 장점이 사라지거든요. 앞서 본 `toTodoItem`은 조건 분기 없이 필드를 하나씩 매핑하고 있죠. "AI 사용량이 한도에 도달했는지" 같은 판단은 Mapper가 아니라 **Policy**에, "오전 9:00"처럼 화면에 맞춘 가공은 **ViewModel**에 둡니다.
+
+Mapper가 하는 일은 딱 두 가지예요. **타입을 맞추는 것**(문자열 → Date)과 **이름을 맞추는 것**(`items` → `subTodos`). 이 범위를 넘어서면 Mapper가 아니라 다른 계층의 일입니다.
+
+### 하나의 모델을 억지로 공유하지 않기
+
+처음에는 `TodoItem` 하나로 모든 화면을 커버하려고 했어요. 하지만 할 일 목록에서는 `formattedTime`이 필요하고, 달성률 화면에서는 `completionRate`가 필요하고, 피드에서는 `isRecurring`이 필요하죠. 이걸 전부 `TodoItem`에 넣으면 도메인 모델이 점점 비대해집니다.
+
+그래서 `TodoItem`(도메인 모델)과 `TodoItemViewModel`(화면 전용)을 명확히 분리했어요. 화면마다 필요한 형태가 다르면, 그 화면 전용 타입을 별도로 정의하는 편이 낫습니다. DTO 위에 또 다른 DTO를 얹는 것보다 훨씬 깔끔하죠.
+
+### 필요할 때만 도입하기
+
+모든 API 응답에 기계적으로 DTO를 만들면 오히려 코드만 늘어나요. 실제로 응답 구조가 단순하고, 한 화면에서만 쓰이는 데이터에는 굳이 Mapper를 두지 않는 경우도 있습니다.
+
+DTO를 도입할지 판단할 때 저는 이렇게 자문하는데요. "이 API 응답이 바뀌면 몇 개 파일을 고쳐야 하지?" 답이 1~2개라면 굳이 Mapper를 만들 필요 없습니다. 하지만 3개 이상이라면, 그때가 변환 계층을 두어야 할 타이밍이에요.
+
+---
+
+## 마무리
+
+지난 글에서 "순수한 코드와 부수 효과를 가진 코드를 분리하자"고 했었죠. DTO와 Mapper는 이 원칙을 데이터 흐름에 적용한 것입니다.
+
+이 패턴을 적용하면서 가장 체감한 것은, 서버 응답의 형태에 대한 의존성을 **Mapper 한 곳에 가두면** 나머지 코드가 놀라울 정도로 단순해진다는 거예요. 서버가 필드명을 바꾸든, 구조를 바꾸든, Mapper 하나만 수정하면 앱의 나머지는 아무 일도 없었다는 듯 동작합니다.
+
+- **Mapper**는 서버의 언어를 클라이언트의 언어로 바꿉니다.
+- **Service**는 검증과 변환이라는 관문 역할을 합니다.
+- **ViewModel**은 도메인 모델을 화면이 원하는 형태로 가공합니다.
+
+DTO는 서버만의 개념이 아닙니다. "화면에 필요한 데이터 구조를 먼저 정의하고, 외부 데이터를 그 구조에 맞게 변환해서 전달한다." 이 한 문장이 이 글에서 다룬 모든 패턴을 관통하는 원칙이고, 프론트엔드에서 DTO가 필요한 이유예요.
