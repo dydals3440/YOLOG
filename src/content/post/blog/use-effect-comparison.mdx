@@ -1,0 +1,539 @@
+---
+title: useEffect vs useLayoutEffect vs useFocusEffect vs useEffectEvent
+date: 2026-04-12
+updatedDate: 2026-04-12
+tags:
+  [
+    useEffect,
+    useLayoutEffect,
+    useFocusEffect,
+    useEffectEvent,
+    React Hooks,
+    React Native,
+    React Navigation,
+    부수 효과,
+  ]
+category: DEVELOPMENT
+image: '/images/use-effect-comparison/thumbnail.svg'
+---
+
+# useEffect vs useLayoutEffect vs useFocusEffect vs useEffectEvent
+
+React에서 부수 효과를 다룰 때, 대부분 `useEffect` 하나로 해결하려고 한다.
+많은 경우 그걸로 충분하다.
+
+하지만 개발을 하다 보면 `useEffect`만으로는 풀리지 않는 문제를 만나게 된다.
+UI가 한 프레임 깜빡이거나, 뒤로 가기를 했는데 데이터가 안 바뀌어 있거나, 의존성 배열 때문에 Effect가 불필요하게 재실행되거나.
+
+이 글에서는 `useEffect`를 시작으로,
+각각의 한계를 해결하기 위해 등장한 훅들을 하나씩 살펴본다.
+
+[이전 글](https://www.yolog.co.kr/post/side-effect)에서 부수 효과가 무엇인지를 다뤘다면,
+이번 글에서는 그 부수 효과를 **어떤 훅으로** 다뤄야 하는지를 다룬다.
+
+---
+
+## 1. useEffect — 부수 효과의 기본
+
+[`useEffect`](https://react.dev/reference/react/useEffect)는 React 16.8(2019년)에 Hooks와 함께 등장한 **부수 효과 처리 훅**이다.
+
+컴포넌트가 렌더링된 후에 "이 작업도 해줘"라고 React에게 알려주는 것이다.
+API 호출, 이벤트 리스너 등록, 타이머 설정 등
+**렌더링 자체와는 관계없지만 컴포넌트에 필요한 작업**들이 여기에 해당한다.
+
+```ts
+useEffect(() => {
+  // 부수 효과 실행
+  return () => {
+    // 정리(cleanup) — 컴포넌트가 사라지거나 deps가 바뀔 때
+  }
+}, [의존성])
+```
+
+### 왜 만들어졌는가
+
+Hooks 이전, 클래스 컴포넌트 시절에는 하나의 부수 효과를 위해 세 개의 메서드를 써야 했다.
+
+```ts
+class ChatRoom extends React.Component {
+  componentDidMount() {
+    this.connect() // 마운트 시 연결
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.roomId !== this.props.roomId) {
+      this.disconnect() // 이전 연결 해제
+      this.connect()    // 새 연결
+    }
+  }
+
+  componentWillUnmount() {
+    this.disconnect() // 정리
+  }
+}
+```
+
+"채팅방 연결"이라는 하나의 관심사가 세 곳에 흩어져 있다.
+`useEffect`는 이걸 한 곳으로 모았다.
+
+```ts
+useEffect(() => {
+  const connection = connect(roomId)
+  return () => connection.disconnect()
+}, [roomId])
+```
+
+### 언제 실행되는가
+
+`useEffect`는 브라우저가 화면을 **paint한 후에** 비동기로 실행된다.
+
+대부분의 부수 효과는 화면 렌더링을 막을 필요가 없다.
+사용자가 로딩 UI를 먼저 보고, 데이터가 도착하면 화면이 업데이트되는 흐름.
+이게 자연스러운 UX다.
+
+### 코드로 보기
+
+채팅 메시지를 불러오는 전형적인 패턴이다.
+
+```tsx
+function ChatRoom({ roomId }: { roomId: string }) {
+  const [messages, setMessages] = useState<Message[]>([])
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      const data = await getMessages(roomId)
+      setMessages(data)
+    }
+    fetchMessages()
+  }, [roomId]) // roomId가 바뀌면 다시 실행
+
+  if (messages.length === 0) return <p>메시지를 불러오는 중...</p>
+  return <MessageList messages={messages} />
+}
+```
+
+로딩 UI가 먼저 그려지고, 데이터가 도착하면 목록이 나타난다.
+
+### 클린업
+
+`useEffect`의 반환 함수는 **정리(cleanup)** 역할을 한다.
+이벤트 리스너나 구독처럼, 컴포넌트가 사라질 때 해제해야 하는 것들이 여기 들어간다.
+
+```tsx
+function WindowSize() {
+  const [width, setWidth] = useState(window.innerWidth)
+
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
+
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  return <p>현재 너비: {width}px</p>
+}
+```
+
+정리 함수를 빼먹으면 메모리 누수가 생기거나,
+이미 사라진 컴포넌트의 상태를 업데이트하려다 경고가 뜬다.
+
+### useEffect의 한계
+
+`useEffect`는 만능이 아니다. 다음과 같은 상황에서 한계가 드러난다.
+
+1. **DOM을 측정해서 UI를 조정해야 할 때** — paint 후에 실행되기 때문에 한 프레임 깜빡임이 생긴다
+2. **React Native에서 화면이 다시 보일 때마다 실행해야 할 때** — 스택 네비게이션에서 화면이 언마운트되지 않는다
+3. **Effect 안에서 최신 값을 읽고 싶지만, 그 값 때문에 재실행되면 안 될 때** — 의존성 배열의 딜레마
+
+이 세 가지 한계를 해결하기 위해 나온 훅들을 하나씩 살펴보자.
+
+---
+
+## 2. useLayoutEffect — paint 전에 끼어들기
+
+`useLayoutEffect`를 이해하려면, 먼저 React에서 **화면이 어떻게 그려지는지** 알아야 한다.
+
+### 브라우저는 화면을 어떻게 그리는가
+
+React에서 상태가 바뀌면 다음 과정이 순서대로 일어난다.
+
+```
+1. 렌더링 (Render)
+   React가 컴포넌트 함수를 호출해서 새로운 JSX를 만든다.
+   이 단계에서는 아직 화면에 아무 변화도 없다.
+
+2. DOM 변경 (Commit)
+   React가 실제 DOM을 업데이트한다.
+   DOM은 바뀌었지만, 브라우저가 아직 화면에 그리지는 않은 상태다.
+
+3. 브라우저 Paint
+   브라우저가 변경된 DOM을 화면에 실제로 그린다.
+   이 순간 사용자 눈에 변화가 보인다.
+```
+
+핵심은 **2번과 3번 사이에 틈**이 있다는 것이다.
+DOM은 이미 바뀌었지만, 사용자 눈에는 아직 안 보이는 순간.
+
+`useEffect`는 3번(Paint) **후에** 실행된다. 대부분은 이걸로 충분하다.
+하지만 "DOM이 바뀐 직후, Paint 전에 뭔가를 해야 하는" 상황이 있다.
+그게 바로 `useLayoutEffect`가 끼어드는 지점이다.
+
+### useLayoutEffect란
+
+[`useLayoutEffect`](https://react.dev/reference/react/useLayoutEffect)는 `useEffect`와 **같은 시기(React 16.8)에** 함께 등장했다.
+사용법도 완전히 동일하다. 콜백, 클린업, 의존성 배열 — 전부 같다.
+
+유일한 차이는 **실행 타이밍**이다.
+
+```
+렌더링 → DOM 변경 → useLayoutEffect → 브라우저 Paint → useEffect
+                        ↑                                    ↑
+                 paint 전에 끼어듦                    paint 후에 실행
+```
+
+`useEffect`가 Paint **후에** 비동기로 실행되는 반면,
+`useLayoutEffect`는 DOM 변경 직후, Paint **전에** 동기적으로 실행된다.
+
+한 줄로 요약하면 이렇다.
+**"화면에 그려지기 전에 DOM을 측정하거나 조정해야 할 때"** 쓰는 훅이다.
+
+### 문제: 깜빡이는 팝오버
+
+위에서 말한 "한계 1번"에 해당하는 상황이다.
+버튼을 클릭하면 팝오버가 나타나는데, 위치를 버튼 기준으로 계산해야 한다.
+
+자연스럽게 `useEffect`를 쓴다.
+
+```tsx
+interface PopoverProps {
+  anchorRef: React.RefObject<HTMLButtonElement | null>
+  children: React.ReactNode
+}
+
+function Popover({ anchorRef, children }: PopoverProps) {
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+
+  useEffect(() => { // [!code error]
+    const rect = anchorRef.current?.getBoundingClientRect()
+    if (!rect) return
+    setPos({ top: rect.bottom + 4, left: rect.left })
+  }, []) // [!code error]
+
+  return (
+    <div style={{ position: 'fixed', top: pos.top, left: pos.left }}>
+      {children}
+    </div>
+  )
+}
+```
+
+이 코드에서 벌어지는 일을 순서대로 따라가보자.
+
+1. 첫 렌더링: 팝오버가 `(0, 0)` 위치에 그려진다
+2. **브라우저가 이 잘못된 위치를 paint한다** — 사용자 눈에 보인다
+3. `useEffect` 실행 → 올바른 위치 계산 → `setPos`
+4. 리렌더링 → 올바른 위치에 다시 paint
+
+2번과 4번 사이, **한 프레임의 깜빡임**이 발생한다.
+팝오버가 왼쪽 상단에서 번쩍 나타났다가 순간이동하는 것이다.
+
+아래 그림으로 보면 차이가 한눈에 들어온다.
+
+<div class="image-grid">
+  <img src="/images/use-effect-comparison/popover-before.svg" alt="useEffect 사용 시 팝오버가 (0,0)에서 깜빡인 뒤 올바른 위치로 이동하는 모습" />
+  <img src="/images/use-effect-comparison/popover-after.svg" alt="useLayoutEffect 사용 시 팝오버가 처음부터 올바른 위치에 나타나는 모습" />
+</div>
+
+왼쪽이 `useEffect`, 오른쪽이 `useLayoutEffect`다.
+왼쪽은 잘못된 위치에 먼저 그려진 뒤 이동하지만, 오른쪽은 처음부터 올바른 위치에 나타난다.
+
+### 해결
+
+`useLayoutEffect`로 바꾸면 된다. 코드 변경은 딱 한 단어다.
+
+```tsx
+function Popover({ anchorRef, children }: PopoverProps) {
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+
+  useLayoutEffect(() => { // [!code highlight]
+    const rect = anchorRef.current?.getBoundingClientRect()
+    if (!rect) return
+    setPos({ top: rect.bottom + 4, left: rect.left })
+  }, []) // [!code highlight]
+
+  return (
+    <div style={{ position: 'fixed', top: pos.top, left: pos.left }}>
+      {children}
+    </div>
+  )
+}
+```
+
+이번에는 흐름이 달라진다.
+
+1. 첫 렌더링: 팝오버 DOM이 생성된다 (아직 화면에 **안 보인다**)
+2. `useLayoutEffect`가 **paint 전에** 동기 실행 → 올바른 위치 계산
+3. React가 상태 업데이트 처리
+4. 브라우저가 **처음부터 올바른 위치에** paint
+
+깜빡임이 사라진다.
+
+### 주의: 성능 비용
+
+`useLayoutEffect`는 **브라우저의 paint를 막는다**.
+안에서 무거운 연산을 하면 그 시간만큼 사용자는 빈 화면을 보게 된다.
+
+> `useLayoutEffect` can hurt performance. Prefer `useEffect` when possible.
+> — [React 공식 문서](https://react.dev/reference/react/useLayoutEffect)
+
+**DOM 측정이나 깜빡임 방지가 필요한 경우에만** 쓴다.
+API 호출 같은 비동기 작업을 여기에 넣으면 안 된다.
+
+---
+
+## 3. useFocusEffect — 화면이 다시 보일 때마다
+
+위에서 말한 "한계 2번"에 해당하는 상황이다.
+
+[`useFocusEffect`](https://reactnavigation.org/docs/use-focus-effect/)는 React 자체 훅이 아니다.
+[React Navigation](https://reactnavigation.org/) 라이브러리가 제공하는 훅으로, **React Native 앱에서 화면 전환을 다룰 때** 사용한다.
+
+`useEffect`와 비슷하게 생겼지만, **실행 조건이 근본적으로 다르다**.
+
+- `useEffect` → 컴포넌트의 **마운트/언마운트**에 반응
+- `useFocusEffect` → 화면의 **focus/blur**에 반응
+
+이 훅은 React Native 전용이기 때문에, 아래 예시 코드도 React Native로 작성했다.
+
+### 문제: 뒤로 가기의 함정
+
+React Native에서 화면을 이동하면,
+이전 화면이 **언마운트되지 않고 스택에 남아있다**.
+
+```
+[게시글 목록] ──navigate──▶ [게시글 작성]
+                                │
+                           (새 글 작성 완료)
+                                │
+[게시글 목록] ◀──뒤로 가기──────┘
+     ↑
+  이 화면은 언마운트된 적이 없다!
+```
+
+게시글 목록에서 `useEffect`로 데이터를 불러오고 있다고 해보자.
+
+```tsx
+function PostList({ navigation }: { navigation: NavigationProp }) {
+  const [posts, setPosts] = useState<Post[]>([])
+
+  useEffect(() => {
+    getPosts().then(setPosts)
+  }, []) // 마운트 시 한 번만 실행
+
+  return (
+    <FlatList
+      data={posts}
+      renderItem={({ item }) => <Text>{item.title}</Text>}
+    />
+  )
+}
+```
+
+사용자가 새 글을 작성하고 뒤로 돌아온다.
+그런데 목록에는 **방금 작성한 글이 없다**.
+
+왜? `PostList`는 언마운트된 적이 없으니까.
+`useEffect`의 `[]`은 "마운트 시 한 번만"이라는 뜻인데,
+마운트는 이미 끝났고 다시 일어나지 않는다.
+
+### 해결
+
+`useFocusEffect`는 화면이 **focus를 얻을 때마다** 실행된다.
+처음 마운트될 때도, 뒤로 가기로 돌아왔을 때도.
+
+```tsx
+import { useFocusEffect } from '@react-navigation/native'
+
+function PostList({ navigation }: { navigation: NavigationProp }) {
+  const [posts, setPosts] = useState<Post[]>([])
+
+  useFocusEffect(
+    useCallback(() => {
+      getPosts().then(setPosts) // 화면이 보일 때마다 실행
+
+      return () => {
+        // 화면을 떠날 때 정리 작업
+      }
+    }, [])
+  )
+
+  return (
+    <FlatList
+      data={posts}
+      renderItem={({ item }) => <Text>{item.title}</Text>}
+    />
+  )
+}
+```
+
+이제 뒤로 돌아오면 목록이 자동으로 새로고침된다.
+
+### useCallback을 빼먹으면?
+
+`useFocusEffect`에 전달하는 콜백은 반드시 `useCallback`으로 감싸야 한다.
+감싸지 않으면 매 렌더링마다 새 함수 참조가 생기고, 결과는 **무한 루프**다.
+
+```tsx
+// 무한 루프
+useFocusEffect(() => { // [!code error]
+  getPosts().then(setPosts) // [!code error]
+}) // [!code error]
+
+// useCallback으로 감싸야 한다
+useFocusEffect(
+  useCallback(() => { // [!code highlight]
+    getPosts().then(setPosts)
+  }, []) // [!code highlight]
+)
+```
+
+React Navigation 공식 문서에서도 첫 번째로 경고하는 부분이다.
+
+---
+
+## 4. useEffectEvent — 의존성 배열의 딜레마 해결
+
+위에서 말한 "한계 3번"에 해당하는 상황이다.
+
+`useEffect`를 쓰다 보면 이런 딜레마를 자주 만난다.
+
+### 문제
+
+채팅방에 연결하는 Effect가 있다.
+연결이 되면 현재 테마에 맞는 알림을 보여주고 싶다.
+
+```tsx
+function ChatRoom({ roomId, theme }: { roomId: string; theme: 'light' | 'dark' }) {
+  useEffect(() => {
+    const connection = createConnection(roomId)
+
+    connection.on('connected', () => {
+      showNotification('연결됨!', theme) // theme의 최신 값이 필요하다
+    })
+
+    connection.connect()
+    return () => connection.disconnect()
+  }, [roomId, theme]) // [!code error]
+}
+```
+
+`theme`이 의존성에 있기 때문에, 사용자가 다크 모드를 토글할 때마다
+**채팅 연결이 끊겼다가 다시 맺어진다**.
+
+테마가 바뀐다고 채팅 연결을 다시 할 이유는 없다.
+`theme`은 단지 알림을 보여줄 때 **최신 값을 읽고 싶을 뿐**이다.
+
+그렇다고 `theme`을 의존성에서 빼면?
+알림에 항상 처음 연결 시점의 `theme` 값이 사용된다.
+
+이것이 의존성 배열의 근본적인 딜레마다.
+**"최신 값을 읽고 싶지만, 그 값이 바뀔 때 Effect를 재실행하고 싶지는 않다."**
+
+### 해결
+
+[`useEffectEvent`](https://react.dev/learn/separating-events-from-effects#declaring-an-effect-event)는 이 문제를 풀기 위해 만들어졌다.
+Effect 안에서 사용하지만, **의존성 배열에 포함되지 않으면서 항상 최신 값을 읽는 함수**를 만들어준다.
+
+```tsx
+function ChatRoom({ roomId, theme }: { roomId: string; theme: 'light' | 'dark' }) {
+  const onConnected = useEffectEvent(() => { // [!code highlight]
+    showNotification('연결됨!', theme) // 항상 최신 theme을 읽는다 // [!code highlight]
+  }) // [!code highlight]
+
+  useEffect(() => {
+    const connection = createConnection(roomId)
+    connection.on('connected', () => onConnected())
+    connection.connect()
+    return () => connection.disconnect()
+  }, [roomId]) // theme이 없어도 된다!
+}
+```
+
+- `roomId`가 바뀌면 → 연결을 다시 맺는다 (의도한 동작)
+- `theme`이 바뀌면 → 연결은 유지하되, 다음 알림에서 새 테마가 적용된다 (의도한 동작)
+
+### React 19.2부터 안정 API
+
+`useEffectEvent`는 오랫동안 실험적(experimental) API였지만,
+**React 19.2(2025년 10월)**부터 안정 버전에 포함되었다.
+
+이제 별도의 설정 없이 `react` 패키지에서 직접 import할 수 있다.
+
+```ts
+import { useEffectEvent } from 'react'
+```
+
+React 19.2 미만 버전을 사용하고 있다면, `useRef`로 최신 값을 유지하는 패턴이 대안이 된다.
+
+```tsx
+const themeRef = useRef(theme)
+themeRef.current = theme
+
+useEffect(() => {
+  const connection = createConnection(roomId)
+  connection.on('connected', () => {
+    showNotification('연결됨!', themeRef.current)
+  })
+  connection.connect()
+  return () => connection.disconnect()
+}, [roomId])
+```
+
+`useEffectEvent`를 쓸 수 있는 환경이라면, 이런 `ref` 우회 없이 의도를 훨씬 명확하게 표현할 수 있다.
+
+---
+
+## 한눈에 정리
+
+| | `useEffect` | `useLayoutEffect` | `useFocusEffect` | `useEffectEvent` |
+|---|---|---|---|---|
+| **등장** | React 16.8 | React 16.8 | React Navigation | React 19.2 |
+| **실행 시점** | paint **후** (비동기) | paint **전** (동기) | 화면 focus 시 | Effect 내부에서 호출 |
+| **주 용도** | API 호출, 구독, 로깅 | DOM 측정, 깜빡임 방지 | 화면 복귀 시 갱신 | 최신 값 읽기 (deps 제외) |
+| **성능** | 낮음 | 높을 수 있음 | 낮음 | 없음 (함수 래퍼) |
+
+어떤 훅을 써야 할지 고민된다면, 이 순서로 판단하면 된다.
+
+```
+Q1. React Native에서 화면 전환 시마다 실행해야 하는가?
+  → 예: useFocusEffect
+  → 아니오: Q2로
+
+Q2. DOM을 측정하거나 시각적 깜빡임을 방지해야 하는가?
+  → 예: useLayoutEffect
+  → 아니오: Q3로
+
+Q3. Effect 안에서 최신 값을 읽되, 의존성에는 넣고 싶지 않은가?
+  → 예: useEffectEvent (또는 ref 패턴)
+  → 아니오: useEffect
+```
+
+대부분의 상황에서는 `useEffect`로 충분하다.
+나머지 훅들은 **특정 한계를 해결하기 위한 도구**라고 생각하면 된다.
+
+---
+
+## 마무리
+
+네 훅의 차이는 결국 **"언제, 어떤 조건으로 실행되는가"**다.
+
+- `useEffect` → 화면이 그려진 **후에** 실행. 가장 범용적이다.
+- `useLayoutEffect` → 화면이 그려지기 **전에** 실행. DOM 측정이나 깜빡임 방지에 쓴다.
+- `useFocusEffect` → 화면이 **다시 보일 때마다** 실행. 네비게이션 기반 앱에서 쓴다.
+- `useEffectEvent` → Effect 안에서 **최신 값을 읽되 재실행은 막는다**. 의존성 딜레마를 해결한다.
+
+[이전 글](https://www.yolog.co.kr/post/side-effect)에서는 부수 효과가 **무엇인지** 다뤘다면,
+이 글에서는 그 부수 효과를 **어떤 훅으로** 다뤄야 하는지를 다뤘다.
+
+타이밍 하나 잘못 잡으면 UI가 깜빡이고, 데이터가 꼬이고, 불필요한 연결이 생긴다.
+각 훅이 해결하는 문제를 정확히 이해하는 것이 답이다.

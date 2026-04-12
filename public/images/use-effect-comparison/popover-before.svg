@@ -1,0 +1,39 @@
+<svg width="100%" viewBox="0 0 360 280" xmlns="http://www.w3.org/2000/svg">
+  <rect width="360" height="280" fill="rgb(28, 28, 26)"/>
+
+  <!-- Title -->
+  <text x="180" y="24" text-anchor="middle" style="fill:rgb(233, 49, 71);font-family:'Anthropic Sans', -apple-system, system-ui, sans-serif;font-size:13px;font-weight:600;">useEffect — 깜빡임 발생</text>
+
+  <!-- Browser frame -->
+  <rect x="20" y="44" width="320" height="216" rx="8" style="fill:rgb(38, 38, 36);stroke:rgb(68, 68, 65);stroke-width:1px;"/>
+  <circle cx="38" cy="58" r="5" style="fill:rgb(233, 49, 71);"/>
+  <circle cx="54" cy="58" r="5" style="fill:rgb(236, 179, 71);"/>
+  <circle cx="70" cy="58" r="5" style="fill:rgb(93, 202, 165);"/>
+
+  <!-- Step 1: Popover at wrong position (0,0) -->
+  <text x="30" y="88" style="fill:rgb(156, 154, 146);font-family:'Anthropic Sans', -apple-system, system-ui, sans-serif;font-size:10px;">1단계: paint — 잘못된 위치</text>
+
+  <!-- Wrong popover at top-left -->
+  <rect x="30" y="96" width="100" height="32" rx="6" style="fill:rgb(60, 52, 137);stroke:rgb(175, 169, 236);stroke-width:1px;"/>
+  <text x="80" y="116" text-anchor="middle" style="fill:rgb(206, 203, 246);font-family:'Anthropic Sans', -apple-system, system-ui, sans-serif;font-size:11px;font-weight:500;">팝오버</text>
+
+  <!-- Flash indicator -->
+  <text x="140" y="116" style="fill:rgb(233, 49, 71);font-family:'Anthropic Sans', -apple-system, system-ui, sans-serif;font-size:18px;">⚡</text>
+
+  <!-- Button (actual anchor) -->
+  <rect x="180" y="180" width="80" height="32" rx="6" style="fill:rgb(68, 68, 65);stroke:rgb(180, 178, 169);stroke-width:1px;"/>
+  <text x="220" y="200" text-anchor="middle" style="fill:rgb(211, 209, 199);font-family:'Anthropic Sans', -apple-system, system-ui, sans-serif;font-size:11px;">버튼</text>
+
+  <!-- Step 2: Popover moves to correct position -->
+  <text x="30" y="155" style="fill:rgb(156, 154, 146);font-family:'Anthropic Sans', -apple-system, system-ui, sans-serif;font-size:10px;">2단계: useEffect → 위치 계산 → 다시 paint</text>
+
+  <!-- Correct popover above button -->
+  <rect x="165" y="142" width="110" height="32" rx="6" style="fill:rgb(60, 52, 137);stroke:rgb(175, 169, 236);stroke-width:1px;stroke-dasharray:4 3;"/>
+  <text x="220" y="162" text-anchor="middle" style="fill:rgb(206, 203, 246);font-family:'Anthropic Sans', -apple-system, system-ui, sans-serif;font-size:11px;font-weight:500;">팝오버 (이동)</text>
+
+  <!-- Arrow showing movement -->
+  <line x1="130" y1="112" x2="165" y2="152" style="stroke:rgb(233, 49, 71);stroke-width:1.5px;stroke-dasharray:4 3;"/>
+
+  <!-- Bottom label -->
+  <text x="180" y="245" text-anchor="middle" style="fill:rgb(233, 49, 71);font-family:'Anthropic Sans', -apple-system, system-ui, sans-serif;font-size:11px;font-weight:500;">사용자가 깜빡임을 느낀다</text>
+</svg>
