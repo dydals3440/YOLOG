@@ -1,7 +1,6 @@
 import mdx from "@astrojs/mdx";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
-import tailwind from "@astrojs/tailwind";
 import vercel from "@astrojs/vercel";
 import {
   transformerMetaHighlight,
@@ -11,6 +10,7 @@ import {
   transformerNotationFocus,
   transformerNotationHighlight,
 } from "@shikijs/transformers";
+import tailwindcss from "@tailwindcss/vite";
 
 import { defineConfig } from "astro/config";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
@@ -78,9 +78,9 @@ export default defineConfig({
       ],
     }),
     sitemap(),
-    tailwind({
-      applyBaseStyles: false,
-    }),
     react(),
   ],
+  vite: {
+    plugins: [tailwindcss()],
+  },
 });

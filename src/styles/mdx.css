@@ -1,3 +1,5 @@
+@reference "./global.css";
+
 :root {
   --vp-c-white: #ffffff;
   --vp-c-black: #000000;
@@ -288,9 +290,24 @@
   border-radius: 4px;
 }
 
-/* 형광펜 스타일 - 실제 형광펜처럼 자연스럽게 */
+/* 형광펜 스타일 — oklch + color-mix 기반
+   색은 .pink/.blue/.green/.orange 클래스로 --highlight 변수만 교체. */
+.mdx {
+  --highlight-yellow: oklch(0.9 0.18 98);
+  --highlight-pink: oklch(0.75 0.22 0);
+  --highlight-blue: oklch(0.82 0.15 220);
+  --highlight-green: oklch(0.87 0.2 135);
+  --highlight-orange: oklch(0.8 0.18 60);
+  --highlight-opacity: 40%;
+}
+
+.dark .mdx {
+  --highlight-opacity: 55%;
+}
+
 .mdx mark,
 .mdx .highlight {
+  --highlight: var(--highlight-yellow);
   position: relative;
   display: inline;
   padding: 0 1px;
@@ -299,8 +316,8 @@
   background: linear-gradient(
     to bottom,
     transparent 25%,
-    rgba(255, 235, 59, 0.4) 25%,
-    rgba(255, 235, 59, 0.4) 100%
+    color-mix(in oklch, var(--highlight) var(--highlight-opacity), transparent) 25%,
+    color-mix(in oklch, var(--highlight) var(--highlight-opacity), transparent) 100%
   );
   background-color: transparent;
   border: none;
@@ -309,109 +326,24 @@
   transition: background 0.2s ease;
 }
 
-/* 다크 모드에서 더 밝고 선명한 형광펜 효과 */
-.dark .mdx mark,
-.dark .mdx .highlight {
-  background: linear-gradient(
-    to bottom,
-    transparent 25%,
-    rgba(255, 235, 59, 0.45) 25%,
-    rgba(255, 235, 59, 0.45) 100%
-  );
-  color: inherit;
-  filter: brightness(1.3) contrast(1.1);
-}
-
-/* 핑크 형광펜 - .pink 클래스 추가 시 */
 .mdx mark.pink,
 .mdx .highlight.pink {
-  background: linear-gradient(
-    to bottom,
-    transparent 25%,
-    rgba(255, 107, 157, 0.4) 25%,
-    rgba(255, 107, 157, 0.4) 100%
-  );
+  --highlight: var(--highlight-pink);
 }
 
-.dark .mdx mark.pink,
-.dark .mdx .highlight.pink {
-  background: linear-gradient(
-    to bottom,
-    transparent 25%,
-    rgba(255, 107, 157, 0.45) 25%,
-    rgba(255, 107, 157, 0.45) 100%
-  );
-  color: inherit;
-  filter: brightness(1.3) contrast(1.1);
-}
-
-/* 블루 형광펜 - .blue 클래스 추가 시 */
 .mdx mark.blue,
 .mdx .highlight.blue {
-  background: linear-gradient(
-    to bottom,
-    transparent 25%,
-    rgba(102, 217, 239, 0.4) 25%,
-    rgba(102, 217, 239, 0.4) 100%
-  );
+  --highlight: var(--highlight-blue);
 }
 
-.dark .mdx mark.blue,
-.dark .mdx .highlight.blue {
-  background: linear-gradient(
-    to bottom,
-    transparent 25%,
-    rgba(102, 217, 239, 0.45) 25%,
-    rgba(102, 217, 239, 0.45) 100%
-  );
-  color: inherit;
-  filter: brightness(1.3) contrast(1.1);
-}
-
-/* 그린 형광펜 - .green 클래스 추가 시 */
 .mdx mark.green,
 .mdx .highlight.green {
-  background: linear-gradient(
-    to bottom,
-    transparent 25%,
-    rgba(166, 226, 46, 0.4) 25%,
-    rgba(166, 226, 46, 0.4) 100%
-  );
+  --highlight: var(--highlight-green);
 }
 
-.dark .mdx mark.green,
-.dark .mdx .highlight.green {
-  background: linear-gradient(
-    to bottom,
-    transparent 25%,
-    rgba(166, 226, 46, 0.45) 25%,
-    rgba(166, 226, 46, 0.45) 100%
-  );
-  color: inherit;
-  filter: brightness(1.3) contrast(1.1);
-}
-
-/* 오렌지 형광펜 - .orange 클래스 추가 시 */
 .mdx mark.orange,
 .mdx .highlight.orange {
-  background: linear-gradient(
-    to bottom,
-    transparent 25%,
-    rgba(253, 151, 31, 0.4) 25%,
-    rgba(253, 151, 31, 0.4) 100%
-  );
-}
-
-.dark .mdx mark.orange,
-.dark .mdx .highlight.orange {
-  background: linear-gradient(
-    to bottom,
-    transparent 25%,
-    rgba(253, 151, 31, 0.45) 25%,
-    rgba(253, 151, 31, 0.45) 100%
-  );
-  color: inherit;
-  filter: brightness(1.3) contrast(1.1);
+  --highlight: var(--highlight-orange);
 }
 
 pre.astro-code {

@@ -1,6 +1,131 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* v3 darkMode: ["class"] equivalent */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* v3 theme.container equivalent (center + 2rem padding + 2xl: 1400px) */
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+  @media (width >= 1400px) {
+    max-width: 1400px;
+  }
+}
+
+/* v3 theme.screens { sm/md/lg/xl: { max: ... } } equivalent:
+   remove default min-width breakpoints, redefine as max-width. */
+@theme {
+  --breakpoint-sm: initial;
+  --breakpoint-md: initial;
+  --breakpoint-lg: initial;
+  --breakpoint-xl: initial;
+  --breakpoint-2xl: initial;
+}
+
+@custom-variant sm (@media (max-width: 640px));
+@custom-variant md (@media (max-width: 768px));
+@custom-variant lg (@media (max-width: 1024px));
+@custom-variant xl (@media (max-width: 1200px));
+
+/* v3 theme tokens as Tailwind v4 theme variables.
+   Use `inline` so external CSS variables resolve at usage time
+   (no circular references for --font-sans / --font-serif / --font-mono). */
+@theme inline {
+  /* font families (external CSS vars injected by FontLoader.astro) */
+  --font-sans: var(--font-sans), sans;
+  --font-serif: var(--font-serif), sans-serif;
+  --font-mono: var(--font-mono), monospace;
+
+  /* Keep Tailwind v4's default oklch palette (red/blue/green/yellow/...) —
+     our gray-* below overrides the built-in grays.
+     This lights up previously-dead chromatic classes (Toast destructive,
+     Pagination active, home links, ShareButton success tick, etc.). */
+
+  /* gray palette (50–950) */
+  --color-gray-50: var(--gray-50);
+  --color-gray-75: var(--gray-75);
+  --color-gray-100: var(--gray-100);
+  --color-gray-200: var(--gray-200);
+  --color-gray-300: var(--gray-300);
+  --color-gray-400: var(--gray-400);
+  --color-gray-500: var(--gray-500);
+  --color-gray-600: var(--gray-600);
+  --color-gray-700: var(--gray-700);
+  --color-gray-800: var(--gray-800);
+  --color-gray-900: var(--gray-900);
+  --color-gray-950: var(--gray-950);
+
+  /* simple tokens */
+  --color-selection: var(--selection);
+  --color-drag: var(--drag);
+
+  /* shadcn-style HSL tokens */
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  /* text colors (text-heading / text-body / text-second / text-disabled) */
+  --color-heading: var(--heading);
+  --color-body: var(--text-body);
+  --color-second: var(--text-second);
+  --color-disabled: var(--text-disabled);
+
+  /* backgrounds (bg-page / bg-opacity) */
+  --color-page: var(--page-background);
+  --color-opacity: var(--page-opacity);
+
+  /* widths (w-page / w-content / max-w-page / max-w-content) */
+  --spacing-page: var(--page-top);
+  --spacing-half-page: var(--page-half-top);
+
+  /* border radius */
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+/* width/max-w tokens that should not be inlined (no external var refs at use site) */
+@theme {
+  --container-page: 1024px;
+  --container-content: 680px;
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+}
 
 /* colors */
 @layer base {
@@ -34,7 +159,7 @@
     --foreground: 240 10% 3.9%;
 
     --code-highlighted: var(--selection);
-    --progress-bar-color: var(--gray-800);
+    --progress-bar-color: oklch(0.7 0.15 250);
   }
 
   .dark {
@@ -66,7 +191,7 @@
     --foreground: 0 0% 98%;
 
     --code-highlighted: hsla(240, 5%, 84%, 0.06);
-    --progress-bar-color: #60a5fa;
+    --progress-bar-color: oklch(0.75 0.14 250);
   }
 }
 
@@ -112,8 +237,7 @@
     padding-left: var(--body-margin-left);
   }
 
-  main > .container {
-    @apply mx-auto max-w-content pt-page;
+  main > .main-container {
     min-height: calc(100vh - var(--page-half-top) * 2 - 20px);
   }
 

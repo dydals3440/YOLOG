@@ -26,6 +26,8 @@ import ThemeToggle from '@/components/ui/ThemeToggle'
 </header>
 
 <style>
+  @reference "@/styles/global.css";
+
   .blur-layer {
     @apply pointer-events-none fixed inset-0 z-10 h-[var(--header-height)] bg-background/70 backdrop-blur-[--blur-size];
     --blur-size: 10px;
