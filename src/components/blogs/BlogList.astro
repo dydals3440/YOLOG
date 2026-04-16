@@ -1,0 +1,22 @@
+---
+import type { CollectionEntry } from 'astro:content'
+
+import BlogCard from './BlogCard.astro'
+
+interface Props {
+  posts: CollectionEntry<'post'>[]
+}
+
+const { posts } = Astro.props
+---
+
+<div class="divide-y divide-border">
+  {posts.map(post => (
+    <a
+      href={`/post/${post.id.replace('blog/', '')}`}
+      class="group block -mx-4 px-4 py-6 rounded-lg transition-colors duration-200 hover:bg-hover sm:-mx-3 sm:px-3 sm:py-5"
+    >
+      <BlogCard post={post} />
+    </a>
+  ))}
+</div>

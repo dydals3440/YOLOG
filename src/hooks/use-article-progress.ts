@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface ArticleProgressResult {
   progress: number;
@@ -46,10 +46,7 @@ export function useArticleProgress({
       // 아티클 끝을 지나면 100%
       const readableHeight = articleHeight - windowHeight * readableOffset;
       const scrolled = scrollY - articleTop;
-      const percentage = Math.min(
-        Math.max((scrolled / readableHeight) * 100, 0),
-        100,
-      );
+      const percentage = Math.min(Math.max((scrolled / readableHeight) * 100, 0), 100);
 
       setProgress(percentage);
       setIsVisible(scrollY > articleTop - windowHeight * visibilityOffset);

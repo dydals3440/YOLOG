@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
 import {
-  TwitterXIcon,
+  CopyCheckIcon,
   FacebookIcon,
   LinkedinIcon,
   LinkIcon,
   ShareIcon,
-  CopyCheckIcon,
+  TwitterXIcon,
 } from "@/components/ui/Icons";
-import { useToast } from "@/hooks/use-toast";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
+import { useToast } from "@/hooks/use-toast";
 import {
   copyToClipboard,
   createShareUrls,
@@ -64,7 +64,7 @@ const SocialShare = ({ title, url }: SocialShareProps) => {
         title: "링크가 복사되었습니다",
         description: "클립보드에 저장되었습니다",
       });
-    } catch (err) {
+    } catch {
       toast({
         title: "복사 실패",
         description: "링크 복사에 실패했습니다",
@@ -75,8 +75,7 @@ const SocialShare = ({ title, url }: SocialShareProps) => {
     }
   };
 
-  const isNativeShareSupported =
-    typeof navigator !== "undefined" && "share" in navigator;
+  const isNativeShareSupported = typeof navigator !== "undefined" && "share" in navigator;
 
   return (
     <ShareContainer>

@@ -1,37 +1,31 @@
 ---
-import type { BlogCardProps } from "@/types";
-import CategoryBadge from "./CategoryBadge.astro";
-import PostMeta from "./PostMeta.astro";
-import ReadingTime from "./ReadingTime.astro";
+import type { BlogCardProps } from '@/types'
+
+import CategoryBadge from './CategoryBadge.astro'
+import PostMeta from './PostMeta.astro'
+import ReadingTime from './ReadingTime.astro'
 
 export interface Props extends BlogCardProps {}
 
-const { post } = Astro.props;
-const { title, description, date, category } = post.data;
-const slug = post.id.replace("blog/", "");
+const { post } = Astro.props
+const { title, description, date, category } = post.data
 ---
 
-<article class="group">
-  <a href={`/post/${slug}`} class="block py-6 transition-colors duration-200 hover:bg-hover rounded-lg -mx-4 px-4 sm:py-5 sm:-mx-3 sm:px-3">
-    <!-- 카테고리 & 메타 정보 -->
-    <div class="flex items-center gap-3 mb-3">
-      <CategoryBadge category={category} />
-      <ReadingTime content={post.body} />
-    </div>
+<article>
+  <div class="mb-3 flex items-center gap-3">
+    <CategoryBadge category={category} />
+    <ReadingTime content={post.body} />
+  </div>
 
-    <!-- 제목 -->
-    <h2 class="mb-2 text-lg font-semibold text-primary leading-snug line-clamp-2 sm:text-base">
-      {title}
-    </h2>
+  <h2 class="mb-2 text-lg font-semibold leading-snug text-primary line-clamp-2 sm:text-base">
+    {title}
+  </h2>
 
-    <!-- 설명 -->
-    {description && (
-      <p class="mb-4 text-sm text-second line-clamp-2 leading-relaxed">
-        {description}
-      </p>
-    )}
+  {description && (
+    <p class="mb-4 text-sm leading-relaxed text-second line-clamp-2">
+      {description}
+    </p>
+  )}
 
-    <!-- 하단 정보 -->
-    <PostMeta date={date} showArrow={true} />
-  </a>
+  <PostMeta date={date} showArrow={true} />
 </article>

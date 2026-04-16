@@ -14,10 +14,7 @@ export type ThemeValue = (typeof THEME_MAP)[ThemeKey];
 
 export const STORAGE_THEME_KEY = "theme" as const;
 
-export const themeStore = persistentAtom<ThemeValue>(
-  STORAGE_THEME_KEY,
-  THEME_MAP.system,
-);
+export const themeStore = persistentAtom<ThemeValue>(STORAGE_THEME_KEY, THEME_MAP.system);
 
 const initThemeStoreSubscribe = () => {
   const applyTheme = (theme: ThemeValue) => {
@@ -31,9 +28,7 @@ const initThemeStoreSubscribe = () => {
   };
 
   let mediaQuery: MediaQueryList | null = null;
-  let mediaQueryHandler:
-    | ((event: MediaQueryListEvent | MediaQueryList) => void)
-    | null = null;
+  let mediaQueryHandler: ((event: MediaQueryListEvent | MediaQueryList) => void) | null = null;
 
   themeStore.subscribe((theme) => {
     // 이전 리스너 정리

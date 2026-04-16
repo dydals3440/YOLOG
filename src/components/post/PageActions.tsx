@@ -10,20 +10,14 @@ const PageActions = () => {
       </li>
       <li>
         <ActionButton
-          onClick={() =>
-            document
-              .querySelector(".giscus")
-              ?.scrollIntoView({ behavior: "smooth" })
-          }
+          onClick={() => document.querySelector(".giscus")?.scrollIntoView({ behavior: "smooth" })}
         >
           <MessageCircle size={18} />
           <span className="sr-only">댓글으로 이동</span>
         </ActionButton>
       </li>
       <li className="lg:hidden">
-        <ActionButton
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        >
+        <ActionButton onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
           <ArrowUp size={18} />
           <span className="sr-only">상단으로 이동</span>
         </ActionButton>

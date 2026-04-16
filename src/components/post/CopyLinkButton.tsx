@@ -1,10 +1,10 @@
 import { useCallback } from "react";
 
-import { LinkIcon, CheckIcon } from "@/components/ui/Icons";
-import { copyToClipboard } from "@/lib/utils/share";
-import { useToast } from "@/hooks/use-toast";
+import { CheckIcon, LinkIcon } from "@/components/ui/Icons";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
+import { useToast } from "@/hooks/use-toast";
 import { DELAYS } from "@/lib/config";
+import { copyToClipboard } from "@/lib/utils/share";
 import ActionButton from "./ActionButton";
 
 const CopyLinkButton = () => {

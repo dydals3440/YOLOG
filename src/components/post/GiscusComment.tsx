@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { giscusThemes, type GiscusTheme } from "@/lib/utils/giscus";
+import { type GiscusTheme, giscusThemes } from "@/lib/utils/giscus";
 
 // 환경 변수에서 Giscus 설정 가져오기
 const GISCUS_CONFIG = {
@@ -14,15 +14,11 @@ const GiscusComment = (props: React.HTMLAttributes<HTMLElement>) => {
   useEffect(() => {
     // Giscus 설정 검증
     if (!GISCUS_CONFIG.repo || !GISCUS_CONFIG.repoId) {
-      console.error(
-        "Giscus configuration is missing. Please check environment variables.",
-      );
+      console.error("Giscus configuration is missing. Please check environment variables.");
       return;
     }
 
-    const theme: GiscusTheme = document.documentElement.classList.contains(
-      "dark",
-    )
+    const theme: GiscusTheme = document.documentElement.classList.contains("dark")
       ? "dark"
       : "light";
 
@@ -44,9 +40,9 @@ const GiscusComment = (props: React.HTMLAttributes<HTMLElement>) => {
     };
 
     const giscusScript = document.createElement("script");
-    Object.entries(giscusAttributes).forEach(([key, value]) =>
-      giscusScript.setAttribute(key, value),
-    );
+    Object.entries(giscusAttributes).forEach(([key, value]) => {
+      giscusScript.setAttribute(key, value);
+    });
 
     // 스크립트 로드 에러 처리
     giscusScript.onerror = () => {
@@ -59,9 +55,7 @@ const GiscusComment = (props: React.HTMLAttributes<HTMLElement>) => {
     }
   }, []);
 
-  return (
-    <section {...props} style={{ minHeight: "372px" }} id="giscus"></section>
-  );
+  return <section {...props} style={{ minHeight: "372px" }} id="giscus"></section>;
 };
 
 export default GiscusComment;

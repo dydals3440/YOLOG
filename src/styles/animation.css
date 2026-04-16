@@ -18,10 +18,10 @@
     animation: intro-stage 0.5s both;
     animation-delay: calc(var(--lv) * var(--delay) + var(--lv-wait) * var(--delay) + var(--start));
   }
-  [data-animate-speed='slow'] > * {
+  [data-animate-speed="slow"] > * {
     --delay: 100ms;
   }
-  [data-animate-speed='fast'] > * {
+  [data-animate-speed="fast"] > * {
     --delay: 25ms;
   }
 }

@@ -1,15 +1,13 @@
-import { type CollectionEntry } from 'astro:content';
-import { BLOG_CATEGORIES, type BlogCategory } from '@/consts';
-import dayjs from 'dayjs';
+import type { CollectionEntry } from "astro:content";
+import dayjs from "dayjs";
+import { BLOG_CATEGORIES, type BlogCategory } from "@/consts";
 
 /**
  * 게시글을 날짜 기준으로 내림차순 정렬합니다.
  * @param posts 정렬할 게시글 배열
  * @returns 정렬된 게시글 배열
  */
-export function sortPostsByDate(
-  posts: CollectionEntry<'post'>[]
-): CollectionEntry<'post'>[] {
+export function sortPostsByDate(posts: CollectionEntry<"post">[]): CollectionEntry<"post">[] {
   return posts.toSorted((a, b) => {
     return new Date(b.data.date).valueOf() - new Date(a.data.date).valueOf();
   });
@@ -21,10 +19,7 @@ export function sortPostsByDate(
  * @param format 날짜 형식 (기본값: 'YYYY년 MM월 DD일')
  * @returns 포맷팅된 날짜 문자열
  */
-export function formatDate(
-  date: Date | string,
-  format: string = 'YYYY년 MM월 DD일'
-): string {
+export function formatDate(date: Date | string, format: string = "YYYY년 MM월 DD일"): string {
   return dayjs(date).format(format);
 }
 
@@ -33,7 +28,7 @@ export function formatDate(
  * @param posts 전체 게시글 배열
  * @returns 카테고리 정보 배열
  */
-export function createCategoryList(posts: CollectionEntry<'post'>[]): Array<{
+export function createCategoryList(posts: CollectionEntry<"post">[]): Array<{
   id: BlogCategory;
   label: string;
   count: number;
@@ -41,10 +36,7 @@ export function createCategoryList(posts: CollectionEntry<'post'>[]): Array<{
   return Object.entries(BLOG_CATEGORIES).map(([key, value]) => ({
     id: key as BlogCategory,
     label: value,
-    count:
-      key === 'ALL'
-        ? posts.length
-        : posts.filter((post) => post.data.category === key).length,
+    count: key === "ALL" ? posts.length : posts.filter((post) => post.data.category === key).length,
   }));
 }
 
@@ -55,10 +47,10 @@ export function createCategoryList(posts: CollectionEntry<'post'>[]): Array<{
  * @returns 필터링된 게시글 배열
  */
 export function filterPostsByCategory(
-  posts: CollectionEntry<'post'>[],
-  category: BlogCategory
-): CollectionEntry<'post'>[] {
-  if (category === 'ALL') {
+  posts: CollectionEntry<"post">[],
+  category: BlogCategory,
+): CollectionEntry<"post">[] {
+  if (category === "ALL") {
     return posts;
   }
   return posts.filter((post) => post.data.category === category);
@@ -71,11 +63,7 @@ export function filterPostsByCategory(
  * @param currentPage 현재 페이지 (1부터 시작)
  * @returns 페이지네이션 정보
  */
-export function calculatePagination(
-  totalItems: number,
-  itemsPerPage: number,
-  currentPage: number
-) {
+export function calculatePagination(totalItems: number, itemsPerPage: number, currentPage: number) {
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
@@ -104,16 +92,13 @@ export function calculatePagination(
 export function paginateArray<T>(
   items: T[],
   page: number,
-  itemsPerPage: number = 5
+  itemsPerPage: number = 5,
 ): {
   items: T[];
   pagination: ReturnType<typeof calculatePagination>;
 } {
   const pagination = calculatePagination(items.length, itemsPerPage, page);
-  const paginatedItems = items.slice(
-    pagination.startIndex,
-    pagination.endIndex
-  );
+  const paginatedItems = items.slice(pagination.startIndex, pagination.endIndex);
 
   return {
     items: paginatedItems,

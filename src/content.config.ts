@@ -1,19 +1,19 @@
-import { defineCollection, z } from 'astro:content'
-import { glob } from 'astro/loaders'
-import { BLOG_CATEGORIES, type BlogCategory } from './consts'
+import { defineCollection, z } from "astro:content";
+import { glob } from "astro/loaders";
+import { BLOG_CATEGORIES, type BlogCategory } from "./consts";
 
 // BLOG_CATEGORIES의 키들을 타입으로 추출 (ALL 제외)
-const categoryKeys = Object.keys(BLOG_CATEGORIES).filter(key => key !== 'ALL')
+const categoryKeys = Object.keys(BLOG_CATEGORIES).filter((key) => key !== "ALL");
 
 // 최소 1개 요소를 보장하는 타입 가드
 if (categoryKeys.length === 0) {
-  throw new Error('BLOG_CATEGORIES must have at least one category besides ALL')
+  throw new Error("BLOG_CATEGORIES must have at least one category besides ALL");
 }
 
-const categoryValues = categoryKeys as [BlogCategory, ...BlogCategory[]]
+const categoryValues = categoryKeys as [BlogCategory, ...BlogCategory[]];
 
 const post = defineCollection({
-  loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/post' }),
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/post" }),
   schema: z.object({
     title: z.string(),
     description: z.string().optional(),
@@ -23,6 +23,6 @@ const post = defineCollection({
     tags: z.array(z.string()).optional(),
     category: z.enum(categoryValues).optional(),
   }),
-})
+});
 
-export const collections = { post }
+export const collections = { post };

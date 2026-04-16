@@ -1,6 +1,6 @@
 import { type CollectionEntry, getCollection } from "astro:content";
-import { sortPostsByDate } from "./blog-utils";
 import type { PostInfoModel, TOCSectionModel } from "@/types";
+import { sortPostsByDate } from "./blog-utils";
 
 export type { TOCSectionModel };
 
@@ -8,9 +8,7 @@ export const isBlogPost = (post: { id: string }) => {
   return post.id.includes("blog/");
 };
 
-export const getPostCollection = async (): Promise<
-  CollectionEntry<"post">[]
-> => {
+export const getPostCollection = async (): Promise<CollectionEntry<"post">[]> => {
   const posts = await getCollection("post");
   return sortPostsByDate(posts);
 };
@@ -78,13 +76,11 @@ export const parseToc = (source: string): TOCSectionModel[] => {
     const withoutCodeBlocks = source.replace(/```[\s\S]*?```/g, "");
 
     // H2 헤딩만 필터링
-    const h2Lines = withoutCodeBlocks
-      .split("\n")
-      .filter((line) => /^#{2}\s/.test(line));
+    const h2Lines = withoutCodeBlocks.split("\n").filter((line) => /^#{2}\s/.test(line));
 
     return h2Lines.map((rawHeading) => {
       // 마크다운 문법 제거
-      let cleanText = rawHeading
+      const cleanText = rawHeading
         .replace(/^##\s+/, "") // ## 제거
         .replace(/[*~]{2,}/g, "") // **bold**, ~~strike~~ 제거
         .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // 링크에서 텍스트만 추출

@@ -1,8 +1,8 @@
 interface Props {
-  title?: string
+  title?: string;
 }
 
-const Envelopment = ({ title = '' }: Props) => {
+const Envelopment = ({ title = "" }: Props) => {
   return (
     <div className="group/envelopment relative flex aspect-[200/283] w-[160px] cursor-pointer">
       <svg
@@ -71,7 +71,7 @@ const Envelopment = ({ title = '' }: Props) => {
         {title}
       </h2>
     </div>
-  )
-}
+  );
+};
 
-export default Envelopment
+export default Envelopment;

@@ -1,23 +1,19 @@
 ---
 import { getCollection } from 'astro:content'
 
-import BaseLayout from '@/layouts/BaseLayout.astro'
-import CategoryList from '@/components/blogs/CategoryList.astro'
-import BlogCard from '@/components/blogs/BlogCard.astro'
-import Pagination from '@/components/blogs/Pagination.astro'
 import YongGlass from '@/components/YongGlass.astro'
-import { sortPostsByDate, createCategoryList, paginateArray } from '@/lib/blog-utils'
+import BlogList from '@/components/blogs/BlogList.astro'
+import CategoryList from '@/components/blogs/CategoryList.astro'
+import Pagination from '@/components/blogs/Pagination.astro'
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import { createCategoryList, paginateArray, sortPostsByDate } from '@/lib/blog-utils'
 import { PAGINATION, getSiteUrl } from '@/lib/config'
 
 const allPosts = await getCollection('post')
 const sortedPosts = sortPostsByDate(allPosts)
 const categories = createCategoryList(allPosts)
-
 const { items: posts, pagination } = paginateArray(sortedPosts, 1, PAGINATION.POSTS_PER_PAGE)
-
-// SEO: 첫 페이지에서 rel="next" 링크 설정
-const siteUrl = getSiteUrl(Astro.site)
-const nextUrl = pagination.totalPages > 1 ? `${siteUrl}/blogs/page/2` : null
+const nextUrl = pagination.totalPages > 1 ? `${getSiteUrl(Astro.site)}/blogs/page/2` : null
 ---
 
 <BaseLayout seo={{ nextUrl }}>
@@ -35,9 +31,7 @@ const nextUrl = pagination.totalPages > 1 ? `${siteUrl}/blogs/page/2` : null
 
     {posts.length > 0 ? (
       <div>
-        <div class="divide-y divide-border">
-          {posts.map(post => <BlogCard post={post} />)}
-        </div>
+        <BlogList posts={posts} />
 
         <div class="mt-12">
           <Pagination pagination={pagination} basePath="/blogs" />

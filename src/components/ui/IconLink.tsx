@@ -1,17 +1,17 @@
-import type { ComponentPropsWithoutRef } from 'react'
+import type { ComponentPropsWithoutRef } from "react";
 
-const IconLink = ({ target = '_blank', children, ...props }: ComponentPropsWithoutRef<'a'>) => {
+const IconLink = ({ target = "_blank", children, ...props }: ComponentPropsWithoutRef<"a">) => {
   return (
     <a
-      style={{ '--lv-wait': '1' } as React.CSSProperties}
+      style={{ "--lv-wait": "1" } as React.CSSProperties}
       className="rounded p-1 transition-colors hover:bg-selection hover:text-body"
       target={target}
-      rel={target === '_blank' ? 'noopener noreferrer' : undefined}
+      rel={target === "_blank" ? "noopener noreferrer" : undefined}
       {...props}
     >
       {children}
     </a>
-  )
-}
+  );
+};
 
-export default IconLink
+export default IconLink;

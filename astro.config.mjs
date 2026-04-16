@@ -40,6 +40,9 @@ export default defineConfig({
           light: "one-light",
           dark: "slack-dark",
         },
+        langAlias: {
+          gitignore: "bash",
+        },
         transformers: [
           transformerNotationHighlight(),
           transformerNotationDiff(),

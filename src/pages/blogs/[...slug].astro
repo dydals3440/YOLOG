@@ -1,125 +1,25 @@
 ---
-import { getCollection } from 'astro:content'
-
-import BaseLayout from '@/layouts/BaseLayout.astro'
-import { BLOG_CATEGORIES, type BlogCategory } from '@/consts'
-import CategoryList from '@/components/blogs/CategoryList.astro'
-import BlogCard from '@/components/blogs/BlogCard.astro'
-import Pagination from '@/components/blogs/Pagination.astro'
 import YongGlass from '@/components/YongGlass.astro'
-import { sortPostsByDate, createCategoryList, filterPostsByCategory, paginateArray } from '@/lib/blog-utils'
-import { PAGINATION, getSiteUrl } from '@/lib/config'
+import BlogList from '@/components/blogs/BlogList.astro'
+import CategoryList from '@/components/blogs/CategoryList.astro'
+import Pagination from '@/components/blogs/Pagination.astro'
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import { buildBlogListingPaths } from '@/lib/blog-paths'
+import { getSiteUrl } from '@/lib/config'
+import { getPaginationUrls } from '@/lib/pagination-urls'
 
-export async function getStaticPaths() {
-  const allPosts = await getCollection('post')
-  const categories = Object.keys(BLOG_CATEGORIES)
-    .filter(category => category !== 'ALL')
-    .map(category => category.toLowerCase())
-
-  const paths = []
-
-  // 전체 블로그 페이지네이션 (2페이지부터)
-  const totalAllPages = Math.ceil(sortPostsByDate(allPosts).length / PAGINATION.POSTS_PER_PAGE)
-  for (let page = 2; page <= totalAllPages; page++) {
-    const { items: posts, pagination } = paginateArray(sortPostsByDate(allPosts), page, PAGINATION.POSTS_PER_PAGE)
-
-    paths.push({
-      params: { slug: `page/${page}` },
-      props: {
-        posts,
-        pagination: {
-          ...pagination,
-          totalPosts: allPosts.length
-        },
-        categories: createCategoryList(allPosts),
-        category: null,
-        categoryLabel: 'All'
-      }
-    })
-  }
-
-  // 각 카테고리별 페이지네이션
-  for (const category of categories) {
-    const categoryKey = category.toUpperCase() as BlogCategory
-    const filteredPosts = filterPostsByCategory(allPosts, categoryKey)
-    const sortedPosts = sortPostsByDate(filteredPosts)
-
-    const totalCategoryPages = Math.ceil(sortedPosts.length / PAGINATION.POSTS_PER_PAGE_CATEGORY)
-
-    // 카테고리 1페이지
-    const { items: firstPagePosts, pagination: firstPagination } = paginateArray(sortedPosts, 1, PAGINATION.POSTS_PER_PAGE_CATEGORY)
-    paths.push({
-      params: { slug: category },
-      props: {
-        posts: firstPagePosts,
-        pagination: {
-          ...firstPagination,
-          totalPosts: sortedPosts.length
-        },
-        categories: createCategoryList(allPosts),
-        category,
-        categoryLabel: BLOG_CATEGORIES[categoryKey],
-        totalPostsInCategory: sortedPosts.length
-      }
-    })
-
-    // 카테고리 2페이지부터
-    for (let page = 2; page <= totalCategoryPages; page++) {
-      const { items: posts, pagination } = paginateArray(sortedPosts, page, PAGINATION.POSTS_PER_PAGE_CATEGORY)
-
-      paths.push({
-        params: { slug: `${category}/page/${page}` },
-        props: {
-          posts,
-          pagination: {
-            ...pagination,
-            totalPosts: sortedPosts.length
-          },
-          categories: createCategoryList(allPosts),
-          category,
-          categoryLabel: BLOG_CATEGORIES[categoryKey],
-          totalPostsInCategory: sortedPosts.length
-        }
-      })
-    }
-  }
-
-  return paths
-}
+export const getStaticPaths = buildBlogListingPaths
 
 const { posts, pagination, categories, category, categoryLabel, totalPostsInCategory } = Astro.props
-
-// URL 기반 경로 설정
 const basePath = category ? `/blogs/${category}` : '/blogs'
-const totalPosts = totalPostsInCategory || pagination.totalPosts
-
-// 제목: 전체 페이지면 "전체", 카테고리면 카테고리 이름
+const totalPosts = totalPostsInCategory ?? pagination.totalPosts
 const displayTitle = category ? categoryLabel : '전체'
-
-// SEO: 페이지네이션 rel="prev/next" URL 계산
-const siteUrl = getSiteUrl(Astro.site)
-const currentPage = pagination.currentPage
-const totalPages = pagination.totalPages
-
-const getPrevUrl = () => {
-  if (currentPage <= 1) return null
-  if (currentPage === 2) {
-    return category ? `${siteUrl}/blogs/${category}` : `${siteUrl}/blogs`
-  }
-  return category
-    ? `${siteUrl}/blogs/${category}/page/${currentPage - 1}`
-    : `${siteUrl}/blogs/page/${currentPage - 1}`
-}
-
-const getNextUrl = () => {
-  if (currentPage >= totalPages) return null
-  return category
-    ? `${siteUrl}/blogs/${category}/page/${currentPage + 1}`
-    : `${siteUrl}/blogs/page/${currentPage + 1}`
-}
-
-const prevUrl = getPrevUrl()
-const nextUrl = getNextUrl()
+const { prevUrl, nextUrl } = getPaginationUrls({
+  category,
+  currentPage: pagination.currentPage,
+  totalPages: pagination.totalPages,
+  siteUrl: getSiteUrl(Astro.site),
+})
 ---
 
 <BaseLayout seo={{ prevUrl, nextUrl }}>
@@ -137,9 +37,7 @@ const nextUrl = getNextUrl()
 
     {posts.length > 0 ? (
       <div>
-        <div class="divide-y divide-border">
-          {posts.map(post => <BlogCard post={post} />)}
-        </div>
+        <BlogList posts={posts} />
 
         {pagination.totalPages > 1 && (
           <div class="mt-12">

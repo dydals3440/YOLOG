@@ -6,7 +6,11 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "format": "biome format --write",
+    "lint": "biome lint --write",
+    "check": "biome check --write",
+    "check:ci": "biome ci"
   },
   "dependencies": {
     "@astrojs/mdx": "^5.0.3",
@@ -40,6 +44,7 @@
   "devDependencies": {
     "@actions/github": "6.0.1",
     "@astrojs/check": "^0.9.8",
+    "@biomejs/biome": "2.4.12",
     "@inquirer/prompts": "^7.10.1",
     "@octokit/rest": "^22.0.1",
     "@shikijs/transformers": "^4.0.2",

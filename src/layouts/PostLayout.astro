@@ -1,9 +1,10 @@
 ---
 import '@/styles/mdx.css'
 
-import { type CollectionEntry, render } from 'astro:content'
-import { formatDate } from '@/lib/blog-utils'
+import { type CollectionEntry, getCollection, render } from 'astro:content'
 
+import GoogleAdsense from '@/components/GoogleAdsense.astro'
+import PostNavigation from '@/components/common/PostNavigation.astro'
 import CopyCodeScript from '@/components/post/CopyCodeScript.astro'
 import GiscusComment from '@/components/post/GiscusComment'
 import MediumZoomScript from '@/components/post/MediumZoomScript.astro'
@@ -11,16 +12,16 @@ import PageActions from '@/components/post/PageActions'
 import PostImage from '@/components/post/PostImage.astro'
 import ReadingProgress from '@/components/post/ReadingProgress'
 import RelatedPosts from '@/components/post/RelatedPosts.astro'
-import TableOfContent from '@/components/post/TableOfContent'
 import SocialShare from '@/components/post/SocialShare'
-import { generateDescription, parseToc } from '@/lib/mdx'
+import TableOfContent from '@/components/post/TableOfContent'
 import LeftSidebar from '@/layouts/partials/LeftSidebar.astro'
-import PostNavigation from '@/components/common/PostNavigation.astro'
+import { formatDate } from '@/lib/blog-utils'
+import { RELATED_POSTS, getSiteUrl } from '@/lib/config'
+import { generateDescription, parseToc } from '@/lib/mdx'
+import { buildBlogPostingSchema, buildBreadcrumbSchema } from '@/lib/post-schema'
+import { getRelatedPosts } from '@/lib/related-posts'
 
 import BaseLayout from './BaseLayout.astro'
-import GoogleAdsense from '@/components/GoogleAdsense.astro'
-import { WEBSITE_CONFIG, BLOG_CATEGORIES, type BlogCategory } from '@/consts'
-import { getSiteUrl } from '@/lib/config'
 
 type Props = {
   post: CollectionEntry<'post'>
@@ -29,75 +30,17 @@ type Props = {
 }
 
 const { post, prevPost, nextPost } = Astro.props
-
-const { title, date, updatedDate, image, tags, category } = post.data
+const { title, date, image, tags } = post.data
 const description = post.data.description || generateDescription(post.body)
 const formattedDate = formatDate(date)
 const toc = parseToc(post.body)
-
 const { Content } = await render(post)
 
-// BlogPosting JSON-LD Schema
-const blogPostingSchema = {
-  "@context": "https://schema.org",
-  "@type": "BlogPosting",
-  "headline": title,
-  "description": description,
-  "image": image ? new URL(image, Astro.site).toString() : new URL(WEBSITE_CONFIG.OG_IMAGE, Astro.site).toString(),
-  "datePublished": new Date(date).toISOString(),
-  "dateModified": new Date(updatedDate || date).toISOString(),
-  "author": {
-    "@type": "Person",
-    "name": "매튜",
-    "url": Astro.site?.toString()
-  },
-  "publisher": {
-    "@type": "Organization",
-    "name": "YOLOG",
-    "logo": {
-      "@type": "ImageObject",
-      "url": new URL("/favicon.ico", Astro.site).toString()
-    }
-  },
-  "mainEntityOfPage": {
-    "@type": "WebPage",
-    "@id": Astro.url.toString()
-  },
-  ...(tags && tags.length > 0 ? { "keywords": tags.join(", ") } : {})
-}
+const blogPostingSchema = buildBlogPostingSchema({ post, description, site: Astro.site, url: Astro.url })
+const breadcrumbSchema = buildBreadcrumbSchema({ post, siteUrl: getSiteUrl(Astro.site) })
 
-// BreadcrumbList Schema for SEO
-const categoryLabel = category ? BLOG_CATEGORIES[category as BlogCategory] : null
-const siteUrl = getSiteUrl(Astro.site)
-const breadcrumbSchema = {
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  "itemListElement": [
-    {
-      "@type": "ListItem",
-      "position": 1,
-      "name": "홈",
-      "item": siteUrl
-    },
-    {
-      "@type": "ListItem",
-      "position": 2,
-      "name": "블로그",
-      "item": `${siteUrl}/blogs`
-    },
-    ...(category ? [{
-      "@type": "ListItem",
-      "position": 3,
-      "name": categoryLabel,
-      "item": `${siteUrl}/blogs/${category.toLowerCase()}`
-    }] : []),
-    {
-      "@type": "ListItem",
-      "position": category ? 4 : 3,
-      "name": title
-    }
-  ]
-}
+const allPosts = await getCollection('post')
+const relatedPosts = getRelatedPosts({ currentPost: post, allPosts, maxPosts: RELATED_POSTS.MAX_COUNT })
 ---
 
 <BaseLayout seo={{ title, description, image, keywords: tags }}>
@@ -147,7 +90,11 @@ const breadcrumbSchema = {
       slot="1234567890"
       className="my-8"
     />
-    <RelatedPosts currentPost={post} />
+    {relatedPosts.length > 0 && (
+      <div class="mt-16 pt-8 border-t border-border">
+        <RelatedPosts posts={relatedPosts} />
+      </div>
+    )}
     <footer class="px-0">
       <hr class="my-8 border-border" />
       <PostNavigation {prevPost} {nextPost} />

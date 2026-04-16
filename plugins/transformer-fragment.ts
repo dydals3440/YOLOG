@@ -1,22 +1,22 @@
-import type { Element } from 'node_modules/rehype-autolink-headings/lib';
-import { addClassToHast, type ShikiTransformer } from 'shiki';
+import type { Element } from "node_modules/rehype-autolink-headings/lib";
+import { addClassToHast, type ShikiTransformer } from "shiki";
 
-const ignoreLangList = ['', 'plaintext'];
+const ignoreLangList = ["", "plaintext"];
 
 export function transformerFragment(): ShikiTransformer {
   return {
-    name: '@shikijs/transformers:fragment',
+    name: "@shikijs/transformers:fragment",
     root(root) {
-      const metaString = this.options.meta?.__raw || '';
+      const metaString = this.options.meta?.__raw || "";
       const title = metaString.match(/title="([^"]+)"/)?.[1];
       const caption = metaString.match(/caption="([^"]+)"/)?.[1];
 
       const preElement = root.children[0] as Element;
       const codeElement = preElement.children[0] as Element;
 
-      const isShowLineNumbers = metaString.includes('line-numbers');
+      const isShowLineNumbers = metaString.includes("line-numbers");
       if (isShowLineNumbers) {
-        addClassToHast(preElement, 'has-line-numbers');
+        addClassToHast(preElement, "has-line-numbers");
         preElement.children.push(createLineNumbersElement(codeElement));
       }
 
@@ -26,7 +26,7 @@ export function transformerFragment(): ShikiTransformer {
         preElement.children.push(createLanguageElement(lang));
       }
 
-      const isShowCopy = !metaString.includes('noCopy');
+      const isShowCopy = !metaString.includes("noCopy");
       if (isShowCopy) {
         preElement.children.push(createCopyElement());
       }
@@ -35,7 +35,7 @@ export function transformerFragment(): ShikiTransformer {
         createFragmentElement(
           title && createTitleElement(title),
           preElement,
-          caption && createCaptionElement(caption)
+          caption && createCaptionElement(caption),
         ),
       ];
       return root;
@@ -45,10 +45,10 @@ export function transformerFragment(): ShikiTransformer {
 
 function createFragmentElement(...children: unknown[]): Element {
   return {
-    type: 'element',
-    tagName: 'div',
+    type: "element",
+    tagName: "div",
     properties: {
-      'data-code-fragment': '',
+      "data-code-fragment": "",
     },
     children: (children as Element[]).filter(Boolean),
   };
@@ -56,44 +56,44 @@ function createFragmentElement(...children: unknown[]): Element {
 
 function createTitleElement(title: string): Element {
   return {
-    type: 'element',
-    tagName: 'div',
+    type: "element",
+    tagName: "div",
     properties: {
-      'data-code-title': '',
+      "data-code-title": "",
     },
-    children: [{ type: 'text', value: title }],
+    children: [{ type: "text", value: title }],
   };
 }
 
 function createCaptionElement(caption: string): Element {
   return {
-    type: 'element',
-    tagName: 'div',
+    type: "element",
+    tagName: "div",
     properties: {
-      'data-code-caption': '',
+      "data-code-caption": "",
     },
-    children: [{ type: 'text', value: caption }],
+    children: [{ type: "text", value: caption }],
   };
 }
 
 function createLanguageElement(lang: string): Element {
   return {
-    type: 'element',
-    tagName: 'span',
+    type: "element",
+    tagName: "span",
     properties: {
-      class: 'lang',
+      class: "lang",
     },
-    children: [{ type: 'text', value: lang }],
+    children: [{ type: "text", value: lang }],
   };
 }
 
 function createCopyElement() {
   return {
-    type: 'element',
-    tagName: 'button',
+    type: "element",
+    tagName: "button",
     properties: {
-      class: 'copy',
-      title: 'Copy Code',
+      class: "copy",
+      title: "Copy Code",
     },
     children: [],
   } satisfies Element;
@@ -101,21 +101,21 @@ function createCopyElement() {
 
 function createLineNumbersElement(codeElement: Element): Element {
   const lineNumbers = codeElement.children
-    .filter((child) => child.type === 'text')
+    .filter((child) => child.type === "text")
     .map((_, i) => {
       return {
-        type: 'element',
-        tagName: 'span',
-        properties: { class: 'line-number' },
-        children: [{ type: 'text', value: `${i + 1}` }],
+        type: "element",
+        tagName: "span",
+        properties: { class: "line-number" },
+        children: [{ type: "text", value: `${i + 1}` }],
       } satisfies Element;
     });
 
   return {
-    type: 'element',
-    tagName: 'div',
+    type: "element",
+    tagName: "div",
     properties: {
-      class: 'line-numbers',
+      class: "line-numbers",
     },
     children: [...lineNumbers],
   };

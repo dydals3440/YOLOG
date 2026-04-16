@@ -1,5 +1,5 @@
-import { getPostInfoList } from "@/lib/mdx";
 import { SITE_URL } from "@/lib/config";
+import { getPostInfoList } from "@/lib/mdx";
 
 export async function GET() {
   const siteUrl = import.meta.env.SITE || SITE_URL;

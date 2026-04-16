@@ -82,9 +82,7 @@ export const reducer = (state: State, action: Action): State => {
     case "UPDATE_TOAST":
       return {
         ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t,
-        ),
+        toasts: state.toasts.map((t) => (t.id === action.toast.id ? { ...t, ...action.toast } : t)),
       };
 
     case "DISMISS_TOAST": {
@@ -124,7 +122,9 @@ export const reducer = (state: State, action: Action): State => {
         }
       } else {
         // 모든 토스트 제거 시 모든 타임아웃 정리
-        toastTimeouts.forEach((timeout) => clearTimeout(timeout));
+        toastTimeouts.forEach((timeout) => {
+          clearTimeout(timeout);
+        });
         toastTimeouts.clear();
       }
 

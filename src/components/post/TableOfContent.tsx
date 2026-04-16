@@ -16,8 +16,8 @@ const TableOfContent = ({
 
   return (
     <ul {...props} className={cn("space-y-1.5 text-sm", className)}>
-      {toc.map((section, index) => (
-        <li key={index} className="flex">
+      {toc.map((section) => (
+        <li key={section.slug} className="flex">
           <a
             className={cn(
               "link text-[13px] text-third transition-colors hover:text-primary",
@@ -72,7 +72,7 @@ const useTocScroll = (tableOfContents: TOCSectionModel[]) => {
     const onScroll = throttle(() => {
       if (headings.length === 0) return;
 
-      let current: typeof currentSectionSlug = undefined;
+      let current: typeof currentSectionSlug;
       const top = window.scrollY + pageTop;
 
       headings.forEach((heading) => {
