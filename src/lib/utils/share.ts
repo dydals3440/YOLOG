@@ -52,6 +52,7 @@ export const copyToClipboard = async (text: string): Promise<void> => {
     // 권한 거부 또는 기타 에러 발생 시 재throw
     throw new Error(
       `Failed to copy to clipboard: ${error instanceof Error ? error.message : "Unknown error"}`,
+      { cause: error },
     );
   }
 };

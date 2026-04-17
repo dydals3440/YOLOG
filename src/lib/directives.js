@@ -26,7 +26,7 @@ export const customCallout = () => {
         data.hName = "div";
         data.hProperties = {
           class: `callout ${type}`,
-          ...{ "data-variant": title ? "title" : "inline" },
+          "data-variant": title ? "title" : "inline",
         };
 
         const iconNode = {

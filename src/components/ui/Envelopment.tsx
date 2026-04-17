@@ -4,7 +4,7 @@ interface Props {
 
 const Envelopment = ({ title = "" }: Props) => {
   return (
-    <div className="group/envelopment relative flex aspect-[200/283] w-[160px] cursor-pointer">
+    <div className="group/envelopment relative flex aspect-200/283 w-[160px] cursor-pointer">
       <svg
         className="h-full w-full"
         viewBox="0 0 200 283"

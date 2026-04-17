@@ -1,0 +1,53 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "react", "jsx-a11y", "import"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn",
+    "style": "off",
+    "pedantic": "off",
+    "nursery": "off"
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2024": true
+  },
+  "settings": {
+    "react": {
+      "version": "19.2.5"
+    }
+  },
+  "rules": {
+    "typescript/no-explicit-any": "warn",
+    "react/no-array-index-key": "warn",
+    "typescript/consistent-type-imports": "error",
+    "eslint/prefer-const": "error",
+    "eslint/no-param-reassign": "error",
+    "typescript/no-unused-vars": "warn",
+    "react/exhaustive-deps": "warn",
+    "react/react-in-jsx-scope": "off",
+    "unicorn/no-useless-spread": "warn"
+  },
+  "ignorePatterns": [
+    "dist/**",
+    ".astro/**",
+    ".vercel/**",
+    "node_modules/**",
+    "public/**",
+    "docs/**",
+    "src/styles/**",
+    "**/*.astro",
+    "**/*.md",
+    "**/*.mdx"
+  ],
+  "overrides": [
+    {
+      "files": ["src/components/ui/Icons.tsx", "src/components/ui/Envelopment.tsx"],
+      "rules": {
+        "jsx-a11y/alt-text": "off"
+      }
+    }
+  ]
+}

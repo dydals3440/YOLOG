@@ -1,7 +1,7 @@
 import type { Element } from "node_modules/rehype-autolink-headings/lib";
 import { addClassToHast, type ShikiTransformer } from "shiki";
 
-const ignoreLangList = ["", "plaintext"];
+const ignoreLangList = new Set(["", "plaintext"]);
 
 export function transformerFragment(): ShikiTransformer {
   return {
@@ -21,7 +21,7 @@ export function transformerFragment(): ShikiTransformer {
       }
 
       const lang = this.options.lang;
-      const isShowLang = !ignoreLangList.includes(lang);
+      const isShowLang = !ignoreLangList.has(lang);
       if (isShowLang) {
         preElement.children.push(createLanguageElement(lang));
       }

@@ -12,7 +12,7 @@ export function getRelatedPosts({ currentPost, allPosts, maxPosts }: GetRelatedP
   return allPosts
     .map((post) => ({ post, score: calculateRelevance(currentPost, post) }))
     .filter(({ score }) => score > 0)
-    .sort((a, b) => {
+    .toSorted((a, b) => {
       if (b.score === a.score) {
         return new Date(b.post.data.date).getTime() - new Date(a.post.data.date).getTime();
       }

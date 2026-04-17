@@ -16,16 +16,16 @@ const resolveSlug = (slug: string) => slug.replace('blog/', '')
     {posts.map((post) => (
       <a
         href={`/post/${resolveSlug(post.id)}`}
-        class="group relative block aspect-[4/3] w-full overflow-hidden rounded-lg bg-gray-100 isolate sm:flex sm:aspect-auto sm:bg-transparent sm:items-center sm:gap-4 sm:overflow-visible sm:rounded-none"
+        class="group relative block aspect-4/3 w-full overflow-hidden rounded-lg bg-gray-100 isolate sm:flex sm:aspect-auto sm:bg-transparent sm:items-center sm:gap-4 sm:overflow-visible sm:rounded-none"
       >
         {post.data.image ? (
           <img
             src={post.data.image}
             alt={post.data.title}
-            class="absolute inset-0 h-full w-full object-cover transition-all duration-500 ease-out z-0 group-hover:scale-105 group-hover:brightness-50 group-hover:blur-[2px] sm:static sm:h-20 sm:w-28 sm:flex-shrink-0 sm:rounded-md sm:transition-none sm:group-hover:scale-100 sm:group-hover:filter-none sm:z-auto"
+            class="absolute inset-0 h-full w-full object-cover transition-all duration-500 ease-out z-0 group-hover:scale-105 group-hover:brightness-50 group-hover:blur-[2px] sm:static sm:h-20 sm:w-28 sm:shrink-0 sm:rounded-md sm:transition-none sm:group-hover:scale-100 sm:group-hover:filter-none sm:z-auto"
           />
         ) : (
-          <div class="absolute inset-0 bg-gray-200 z-0 sm:static sm:h-20 sm:w-28 sm:flex-shrink-0 sm:rounded-md" />
+          <div class="absolute inset-0 bg-gray-200 z-0 sm:static sm:h-20 sm:w-28 sm:shrink-0 sm:rounded-md" />
         )}
 
         <div class="absolute inset-0 z-10 flex flex-col items-center justify-center p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-black/10 sm:static sm:block sm:bg-transparent sm:p-0 sm:opacity-100">

@@ -1,0 +1,35 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "endOfLine": "lf",
+  "semi": true,
+  "singleQuote": false,
+  "jsxSingleQuote": false,
+  "trailingComma": "all",
+  "bracketSpacing": true,
+  "bracketSameLine": false,
+  "arrowParens": "always",
+  "insertFinalNewline": true,
+  "ignorePatterns": [
+    "dist/**",
+    ".astro/**",
+    ".vercel/**",
+    "node_modules/**",
+    "public/**",
+    "docs/**",
+    "src/styles/**",
+    "**/*.astro",
+    "**/*.md",
+    "**/*.mdx"
+  ],
+  "overrides": [
+    {
+      "files": ["**/*.json", "**/*.jsonc"],
+      "options": {
+        "trailingComma": "none"
+      }
+    }
+  ]
+}
