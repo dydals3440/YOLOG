@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 
-import { CheckIcon, LinkIcon } from "@/components/ui/Icons";
+import { Check, Link2 } from "lucide-react";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { useToast } from "@/hooks/use-toast";
 import { DELAYS } from "@/lib/config";
@@ -32,7 +32,7 @@ const CopyLinkButton = () => {
 
   return (
     <ActionButton onClick={handleCopyLink}>
-      {isCopied ? <CheckIcon /> : <LinkIcon />}
+      {isCopied ? <Check size={18} strokeWidth={1.75} /> : <Link2 size={18} strokeWidth={1.75} />}
       <span className="sr-only">링크 복사</span>
     </ActionButton>
   );

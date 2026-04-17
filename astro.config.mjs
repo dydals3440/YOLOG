@@ -37,8 +37,8 @@ export default defineConfig({
       syntaxHighlight: "shiki",
       shikiConfig: {
         themes: {
-          light: "one-light",
-          dark: "slack-dark",
+          light: "catppuccin-latte",
+          dark: "tokyo-night",
         },
         langAlias: {
           gitignore: "bash",

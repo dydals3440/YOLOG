@@ -15,21 +15,30 @@ const TableOfContent = ({
   const { currentSectionSlug } = useTocScroll(toc);
 
   return (
-    <ul {...props} className={cn("space-y-1.5 text-sm", className)}>
-      {toc.map((section) => (
-        <li key={section.slug} className="flex">
-          <a
-            className={cn(
-              "link text-[13px] text-third transition-colors hover:text-primary",
-              currentSectionSlug === section.slug && "text-primary font-medium",
-            )}
-            href={`#${section.slug}`}
-          >
-            {section.text}
-          </a>
-        </li>
-      ))}
-    </ul>
+    <nav {...props} className={cn("relative", className)}>
+      <div aria-hidden="true" className="absolute top-0 bottom-0 left-0 w-px bg-gray-200" />
+      <ul className="relative">
+        {toc.map((section) => {
+          const isActive = currentSectionSlug === section.slug;
+          return (
+            <li key={section.slug}>
+              <a
+                href={`#${section.slug}`}
+                className={cn(
+                  "relative block py-1.5 pl-4 text-[13px] leading-snug transition-colors duration-200",
+                  "before:absolute before:top-0 before:left-0 before:h-full before:w-px before:transition-colors",
+                  isActive
+                    ? "font-medium text-heading before:bg-heading"
+                    : "text-disabled before:bg-transparent hover:text-body",
+                )}
+              >
+                {section.text}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
 };
 

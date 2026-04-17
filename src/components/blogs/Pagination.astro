@@ -6,7 +6,7 @@ export interface Props extends PaginationProps {}
 
 const { pagination, basePath } = Astro.props
 
-const getPageUrl = (page: number) => page === 1 ? basePath : `${basePath}/page/${page}`
+const getPageUrl = (page: number) => (page === 1 ? basePath : `${basePath}/page/${page}`)
 
 const generatePageNumbers = () => {
   const { currentPage, totalPages } = pagination
@@ -14,7 +14,11 @@ const generatePageNumbers = () => {
   const range = []
   const rangeWithDots = []
 
-  for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+  for (
+    let i = Math.max(2, currentPage - delta);
+    i <= Math.min(totalPages - 1, currentPage + delta);
+    i++
+  ) {
     range.push(i)
   }
 
@@ -38,55 +42,164 @@ const generatePageNumbers = () => {
 const pageNumbers = generatePageNumbers()
 ---
 
-<nav class="flex justify-center items-center gap-1" aria-label="페이지네이션">
-  {pagination.hasPrevious ? (
-    <a
-      href={getPageUrl(pagination.previousPage!)}
-      class="flex items-center justify-center w-9 h-9 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-800 hover:border-gray-400 transition-all duration-200"
-      aria-label="이전 페이지"
-    >
-      ←
-    </a>
-  ) : (
-    <span class="flex items-center justify-center w-9 h-9 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
-      ←
-    </span>
-  )}
+<nav class="flex items-center justify-center gap-1.5" aria-label="페이지네이션">
+  {
+    pagination.hasPrevious ? (
+      <a href={getPageUrl(pagination.previousPage!)} class="page-link" aria-label="이전 페이지">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m15 18-6-6 6-6" />
+        </svg>
+      </a>
+    ) : (
+      <span class="page-link page-link-disabled" aria-hidden="true">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m15 18-6-6 6-6" />
+        </svg>
+      </span>
+    )
+  }
 
-  <div class="flex gap-1">
-    {pageNumbers.map((pageNum) => (
+  {
+    pageNumbers.map((pageNum) =>
       pageNum === '...' ? (
-        <span class="flex items-center justify-center w-9 h-9 text-sm text-gray-500">
+        <span class="page-ellipsis" aria-hidden="true">
           …
         </span>
       ) : (
         <a
           href={getPageUrl(pageNum as number)}
-          class={`flex items-center justify-center w-9 h-9 text-sm font-medium rounded-lg transition-all duration-200 ${
-            pageNum === pagination.currentPage
-              ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
-              : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400'
-          }`}
+          class:list={[
+            'page-link',
+            pageNum === pagination.currentPage && 'page-link-active',
+          ]}
           aria-label={`${pageNum}페이지로 이동`}
           aria-current={pageNum === pagination.currentPage ? 'page' : undefined}
         >
           {pageNum}
         </a>
-      )
-    ))}
-  </div>
+      ),
+    )
+  }
 
-  {pagination.hasNext ? (
-    <a
-      href={getPageUrl(pagination.nextPage!)}
-      class="flex items-center justify-center w-9 h-9 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-800 hover:border-gray-400 transition-all duration-200"
-      aria-label="다음 페이지"
-    >
-      →
-    </a>
-  ) : (
-    <span class="flex items-center justify-center w-9 h-9 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
-      →
-    </span>
-  )}
+  {
+    pagination.hasNext ? (
+      <a href={getPageUrl(pagination.nextPage!)} class="page-link" aria-label="다음 페이지">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m9 18 6-6-6-6" />
+        </svg>
+      </a>
+    ) : (
+      <span class="page-link page-link-disabled" aria-hidden="true">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m9 18 6-6-6-6" />
+        </svg>
+      </span>
+    )
+  }
 </nav>
+
+<style>
+  .page-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-second);
+    background-color: transparent;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    cursor: pointer;
+    transition:
+      color 200ms,
+      background-color 200ms,
+      border-color 200ms;
+    text-decoration: none;
+  }
+
+  .page-link:hover {
+    color: var(--heading);
+    background-color: color-mix(in oklch, var(--gray-100) 60%, transparent);
+    border-color: var(--gray-300);
+  }
+
+  .page-link:focus-visible {
+    outline: 2px solid var(--heading);
+    outline-offset: 2px;
+  }
+
+  .page-link-active,
+  .page-link-active:hover {
+    color: var(--page-background);
+    background-color: var(--heading);
+    border-color: var(--heading);
+    cursor: default;
+  }
+
+  .page-link-disabled {
+    color: var(--text-disabled);
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .page-link-disabled:hover {
+    background-color: transparent;
+    border-color: var(--gray-200);
+    color: var(--text-disabled);
+  }
+
+  .page-ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 0.875rem;
+    color: var(--text-disabled);
+    user-select: none;
+  }
+</style>
