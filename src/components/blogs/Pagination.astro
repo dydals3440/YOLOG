@@ -1,51 +1,26 @@
 ---
-import type { PaginationProps } from '@/types'
-import { PAGINATION } from '@/lib/config'
+import { PAGINATION } from "@/lib/config";
+import { buildPaginationRange } from "@/lib/pagination-range";
+import { getPageUrl } from "@/lib/pagination-urls";
+import type { PaginationProps } from "@/types";
 
 export interface Props extends PaginationProps {}
 
-const { pagination, basePath } = Astro.props
+const { pagination, basePath } = Astro.props;
+const { currentPage, totalPages, hasPrevious, hasNext, previousPage, nextPage } = pagination;
 
-const getPageUrl = (page: number) => (page === 1 ? basePath : `${basePath}/page/${page}`)
-
-const generatePageNumbers = () => {
-  const { currentPage, totalPages } = pagination
-  const delta = PAGINATION.DELTA
-  const range = []
-  const rangeWithDots = []
-
-  for (
-    let i = Math.max(2, currentPage - delta);
-    i <= Math.min(totalPages - 1, currentPage + delta);
-    i++
-  ) {
-    range.push(i)
-  }
-
-  if (currentPage - delta > 2) {
-    rangeWithDots.push(1, '...')
-  } else {
-    rangeWithDots.push(1)
-  }
-
-  rangeWithDots.push(...range)
-
-  if (currentPage + delta < totalPages - 1) {
-    rangeWithDots.push('...', totalPages)
-  } else {
-    rangeWithDots.push(totalPages)
-  }
-
-  return totalPages === 1 ? [1] : rangeWithDots
-}
-
-const pageNumbers = generatePageNumbers()
+const items = buildPaginationRange({ currentPage, totalPages, siblings: PAGINATION.DELTA });
 ---
 
-<nav class="flex items-center justify-center gap-1.5" aria-label="페이지네이션">
+<nav class="flex items-center justify-center gap-1" aria-label="페이지네이션">
   {
-    pagination.hasPrevious ? (
-      <a href={getPageUrl(pagination.previousPage!)} class="page-link" aria-label="이전 페이지">
+    hasPrevious ? (
+      <a
+        href={getPageUrl(basePath, previousPage!)}
+        rel="prev"
+        aria-label="이전 페이지"
+        class="page-btn"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="16"
@@ -62,7 +37,7 @@ const pageNumbers = generatePageNumbers()
         </svg>
       </a>
     ) : (
-      <span class="page-link page-link-disabled" aria-hidden="true">
+      <span aria-hidden="true" class="page-btn is-disabled">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="16"
@@ -80,31 +55,37 @@ const pageNumbers = generatePageNumbers()
     )
   }
 
-  {
-    pageNumbers.map((pageNum) =>
-      pageNum === '...' ? (
-        <span class="page-ellipsis" aria-hidden="true">
-          …
-        </span>
-      ) : (
-        <a
-          href={getPageUrl(pageNum as number)}
-          class:list={[
-            'page-link',
-            pageNum === pagination.currentPage && 'page-link-active',
-          ]}
-          aria-label={`${pageNum}페이지로 이동`}
-          aria-current={pageNum === pagination.currentPage ? 'page' : undefined}
-        >
-          {pageNum}
-        </a>
-      ),
-    )
-  }
+  <ol class="flex items-center gap-1" role="list">
+    {
+      items.map((item) =>
+        item.type === "ellipsis" ? (
+          <li aria-hidden="true" class="page-ellipsis">
+            …
+          </li>
+        ) : (
+          <li>
+            {item.page === currentPage ? (
+              <span aria-current="page" class="page-btn is-active">
+                {item.page}
+              </span>
+            ) : (
+              <a
+                href={getPageUrl(basePath, item.page)}
+                aria-label={`${item.page}페이지로 이동`}
+                class="page-btn"
+              >
+                {item.page}
+              </a>
+            )}
+          </li>
+        ),
+      )
+    }
+  </ol>
 
   {
-    pagination.hasNext ? (
-      <a href={getPageUrl(pagination.nextPage!)} class="page-link" aria-label="다음 페이지">
+    hasNext ? (
+      <a href={getPageUrl(basePath, nextPage!)} rel="next" aria-label="다음 페이지" class="page-btn">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="16"
@@ -121,7 +102,7 @@ const pageNumbers = generatePageNumbers()
         </svg>
       </a>
     ) : (
-      <span class="page-link page-link-disabled" aria-hidden="true">
+      <span aria-hidden="true" class="page-btn is-disabled">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="16"
@@ -141,65 +122,73 @@ const pageNumbers = generatePageNumbers()
 </nav>
 
 <style>
-  .page-link {
+  .page-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.25rem;
-    height: 2.25rem;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    padding: 0 0.5rem;
     font-size: 0.875rem;
     font-weight: 500;
+    font-variant-numeric: tabular-nums;
     color: var(--text-second);
     background-color: transparent;
-    border: 1px solid var(--gray-200);
-    border-radius: 8px;
-    cursor: pointer;
-    transition:
-      color 200ms,
-      background-color 200ms,
-      border-color 200ms;
+    border-radius: 10px;
     text-decoration: none;
+    transition:
+      color 150ms ease,
+      background-color 150ms ease,
+      transform 150ms ease;
   }
 
-  .page-link:hover {
+  a.page-btn:hover {
     color: var(--heading);
-    background-color: color-mix(in oklch, var(--gray-100) 60%, transparent);
-    border-color: var(--gray-300);
+    background-color: color-mix(in oklch, var(--gray-100) 80%, transparent);
   }
 
-  .page-link:focus-visible {
-    outline: 2px solid var(--heading);
+  a.page-btn:active {
+    transform: scale(0.96);
+  }
+
+  a.page-btn:focus-visible {
+    outline: 2px solid var(--progress-bar-color);
     outline-offset: 2px;
   }
 
-  .page-link-active,
-  .page-link-active:hover {
+  .page-btn.is-active {
     color: var(--page-background);
     background-color: var(--heading);
-    border-color: var(--heading);
     cursor: default;
   }
 
-  .page-link-disabled {
+  .page-btn.is-disabled {
     color: var(--text-disabled);
+    opacity: 0.4;
     cursor: not-allowed;
-    opacity: 0.5;
-  }
-
-  .page-link-disabled:hover {
-    background-color: transparent;
-    border-color: var(--gray-200);
-    color: var(--text-disabled);
   }
 
   .page-ellipsis {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.25rem;
-    height: 2.25rem;
-    font-size: 0.875rem;
+    width: 1.75rem;
+    height: 2.5rem;
     color: var(--text-disabled);
+    font-size: 0.875rem;
     user-select: none;
+  }
+
+  @media (max-width: 640px) {
+    .page-btn {
+      min-width: 2.25rem;
+      height: 2.25rem;
+      padding: 0 0.375rem;
+      border-radius: 8px;
+    }
+    .page-ellipsis {
+      width: 1.25rem;
+      height: 2.25rem;
+    }
   }
 </style>
