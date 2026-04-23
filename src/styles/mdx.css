@@ -194,11 +194,20 @@
 
 .mdx hr {
   width: 100%;
-  height: 1px;
+  height: 0;
   padding: 0;
-  margin: 3rem auto;
-  background: var(--gray-200);
+  margin: var(--page-top) auto;
+  overflow: visible;
+  text-align: center;
   border: none;
+}
+
+.mdx hr::after {
+  display: inline-block;
+  margin: -1rem 0 0;
+  font-size: 1.5rem;
+  color: var(--text-disabled);
+  content: "* * *";
 }
 
 .mdx table {
