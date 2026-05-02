@@ -389,8 +389,10 @@
   background: linear-gradient(
     to bottom,
     transparent 25%,
-    color-mix(in oklch, var(--highlight) var(--highlight-opacity), transparent) 25%,
-    color-mix(in oklch, var(--highlight) var(--highlight-opacity), transparent) 100%
+    color-mix(in oklch, var(--highlight) var(--highlight-opacity), transparent)
+      25%,
+    color-mix(in oklch, var(--highlight) var(--highlight-opacity), transparent)
+      100%
   );
   background-color: transparent;
   border: none;
@@ -704,7 +706,11 @@ html.dark pre.astro-code span.highlighted span {
   color: var(--text-second);
 }
 
-.mdx :is(.callout[data-variant="inline"].note, .callout[data-variant="inline"].idea) {
+.mdx
+  :is(
+    .callout[data-variant="inline"].note,
+    .callout[data-variant="inline"].idea
+  ) {
   color: var(--text-second);
 }
 
