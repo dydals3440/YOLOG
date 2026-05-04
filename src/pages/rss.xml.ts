@@ -2,7 +2,7 @@ import { getCollection } from "astro:content";
 import rss from "@astrojs/rss";
 import type { APIContext } from "astro";
 import { WEBSITE_CONFIG } from "@/consts";
-import { resolveSlug } from "@/lib/mdx";
+import { generateDescription, resolveSlug } from "@/lib/mdx";
 
 export async function GET(context: APIContext) {
   if (!context.site) {
@@ -17,7 +17,7 @@ export async function GET(context: APIContext) {
       title: post.data.title,
       link: `/post/${resolveSlug(post.id)}/`,
       pubDate: new Date(post.data.date),
-      description: post.data.description || WEBSITE_CONFIG.DESCRIPTION,
+      description: post.data.description || generateDescription(post.body ?? ""),
     })),
     customData: `<language>ko-KR</language>`,
   });

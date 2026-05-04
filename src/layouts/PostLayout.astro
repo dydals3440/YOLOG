@@ -15,6 +15,7 @@ import RelatedPosts from '@/components/post/RelatedPosts.astro'
 import SocialShare from '@/components/post/SocialShare'
 import TableOfContent from '@/components/post/TableOfContent'
 import LeftSidebar from '@/layouts/partials/LeftSidebar.astro'
+import { BLOG_CATEGORIES, type BlogCategory, WEBSITE_CONFIG } from '@/consts'
 import { formatDate } from '@/lib/blog-utils'
 import { RELATED_POSTS, getSiteUrl } from '@/lib/config'
 import { generateDescription, parseToc } from '@/lib/mdx'
@@ -30,7 +31,7 @@ type Props = {
 }
 
 const { post, prevPost, nextPost } = Astro.props
-const { title, date, image, tags } = post.data
+const { title, date, updatedDate, image, tags, category } = post.data
 const description = post.data.description || generateDescription(post.body)
 const formattedDate = formatDate(date)
 const toc = parseToc(post.body)
@@ -41,9 +42,25 @@ const breadcrumbSchema = buildBreadcrumbSchema({ post, siteUrl: getSiteUrl(Astro
 
 const allPosts = await getCollection('post')
 const relatedPosts = getRelatedPosts({ currentPost: post, allPosts, maxPosts: RELATED_POSTS.MAX_COUNT })
+
+const articleSection = category ? BLOG_CATEGORIES[category as BlogCategory] : undefined
 ---
 
-<BaseLayout seo={{ title, description, image, keywords: tags }}>
+<BaseLayout
+  seo={{
+    title,
+    description,
+    image,
+    keywords: tags,
+    ogType: 'article',
+    publishedTime: date,
+    modifiedTime: updatedDate ?? date,
+    author: WEBSITE_CONFIG.AUTHOR,
+    articleSection,
+    articleTags: tags,
+    excludeWebPageSchema: true,
+  }}
+>
   <ReadingProgress client:only="react" />
   <script is:inline type="application/ld+json" set:html={JSON.stringify(blogPostingSchema)} />
   <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />

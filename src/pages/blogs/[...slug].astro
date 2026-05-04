@@ -20,9 +20,17 @@ const { prevUrl, nextUrl } = getPaginationUrls({
   totalPages: pagination.totalPages,
   siteUrl: getSiteUrl(Astro.site),
 })
+
+const baseTitle = category ? categoryLabel : '블로그'
+const seoTitle = pagination.currentPage > 1
+  ? `${baseTitle} (${pagination.currentPage}페이지)`
+  : baseTitle
+const seoDescription = category
+  ? `${categoryLabel} 카테고리 글 ${totalPosts}개`
+  : `개발자 매튜의 글 모음 — 개발/HTTP/디자인 패턴/회고/이야기 (총 ${totalPosts}개)`
 ---
 
-<BaseLayout seo={{ prevUrl, nextUrl }}>
+<BaseLayout seo={{ title: seoTitle, description: seoDescription, prevUrl, nextUrl }}>
   <div class="py-12 sm:py-8">
     <div class="mb-12 sm:mb-8">
       <h1 class="text-3xl font-bold tracking-tight mb-2 sm:text-2xl">{displayTitle}</h1>

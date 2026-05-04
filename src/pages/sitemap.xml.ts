@@ -1,3 +1,4 @@
+import { BLOG_CATEGORIES } from "@/consts";
 import { SITE_URL } from "@/lib/config";
 import { getPostInfoList } from "@/lib/mdx";
 
@@ -7,11 +8,17 @@ export async function GET() {
 
   const renderUrl = (slug: string) => `<url><loc>${siteUrl}${slug}</loc></url>`;
 
+  const categoryUrls = Object.keys(BLOG_CATEGORIES)
+    .filter((key) => key !== "ALL")
+    .map((key) => renderUrl(`/blogs/${key.toLowerCase()}`))
+    .join("\n");
+
   const result = `
     <?xml version="1.0" encoding="UTF-8"?>
     <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
       ${renderUrl("/")}
       ${renderUrl("/blogs")}
+      ${categoryUrls}
       ${posts
         .map((post) => {
           const lastMod = (post.updatedDate ?? post.date).toISOString();

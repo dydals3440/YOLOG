@@ -14,9 +14,12 @@ const sortedPosts = sortPostsByDate(allPosts)
 const categories = createCategoryList(allPosts)
 const { items: posts, pagination } = paginateArray(sortedPosts, 1, PAGINATION.POSTS_PER_PAGE)
 const nextUrl = pagination.totalPages > 1 ? `${getSiteUrl(Astro.site)}/blogs/page/2` : null
+
+const seoTitle = '블로그'
+const seoDescription = `개발자 매튜의 글 모음 — 개발/HTTP/디자인 패턴/회고/이야기 (총 ${sortedPosts.length}개)`
 ---
 
-<BaseLayout seo={{ nextUrl }}>
+<BaseLayout seo={{ title: seoTitle, description: seoDescription, nextUrl }}>
   <div class="py-12 sm:py-8">
     <div class="mb-12 sm:mb-8">
       <h1 class="text-3xl font-bold tracking-tight mb-2 sm:text-2xl">전체</h1>
