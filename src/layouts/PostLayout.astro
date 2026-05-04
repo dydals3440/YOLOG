@@ -32,9 +32,10 @@ type Props = {
 
 const { post, prevPost, nextPost } = Astro.props
 const { title, date, updatedDate, image, tags, category } = post.data
-const description = post.data.description || generateDescription(post.body)
+const body = post.body ?? ''
+const description = post.data.description || generateDescription(body)
 const formattedDate = formatDate(date)
-const toc = parseToc(post.body)
+const toc = parseToc(body)
 const { Content } = await render(post)
 
 const blogPostingSchema = buildBlogPostingSchema({ post, description, site: Astro.site, url: Astro.url })
