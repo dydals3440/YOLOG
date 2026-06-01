@@ -1,0 +1,506 @@
+---
+title: React Suspense 제대로 이해하기
+date: 2026-06-01
+updatedDate: 2026-06-01
+tags:
+  [
+    React,
+    Suspense,
+    Async,
+    Data Loading,
+    React Suspense,
+    React Async,
+    React Data Loading,
+  ]
+category: DEVELOPMENT
+image: "/images/react-suspense/thumbnail.webp"
+---
+
+요즘 대부분의 React 프로젝트에서 서버 상태를 관리할 때 [`TanStack Query`](https://tanstack.com/query/latest)를 사용한다. 데이터를 가져오는 컴포넌트마다 보통 아래와 같은 패턴이 반복된다.
+
+```tsx
+function TodoList() {
+  const {
+    data: todos,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["todos"],
+    queryFn: () => fetchTodos(),
+  });
+
+  if (isLoading) {
+    return <div>로딩중이에요..!</div>;
+  }
+
+  if (isError) {
+    return <div>에러가 발생했어요..!</div>;
+  }
+
+  return (
+    <>
+      {todos.map((todo) => (
+        <div key={todo.id}>{todo.title}</div>
+      ))}
+    </>
+  );
+}
+```
+
+데이터를 가져오고, `isLoading`을 확인하고, `isError`를 확인한 다음에야 비로소 화면을 그린다. 화면이 늘어날수록 이 분기 세트도 그대로 따라 늘어난다.
+
+사실 처음에는 이게 별 문제로 느껴지지 않는다. 그래서 위 코드를 다시 한 번 들여다 보면서 어디가 어색한지 짚어보자.
+
+---
+
+## 컴포넌트가 약속한 일과 실제 하는 일
+
+`TodoList`라는 이름을 보고 우리가 기대하는 건 뭘까? 이름 그대로 **투두 리스트를 그려주는 컴포넌트**다. 책임은 단 하나, 화면에 투두 목록을 보여주는 것이어야 한다.
+
+그런데 지금 `TodoList`는 세 가지 일을 동시에 하고 있다. 로딩일 때 로딩 화면을 그리고, 에러일 때 에러 화면을 그리고, 데이터가 도착했을 때 비로소 목록을 그린다. 이름은 한 가지를 약속했는데 실제로는 셋을 떠안은 셈이다.
+
+이걸 사용하는 쪽의 코드를 보면 문제가 더 분명해진다.
+
+```tsx
+function TodoScreen() {
+  return (
+    <VStack>
+      <TodoList />
+    </VStack>
+  );
+}
+```
+
+여기까진 별 문제 없어 보인다. 우리는 `TodoList`를 직접 만들었으니, 그 안에 로딩과 에러 처리가 들어 있다는 걸 이미 알고 있기 때문이다.
+
+문제는 **동료 개발자**다. `TodoScreen`만 보는 사람은 `<TodoList />`라는 한 줄에서 이 컴포넌트가 로딩과 에러를 알아서 처리하는지, 한다면 어떻게 보여주는지 전혀 알 수 없다. 확인하려면 결국 `TodoList` 내부를 직접 열어봐야 한다. 즉, 로딩과 에러 처리라는 중요한 동작이 호출하는 쪽에서는 보이지 않는 곳에 숨어 있다.
+
+---
+
+## 책임을 상위로 끌어올려도 해결되지 않는다
+
+그렇다면 데이터를 가져오는 책임을 부모로 끌어올리면 어떨까? `TodoScreen`이 데이터를 가져오고, `TodoList`는 받은 데이터를 그리는 일에만 집중하도록.
+
+```tsx
+function TodoScreen() {
+  const {
+    data: todos,
+    isLoading: todosLoading,
+    isError: todosError,
+  } = useQuery({
+    queryKey: ["todos"],
+    queryFn: () => fetchTodos(),
+  });
+
+  if (todosLoading) {
+    return <div>로딩중이에요..!</div>;
+  }
+
+  if (todosError) {
+    return <div>에러가 발생했어요..!</div>;
+  }
+
+  return (
+    <VStack>
+      {/* 데이터까지 부모가 다 가져온다면, TodoList를 굳이 컴포넌트로 분리할 필요가 있을까? */}
+      <TodoList items={todos} />
+    </VStack>
+  );
+}
+```
+
+겉으로는 깔끔해진 것 같지만, 사실 문제는 자리만 옮긴 셈이다.
+
+`TodoScreen`은 본래 "이 화면이 어떤 영역으로 이루어져 있는지" 한눈에 드러내야 하는 화면 컴포넌트인데, 데이터 페칭과 분기문에 가려져 그 역할이 흐려진다. 화면에 컴포넌트가 하나씩 늘어날 때마다 `useQuery` 호출과 `isLoading`/`isError` 분기도 함께 따라 붙는다.
+
+그리고 코드 안에 남겨둔 주석처럼, 이 구조에서는 `TodoList`도 더 이상 자기 데이터를 책임지지 않는다. 부모가 받아온 `todos`를 그대로 받아 그리기만 하는, 사실상 얇은 표현 컴포넌트가 된다. 굳이 분리해둘 이유가 약해진다.
+
+여기에 더 중요한 부작용이 하나 있다. 이렇게 되면 **로딩 단위가 페이지 전체**가 된다. 같은 화면에 데이터를 불러오는 컴포넌트가 더 있다고 해보자. 친구 목록 하나가 늦게 도착하기만 해도, 멀쩡히 보여줄 수 있는 캘린더와 투두 목록까지 같이 빈 화면으로 묶여 기다리게 된다.
+
+---
+
+## 화면과 컴포넌트는 1대1로 매칭되어야 한다
+
+<img src="/images/react-suspense/1.webp" alt="친구 목록, 캘린더, 카테고리별 할 일이 한 화면에 쌓여 있는 투두 스크린" style="max-width: 240px;" />
+
+위 화면을 잠깐 보자. 위에서부터 차례로 친구 목록이 가로로 늘어서 있고, 그 아래에는 캘린더가 있고, 그 아래에는 카테고리별 할 일이 쌓여 있다.
+
+이제 이 화면을 코드로 옮긴다고 생각해보자. 우리가 진짜로 원하는 `TodoScreen`은 이런 모양이 아닐까?
+
+```tsx
+function TodoScreen() {
+  return (
+    <VStack>
+      <FriendList />
+
+      <Spacing size={10} />
+
+      <Calendar />
+
+      <Spacing size={20} />
+
+      <TodoList />
+
+      <Spacing size={20} />
+    </VStack>
+  );
+}
+```
+
+코드만 봐도 이 화면이 어떤 영역으로 구성되어 있는지 바로 읽힌다. 이미지를 보지 않아도 대충 어떤 화면일지 그려진다.
+
+1. 친구 목록을 보여준다
+2. 캘린더를 보여준다
+3. 투두 리스트를 보여준다
+
+화면의 한 영역과 코드 안의 한 컴포넌트가 정확히 1대1로 매칭된다. 이것이 화면 컴포넌트의 본래 역할이다.
+
+그런데 이 깔끔함을 유지하려면 한 가지 조건이 있다. **로딩과 에러 분기가 이 코드 안에 끼어들지 않아야 한다.** 각 컴포넌트가 자기 데이터를 직접 가져오게 두되, 로딩과 에러 처리는 컴포넌트 밖으로 빼야 한다.
+
+이건 결국 우리에게 익숙한 **관심사 분리** 원칙이다. 영문으로 Separation of Concerns, 줄여서 SoC라 부른다. `TodoList`는 데이터로 UI를 그리는 일에 집중하고, 로딩 상태는 `Suspense`가, 에러 상태는 `ErrorBoundary`가 각자의 자리에서 책임진다. 컴포넌트, 로딩, 에러가 서로의 코드 안에 섞이지 않고 각자의 영역에 머문다. 그 일을 가능하게 해주는 도구가 바로 `Suspense`다.
+
+---
+
+## Suspense가 하는 일
+
+지금까지 우리는 세 가지 문제를 봤다. 컴포넌트가 약속한 책임 이상을 떠안았고, 부모로 끌어올려도 화면 코드가 흐려졌고, 로딩 단위가 페이지 전체로 부풀었다. `Suspense`는 이 셋을 한 번에 푸는 도구다.
+
+[`Suspense`](https://react.dev/reference/react/Suspense)는 "자식 컴포넌트가 아직 준비되지 않았다면 대신 다른 것을 보여달라"고 React에게 부탁하는 컴포넌트다. 데이터 로딩 중이면 fallback을 그리고, 끝나면 본문을 그린다. 이 분기 자체를 React가 트리 구조로 처리해준다.
+
+TanStack Query에서는 [`useSuspenseQuery`](https://tanstack.com/query/latest/docs/framework/react/reference/useSuspenseQuery)를 쓰면 된다. 컴포넌트는 데이터가 **이미 있다는 가정** 아래 코드를 짤 수 있다. 도입부의 `TodoList`와 나란히 놓고 보자.
+
+```tsx
+// Before
+function TodoList() {
+  const { data: todos, isLoading, isError } = useQuery({
+    queryKey: ["todos"],
+    queryFn: () => fetchTodos(),
+  });
+
+  if (isLoading) return <div>로딩중이에요..!</div>;
+  if (isError) return <div>에러가 발생했어요..!</div>;
+
+  return (
+    <>
+      {todos.map((todo) => (
+        <div key={todo.id}>{todo.title}</div>
+      ))}
+    </>
+  );
+}
+
+// After
+function TodoList() {
+  const { data: todos } = useSuspenseQuery({
+    queryKey: ["todos"],
+    queryFn: () => fetchTodos(),
+  });
+
+  return (
+    <>
+      {todos.map((todo) => (
+        <div key={todo.id}>{todo.title}</div>
+      ))}
+    </>
+  );
+}
+```
+
+After 쪽에서 사라진 것을 짚어보자. `isLoading` 분기, `isError` 분기, 그리고 `todos`가 `undefined`일 가능성 자체가 사라졌다. `TodoList`는 다시 자기 이름이 약속한 일, 즉 투두 리스트를 그리는 일만 한다.
+
+훅이 돌려주는 모양 자체가 달라졌다는 점도 한 줄로 짚어둘 만하다.
+
+```ts
+// Before
+const { data, isLoading, isError } = useQuery(...);   // data: Todo[] | undefined
+
+// After
+const { data } = useSuspenseQuery(...);               // data: Todo[]
+```
+
+`isLoading`과 `isError`가 반환값에서 빠지고, `data` 타입에서 `undefined`가 빠진다. 이 작은 차이가 본문 코드 전체의 결을 바꾼다. 자세한 건 뒤에서 다룬다.
+
+대신 로딩과 에러는 누군가 떠안아야 하는데, 그 역할을 사용하는 쪽의 `Suspense`와 [`ErrorBoundary`](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)가 맡는다.
+
+```tsx
+<ErrorBoundary fallback={<TodoList.Error />}>
+  <Suspense fallback={<TodoList.Loading />}>
+    <TodoList />
+  </Suspense>
+</ErrorBoundary>
+```
+
+로딩 중에는 `TodoList.Loading`이, 에러가 나면 `TodoList.Error`가 자리를 대신 채운다. `TodoList` 내부에는 더 이상 분기문이 없고, 사용하는 쪽의 코드만 봐도 이 영역에서 로딩과 에러가 어떻게 처리되는지 한눈에 보인다.
+
+### TodoList.Loading과 TodoList.Error로 묶기
+
+위 코드의 `TodoList.Loading`과 `TodoList.Error`는 어디서 갑자기 튀어나왔을까? 사실 이건 아무 데서나 쓰이는 범용 부품이 아니다. `TodoList`가 로딩 중일 때, 에러일 때 각각 어떻게 보일지를 정의한 부품이고, 사실상 `TodoList`와 한 묶음이다.
+
+두 방식을 비교해보면 차이가 분명해진다.
+
+- 흔한 방식: `TodoListSkeleton`이나 `ErrorView` 같은 부품이 어딘가 따로 존재하고, 호출부에서 비로소 `TodoList`와 조립된다. 셋이 한 묶음이라는 사실이 코드 위치로는 드러나지 않는다.
+- compound 방식: `TodoList.Loading`과 `TodoList.Error`로 같은 파일에 묶여 있어, 호출부 한 줄만 봐도 본문, 로딩, 에러 세 상태가 한눈에 들어온다.
+
+그래서 멀리 떨어진 별도의 컴포넌트로 두기보다, **같은 곳에 정적 속성으로 묶어두는 편이 자연스럽다.**
+
+```tsx
+// TodoList 정의 옆에 같이 둔다
+TodoList.Loading = function TodoListLoading() {
+  return <div>로딩중이에요..!</div>;
+};
+
+TodoList.Error = function TodoListError({ reset }: { reset?: () => void }) {
+  return (
+    <div>
+      에러가 발생했어요..! <button onClick={reset}>다시 시도</button>
+    </div>
+  );
+};
+```
+
+이렇게 해두면 사용하는 쪽 코드만 봐도 "이 영역은 `TodoList`의 본문, 로딩, 에러 세 상태로 구성된다"는 것이 한눈에 읽힌다. 로딩 스켈레톤이나 에러 메시지를 손볼 일이 생겨도 `TodoList`가 정의된 파일 하나만 열면 된다.
+
+### 에러에서 다시 시도까지 이어주기
+
+에러 화면이 떴을 때 사용자가 다시 시도할 수 있어야 한다. [`react-error-boundary`](https://github.com/bvaughn/react-error-boundary)의 `ErrorBoundary`와 TanStack Query의 [`QueryErrorResetBoundary`](https://tanstack.com/query/latest/docs/framework/react/reference/QueryErrorResetBoundary)를 묶어 `QueryErrorBoundary`라는 얇은 래퍼를 한 번 만들어두면, 호출부는 한 줄짜리 흐름으로 깔끔하게 유지된다.
+
+```tsx
+<QueryErrorBoundary fallback={(props) => <TodoList.Error {...props} />}>
+  <Suspense fallback={<TodoList.Loading />}>
+    <TodoList />
+  </Suspense>
+</QueryErrorBoundary>
+```
+
+`QueryErrorBoundary`는 두 라이브러리를 이어주는 얇은 래퍼다. 리셋 흐름과 관련된 부분만 보면 다음과 같다.
+
+```tsx
+type Props = {
+  children: ReactNode;
+  fallback: (props: { error: unknown; reset: () => void }) => ReactNode;
+};
+
+export function QueryErrorBoundary({ children, fallback }: Props) {
+  return (
+    <QueryErrorResetBoundary>
+      {({ reset }) => (
+        <ErrorBoundary
+          onReset={reset}
+          fallbackRender={({ error, resetErrorBoundary }) =>
+            fallback({ error, reset: resetErrorBoundary })
+          }
+        >
+          {children}
+        </ErrorBoundary>
+      )}
+    </QueryErrorResetBoundary>
+  );
+}
+```
+
+핵심은 `onReset={reset}` 한 줄이다. `QueryErrorResetBoundary`가 내려준 `reset`을 `ErrorBoundary`의 `onReset`에 그대로 연결하는 것이 전부다. 사용자가 `TodoList.Error`의 "다시 시도"를 누르면 `resetErrorBoundary`가 호출되고, 그 흐름이 `onReset`으로 이어져 TanStack Query의 에러 캐시까지 비워준다. 그 뒤 `useSuspenseQuery`가 다시 요청을 던지면서 **에러 → 다시 시도 → 성공** 흐름이 자연스럽게 완성된다.
+
+필요하다면 `resetKeys`도 같은 방식으로 wrapper의 prop으로 받아 `ErrorBoundary`에 넘기면 된다. 예를 들어 화면의 필터 값을 담아두면, 그 값이 바뀔 때마다 사용자가 따로 누르지 않아도 자동으로 다시 시도된다.
+
+### useSuspenseQuery의 제약
+
+`useSuspenseQuery`는 `useQuery`에서 분기만 빠진 동의어가 아니다. 동작 모델 자체가 달라서, `useQuery`에서 쓰던 옵션이 일부 통하지 않는다.
+
+- `enabled`: 조건부 비활성화가 안 된다. 대신 호출 자체를 컴포넌트 단위로 쪼개 분기한다.
+- `placeholderData`: 데이터가 없는 동안 임시 데이터로 본문을 그리는 패턴이 안 된다. 새 데이터를 받는 동안 이전 화면을 유지하고 싶다면 `startTransition`이나 `useDeferredValue`로 업데이트를 감싸는 것이 권장 패턴이다(글 마지막 섹션에서 다룬다).
+- `ErrorBoundary`: 없으면 에러가 앱 루트까지 그대로 올라간다. `Suspense`처럼 사실상 필수다.
+
+```tsx
+// useQuery라면 이렇게 조건부로 끌 수 있다
+useQuery({
+  queryKey: ["todos"],
+  queryFn: () => fetchTodos(),
+  enabled: shouldFetch,
+});
+
+// useSuspenseQuery는 enabled가 없다
+// 대신 호출 자체를 컴포넌트로 분리해 분기한다
+{shouldFetch ? <TodoList /> : <EmptyState />}
+```
+
+결국 `useSuspenseQuery`는 `Suspense` 사고에 맞춰 다시 설계된 훅이다. 그 사고에 어긋나는 옵션은 의도적으로 빠져 있다고 보면 된다.
+
+---
+
+## Suspense는 어떻게 동작하는가
+
+`isLoading` 분기 하나 없이 컴포넌트가 어떻게 "기다릴" 수 있는 걸까? 원리를 알고 나면 `Suspense`가 훨씬 명확해진다.
+
+핵심은 자바스크립트의 `try/catch`와 똑같다. 단 한 가지, 에러 대신 아직 끝나지 않은 `Promise`를 throw한다는 점만 다르다.
+
+세부로 들어가기 전에, 사고 방식 자체가 어떻게 바뀌는지 두 줄로 짚어두자.
+
+- 기존 사고: 함수를 호출하면 결과(혹은 로딩/에러 상태)가 나온다 → 그 상태에 맞춰 분기한다.
+- `Suspense` 사고: 데이터가 없으면 컴포넌트 실행이 throw로 즉시 중단된다 → 상위의 `Suspense`가 잡아 `fallback`을 그린다 → 데이터가 도착하면 같은 자리에서 다시 시도한다.
+
+이 흐름을 코드 동작 차원에서 풀어보면 이렇다.
+
+`useSuspenseQuery`는 호출된 시점에 데이터가 아직 없으면, 값을 반환하는 대신 데이터를 가져오는 `Promise`를 그대로 throw한다. `throw`는 함수 실행을 즉시 중단시키기 때문에, `TodoList`의 본문(목록을 그리는 코드)에는 애초에 도달하지 못한다.
+
+![Suspense의 throw-catch-retry 동작 흐름](/images/react-suspense/2.webp)
+
+이렇게 던져진 `Promise`는 가장 가까운 `Suspense`까지 위로 전달되고, `Suspense`가 그것을 잡아챈다(catch). `try/catch`에서 에러가 가장 가까운 `catch` 블록으로 거슬러 올라가는 것과 똑같은 그림이다. `Promise`를 잡은 `Suspense`는 본문 대신 `fallback`을 화면에 그린다.
+
+그리고 `Promise`가 resolve되면, React는 멈췄던 지점부터 이어서 실행하는 것이 아니다. `Suspense` 경계 아래를 **처음부터 다시 렌더링한다.** 이번에는 데이터가 캐시에 채워져 있으니 `useSuspenseQuery`가 throw 없이 값을 반환하고, `TodoList`는 비로소 목록을 그린다.
+
+정리하면 이렇게 흘러간다.
+
+1. `TodoList`가 렌더되며 `useSuspenseQuery`를 호출한다
+2. 데이터가 없으면 `Promise`를 throw해 렌더링을 중단한다
+3. 가장 가까운 `Suspense`가 이를 catch하고 `fallback`을 그린다
+4. `Promise`가 resolve되면 경계부터 다시 렌더링한다 → 이번엔 데이터가 있으니 본문을 그린다
+
+이런 throw 기반 동작은 그동안 TanStack Query 같은 라이브러리가 내부적으로 다뤄온 패턴인데, React 19부터는 [`use`](https://react.dev/reference/react/use) 훅이 같은 메커니즘을 정식 프리미티브로 노출한다. 동작 모델은 동일하다.
+
+여기서 `TodoList`가 "데이터는 항상 있다"고 가정할 수 있는 이유도 분명해진다. 데이터가 없을 때는 2번에서 이미 throw되어 본문에 도달조차 하지 못하기 때문이다. `useSuspenseQuery`가 돌려주는 `data`의 타입에 `undefined`가 없는 것은, 바로 이 동작에서 따라 나오는 결과다.
+
+이 보장은 코드의 결을 눈에 띄게 바꿔놓는다. `useQuery`를 쓸 때는 `data`의 타입이 `Todo[] | undefined`라서, 본문 어디서든 옵셔널 체이닝(`?.`)과 폴백(`??`)을 달고 다녀야 했다.
+
+```tsx
+function TodoCount() {
+  const { data: todos } = useQuery({
+    queryKey: ["todos"],
+    queryFn: () => fetchTodos(),
+  });
+
+  const total = todos?.length ?? 0;
+  const done = todos?.filter((t) => t.done).length ?? 0;
+
+  return <span>총 {total}개 중 {done}개 완료</span>;
+}
+```
+
+반면 `useSuspenseQuery`는 본문에 도달한 시점에 데이터가 반드시 있다는 사실이 타입으로도 보장된다. 그래서 `?.`과 `??`이 깔끔하게 사라지고, 점(`.`)으로 곧장 접근할 수 있다.
+
+```tsx
+function TodoCount() {
+  const { data: todos } = useSuspenseQuery({
+    queryKey: ["todos"],
+    queryFn: () => fetchTodos(),
+  });
+
+  return (
+    <span>
+      총 {todos.length}개 중 {todos.filter((t) => t.done).length}개 완료
+    </span>
+  );
+}
+```
+
+컴포넌트가 "데이터가 있을 때의 모습"만 다루면 되는 셈이다. 불확실한 상태를 처리하는 분기가 사라지면, 도메인 로직과 화면 표현이 훨씬 또렷하게 드러난다.
+
+> 한 가지만 기억하자. `Suspense`는 렌더링을 "일시정지했다가 이어서" 하는 것이 아니라, **중단하고 처음부터 다시 시도한다.** 그래서 `Suspense` 아래의 컴포넌트 본문은 데이터가 도착하기까지 여러 번 실행될 수 있다.
+
+---
+
+## Suspense의 위치가 결과를 바꾼다
+
+`Suspense`를 쓰기로 했다면, 다음 질문은 **어디에 둘 것인가**이다. 같은 화면이라도 `Suspense`를 두는 위치에 따라 사용자가 보는 경험이 완전히 달라진다.
+
+먼저 화면 전체를 하나의 `Suspense`로 감싸는 경우를 보자.
+
+```tsx
+<Suspense fallback={<ScreenSkeleton />}>
+  <TodoScreen />
+</Suspense>
+```
+
+깔끔해 보이지만 문제가 있다. `TodoScreen` 안의 `FriendList`, `Calendar`, `TodoList` 중 **가장 느린 하나가 끝날 때까지** 화면 전체가 fallback에 머문다. 친구 목록이 50ms 만에 도착하고 캘린더도 100ms 만에 도착해도, 투두 목록이 2초 걸리면 사용자는 2초 내내 빈 화면을 본다. 빠른 데이터가 먼저 도착해도 보여줄 방법이 없는 셈이다.
+
+이번엔 각 컴포넌트마다 `Suspense` 경계를 두는 경우를 보자.
+
+```tsx
+function TodoScreen() {
+  return (
+    <VStack>
+      <Suspense fallback={<FriendList.Loading />}>
+        <FriendList />
+      </Suspense>
+
+      <Suspense fallback={<Calendar.Loading />}>
+        <Calendar />
+      </Suspense>
+
+      <Suspense fallback={<TodoList.Loading />}>
+        <TodoList />
+      </Suspense>
+    </VStack>
+  );
+}
+```
+
+이제는 친구 목록이 먼저 도착하면 친구 영역만 먼저 채워지고, 캘린더가 그 다음, 투두 목록은 마지막에 채워진다. 빈 화면을 보는 시간이 영역별로 잘게 나뉘면서 체감 속도가 훨씬 빨라진다.
+
+다시 말해, `Suspense` 경계는 **로딩이 끊기는 단위**다. 경계를 크게 두를수록 더 큰 영역이 한 덩어리로 묶여 기다리고, 작게 두를수록 부분 로딩이 가능해진다. 그래서 보통은 화면을 구성하는 의미 있는 영역 단위로 `Suspense`를 두는 것이 좋다.
+
+---
+
+## Suspense는 데이터 페칭만의 도구가 아니다
+
+지금까지 모든 예시는 TanStack Query 기반이었다. 그래서 자칫 "Suspense는 데이터 페칭에 쓰는 도구"라고 좁게 받아들이기 쉽다. 사실 `Suspense`의 본질은 더 일반적이다. "자식이 아직 준비 안 됐으면 fallback을 보여줘"라는 메커니즘이고, "준비 안 됨"의 의미는 여러 가지다.
+
+- [`React.lazy()`](https://react.dev/reference/react/lazy) 코드 스플리팅: 컴포넌트 자체를 비동기로 불러올 때. 데이터 페칭 다음으로 흔히 만나는 사용법이다.
+- SSR 스트리밍: React 18 이후 서버에서 트리의 일부분을 먼저 보내고 나머지는 준비되는 대로 흘려보내는데, 그 단위가 바로 `Suspense` 경계다.
+- [`startTransition`](https://react.dev/reference/react/startTransition)과 [`useDeferredValue`](https://react.dev/reference/react/useDeferredValue): 무거운 상태 업데이트로 잠시 멈출 때 `Suspense` 경계가 잡고 fallback 또는 이전 화면을 유지한다.
+
+두 사용법을 짧게 살펴보자. 먼저 `React.lazy()`다.
+
+```tsx
+import { lazy, Suspense } from "react";
+
+const TodoScreen = lazy(() => import("./TodoScreen"));
+
+function App() {
+  return (
+    <Suspense fallback={<div>로딩중이에요..!</div>}>
+      <TodoScreen />
+    </Suspense>
+  );
+}
+```
+
+`TodoScreen`의 자바스크립트 번들이 도착하지 않은 동안 `Suspense`는 fallback을 그린다. 데이터 페칭과 똑같은 모델이다. 다른 점은 throw되는 것이 데이터를 가져오는 `Promise`가 아니라 모듈을 가져오는 `Promise`라는 것뿐이다.
+
+다음은 `useDeferredValue`다.
+
+```tsx
+import { useDeferredValue, Suspense } from "react";
+
+function SearchPage({ query }: { query: string }) {
+  const deferredQuery = useDeferredValue(query);
+
+  return (
+    <Suspense fallback={<div>로딩중이에요..!</div>}>
+      <SearchResults query={deferredQuery} />
+    </Suspense>
+  );
+}
+```
+
+사용자가 검색어를 빠르게 입력해도 `useDeferredValue`가 변화를 한 박자 늦춰 전달한다. 한 번 결과가 그려진 뒤의 갱신에서 새 검색어로 `SearchResults`가 다시 suspend되면, React는 fallback을 곧장 띄우는 대신 이전 결과를 그대로 유지한다. "잠깐 멈춤"을 사용자에게 들키지 않게 부드럽게 넘기는 셈이다. 단, 최초 마운트 때는 보여줄 이전 결과가 없으므로 fallback이 그대로 뜬다.
+
+`Suspense`의 핵심은 단 하나의 모델이다. **throw → catch → retry**. 데이터 페칭, 코드 스플리팅, 트랜지션은 모두 이 위에 같은 방식으로 얹혀 있을 뿐이다.
+
+---
+
+## 핵심 정리
+
+**기존 방식의 한계**
+
+- 컴포넌트 안에 `isLoading`/`isError` 분기가 쌓이면 이름이 약속한 책임 이상을 떠안는다
+- 분기를 부모로 끌어올려도 화면 코드가 흐려지고, 로딩 단위가 페이지 전체로 커진다
+- 데이터 타입이 `T | undefined`라 본문 곳곳에 옵셔널 체이닝(`?.`)이 따라붙는다
+
+**Suspense를 도입하면**
+
+- `useSuspenseQuery`는 데이터가 없으면 `Promise`를 throw해 본문에 도달조차 못 하게 한다 → `data` 타입에서 `undefined`가 사라지고, 점(`.`)으로 곧장 접근한다
+- `Suspense`와 `ErrorBoundary`가 로딩과 에러를 떠안고, 컴포넌트는 "데이터가 있을 때의 모습"만 그린다
+- 로딩과 에러 UI는 `TodoList.Loading`/`TodoList.Error`로 컴포넌트와 함께 묶어둘 수 있다
+- `onReset`과 `resetKeys`로 "에러 → 다시 시도" 흐름까지 선언적으로 처리된다
+- `Suspense` 경계의 위치가 곧 사용자에게 보이는 로딩 단위다. 작게 둘러서 부분 로딩이 가능해진다
+- `Suspense`는 데이터 페칭에만 쓰이지 않는다. `React.lazy()` 코드 스플리팅, SSR 스트리밍, 트랜지션도 같은 throw/catch/retry 모델로 엮인다
