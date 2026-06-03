@@ -1,0 +1,34 @@
+<script>
+  const nodes = Array.from(document.querySelectorAll<HTMLElement>('pre.mermaid'))
+
+  if (nodes.length) {
+    // mermaid가 처리하면 원본 소스를 SVG로 덮어쓰므로, 재렌더링용으로 원본을 미리 캐싱한다.
+    const sources = nodes.map((el) => el.textContent ?? '')
+    const isDark = () => document.documentElement.classList.contains('dark')
+
+    // 다이어그램이 있는 페이지에서만 무거운 mermaid 번들을 동적으로 불러온다.
+    import('mermaid').then(async ({ default: mermaid }) => {
+      const renderAll = async () => {
+        nodes.forEach((el, i) => {
+          el.removeAttribute('data-processed')
+          el.textContent = sources[i]
+        })
+        mermaid.initialize({ startOnLoad: false, theme: isDark() ? 'dark' : 'default' })
+        await mermaid.run({ nodes })
+      }
+
+      await renderAll()
+
+      // 테마 토글(html.dark 변경) 시 원본 소스로 복원 후 새 테마로 다시 그린다.
+      let dark = isDark()
+      new MutationObserver(() => {
+        if (isDark() === dark) return
+        dark = isDark()
+        renderAll()
+      }).observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class'],
+      })
+    })
+  }
+</script>

@@ -20,7 +20,7 @@ import remarkBreaks from "remark-breaks";
 import remarkDirective from "remark-directive";
 
 import { transformerFragment } from "./plugins/transformer-fragment";
-import { customCallout } from "./src/lib/directives";
+import { customCallout, remarkMermaid } from "./src/lib/directives";
 
 export default defineConfig({
   output: "static",
@@ -53,7 +53,7 @@ export default defineConfig({
           transformerFragment(),
         ],
       },
-      remarkPlugins: [remarkBreaks, remarkDirective, customCallout],
+      remarkPlugins: [remarkBreaks, remarkDirective, customCallout, remarkMermaid],
       rehypePlugins: [
         rehypeSlug,
         [

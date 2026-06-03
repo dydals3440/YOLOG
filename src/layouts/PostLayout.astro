@@ -8,6 +8,7 @@ import PostNavigation from '@/components/common/PostNavigation.astro'
 import CopyCodeScript from '@/components/post/CopyCodeScript.astro'
 import GiscusComment from '@/components/post/GiscusComment'
 import MediumZoomScript from '@/components/post/MediumZoomScript.astro'
+import MermaidScript from '@/components/post/MermaidScript.astro'
 import PageActions from '@/components/post/PageActions'
 import PostImage from '@/components/post/PostImage.astro'
 import ReadingProgress from '@/components/post/ReadingProgress'
@@ -121,4 +122,5 @@ const articleSection = category ? BLOG_CATEGORIES[category as BlogCategory] : un
   </section>
   <MediumZoomScript />
   <CopyCodeScript />
+  <MermaidScript />
 </BaseLayout>

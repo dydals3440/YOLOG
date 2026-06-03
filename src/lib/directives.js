@@ -14,6 +14,21 @@ export const getIconForType = (type) => {
   return icons[type] || icons.note;
 };
 
+// Mermaid
+const escapeHtml = (str) => str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+// ```mermaid 코드블록을 Shiki 처리에서 빼내 <pre class="mermaid">로 바꾼다.
+// 브라우저가 textContent의 엔티티를 디코드하므로 escape한 값이 mermaid에 그대로 전달된다.
+export const remarkMermaid = () => {
+  return (tree) => {
+    visit(tree, "code", (node) => {
+      if (node.lang !== "mermaid") return;
+      node.type = "html";
+      node.value = `<pre class="mermaid" data-mermaid>${escapeHtml(node.value)}</pre>`;
+    });
+  };
+};
+
 export const customCallout = () => {
   return (tree) => {
     visit(tree, (node) => {

@@ -733,3 +733,21 @@ html.dark pre.astro-code span.highlighted span {
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
+
+/* mermaid */
+.mdx pre.mermaid {
+  display: flex;
+  justify-content: center;
+  margin: 1.5rem 0;
+  padding: 0;
+  background: none;
+  border: none;
+}
+/* mermaid가 그리기 전(원본 소스 상태)에는 숨겨 깜빡임을 막는다 */
+.mdx pre.mermaid:not([data-processed]) {
+  visibility: hidden;
+}
+.mdx pre.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
