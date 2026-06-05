@@ -48,6 +48,12 @@
       "rules": {
         "jsx-a11y/alt-text": "off"
       }
+    },
+    {
+      "files": ["src/components/post/ReadingProgress.tsx"],
+      "rules": {
+        "jsx-a11y/prefer-tag-over-role": "off"
+      }
     }
   ]
 }
