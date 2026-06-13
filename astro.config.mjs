@@ -12,6 +12,7 @@ import {
 } from "@shikijs/transformers";
 import tailwindcss from "@tailwindcss/vite";
 
+import { unified } from "@astrojs/markdown-remark";
 import { defineConfig } from "astro/config";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeExternalLinks from "rehype-external-links";
@@ -32,27 +33,27 @@ export default defineConfig({
     prefetchAll: true,
     defaultStrategy: "viewport",
   },
-  integrations: [
-    mdx({
-      syntaxHighlight: "shiki",
-      shikiConfig: {
-        themes: {
-          light: "catppuccin-latte",
-          dark: "tokyo-night",
-        },
-        langAlias: {
-          gitignore: "bash",
-        },
-        transformers: [
-          transformerNotationHighlight(),
-          transformerNotationDiff(),
-          transformerNotationFocus(),
-          transformerNotationErrorLevel(),
-          transformerMetaHighlight(),
-          transformerMetaWordHighlight(),
-          transformerFragment(),
-        ],
+  markdown: {
+    syntaxHighlight: "shiki",
+    shikiConfig: {
+      themes: {
+        light: "catppuccin-latte",
+        dark: "tokyo-night",
       },
+      langAlias: {
+        gitignore: "bash",
+      },
+      transformers: [
+        transformerNotationHighlight(),
+        transformerNotationDiff(),
+        transformerNotationFocus(),
+        transformerNotationErrorLevel(),
+        transformerMetaHighlight(),
+        transformerMetaWordHighlight(),
+        transformerFragment(),
+      ],
+    },
+    processor: unified({
       remarkPlugins: [remarkBreaks, remarkDirective, customCallout, remarkMermaid],
       rehypePlugins: [
         rehypeSlug,
@@ -77,9 +78,8 @@ export default defineConfig({
         ],
       ],
     }),
-    sitemap(),
-    react(),
-  ],
+  },
+  integrations: [mdx(), sitemap(), react()],
   vite: {
     plugins: [tailwindcss()],
   },
