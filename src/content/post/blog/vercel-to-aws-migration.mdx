@@ -1,7 +1,7 @@
 ---
 title: Vercel에서 AWS로 프론트엔드 배포 이전하기 (S3 + CloudFront + GitHub Actions)
 date: 2026-06-04
-updatedDate: 2026-06-04
+updatedDate: 2026-06-29
 tags: [AWS, S3, CloudFront, Vercel, 배포, GitHub Actions, OIDC, CI/CD, 모노레포]
 category: DEVELOPMENT
 image: '/images/vercel-to-aws-migration/thumbnail.webp'
@@ -303,6 +303,14 @@ sequenceDiagram
 
 ### ③ 캐시 전략을 담아 S3에 업로드한다
 
+그런데 정적 SPA를 CDN에 얹는 일은 파일만 올린다고 끝이 아니다. 배포가 한 번 나갈 때마다 세 가지가 어긋날 수 있다.
+
+- 새 배포가 나가면 옛 `index.html`을 캐시한 브라우저는 이미 사라진 옛 청크를 가리킨다. 어떻게 막을까?
+- `/academy/1/cards/list` 같은 라우트는 `S3`에 그런 파일이 없다. 사용자가 그 주소에서 새로고침하면 어떻게 될까?
+- 배포 도중 옛 탭을 켜둔 사용자가 받으려던 청크가 그새 사라지면?
+
+이 세 질문에 답하는 게 사실상 정적 SPA 배포의 절반이다. 우리는 이를 세 축으로 풀었다 — ① 파일마다 다른 캐시 수명, ② 옛 에셋을 함부로 지우지 않기, ③ 없는 경로를 위한 `SPA 폴백`. 지금부터 차례로 본다. 먼저 캐시 수명이다.
+
 ```bash
 # 해시 붙은 에셋: 1년 영구 캐시 (immutable)
 - name: Sync hashed assets to S3 (immutable)
@@ -325,6 +333,8 @@ sequenceDiagram
 |---|---|---|
 | `assets/index-a1b2c3.js` | 1년 `immutable` | 내용이 바뀌면 파일명 해시가 바뀌므로 영원히 캐시해도 안전 |
 | `index.html` | `no-cache` | 항상 최신을 받아 새 해시 파일을 가리키게 |
+
+두 헤더는 한 쌍으로 움직인다. `index.html`은 매번 새로 받아 늘 최신 해시 파일을 가리키고, 그 해시 파일은 이름 자체가 곧 버전이라 1년을 캐시해도 충돌이 없다. 그래서 "항상 최신인 진입점 + 영원히 고정인 에셋"이라는 조합이 성립한다.
 
 참고로 이 sync에는 의도적으로 `--delete`를 넣지 않았다.
 배포 중 옛 탭을 켜둔 사용자가 이미 받은 청크를 못 찾아 깨지는 걸 막기 위해서다.
@@ -369,9 +379,11 @@ sequenceDiagram
 
 `CloudFront`는 `S3` 앞단의 글로벌 CDN이다. 사용자와 가까운 엣지에서 캐시해 빠르게 배달하고, HTTPS를 처리하고, SPA 라우팅까지 책임진다. 배포 직후엔 캐시에 남은 옛 `index.html`을 비워야 새 버전이 바로 보이므로 위처럼 무효화한다.
 
+여기서 무효화 경로를 `/*`가 아니라 `/`·`/index.html`로 좁힌 것도 의도다. 해시 붙은 에셋은 내용이 바뀌면 파일명까지 바뀌니 애초에 무효화할 필요가 없다. 오히려 `/*`로 엣지를 통째로 비우면, 배포 직후 이미 열려 있는 옛 탭이 기댈 옛 에셋까지 엣지에서 사라진다. 실제로 바뀐 건 `index.html` 하나뿐이니, 딱 그 하나만 비우면 된다.
+
 그런데 `CloudFront`에서 꼭 해둬야 하는 게 두 가지 있다.
 
-- **SPA fallback** — `/academy/1/cards/list` 같은 라우트는 `S3`에 파일이 없다. `403/404 → /index.html (200)`로 매핑해 SPA가 라우팅을 잇게 한다. (`OAC`로 막힌 버킷은 [`404`](https://developer.mozilla.org/ko/docs/Web/HTTP/Status/404)가 아니라 [`403`](https://developer.mozilla.org/ko/docs/Web/HTTP/Status/403)이 떨어지므로 둘 다 잡아야 한다.)
+- `SPA 폴백` — `/academy/1/cards/list` 같은 라우트는 `S3`에 파일이 없다. `403/404 → /index.html (200)`로 매핑해 SPA가 라우팅을 잇게 한다. (`OAC`로 막힌 버킷은 [`404`](https://developer.mozilla.org/ko/docs/Web/HTTP/Status/404)가 아니라 [`403`](https://developer.mozilla.org/ko/docs/Web/HTTP/Status/403)이 떨어지므로 둘 다 잡아야 한다.)
 - `OAC(Origin Access Control)` — `CloudFront`만 `S3`를 읽게 잠그는 자물쇠다. 버킷은 퍼블릭 액세스를 전부 막고 `CloudFront`만 통과시킨다.
 
 요청 하나가 이 두 장치를 어떻게 통과하는지 그림으로 보면 이렇다.
