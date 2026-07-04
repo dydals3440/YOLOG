@@ -90,7 +90,7 @@ const articleSection = category ? BLOG_CATEGORIES[category as BlogCategory] : un
   </LeftSidebar>
   <section>
     <div class="pt-12 pb-8 sm:pt-8 sm:pb-6">
-      <time datetime={formattedDate} class="text-xs text-third">{formattedDate}</time>
+      <time datetime={formatDate(date, 'YYYY-MM-DD')} class="text-xs text-third">{formattedDate}</time>
       <h1 class="mt-3 text-3xl font-bold tracking-tight leading-tight sm:text-2xl">{title}</h1>
       <div class="mt-6">
         <SocialShare

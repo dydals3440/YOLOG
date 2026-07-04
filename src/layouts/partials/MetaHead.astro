@@ -49,11 +49,22 @@ const organizationSchema = {
   "url": Astro.site?.toString() || SITE_URL,
   "logo": {
     "@type": "ImageObject",
-    "url": new URL("/favicon.ico", Astro.site || SITE_URL).toString()
+    "url": new URL(WEBSITE_CONFIG.OG_IMAGE, Astro.site || SITE_URL).toString()
   },
   "sameAs": [
     WEBSITE_CONFIG.SOCIAL_LINKS.YOUTUBE
   ]
+}
+
+// WebSite Schema (사이트 엔티티)
+const webSiteSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": WEBSITE_CONFIG.TITLE,
+  "alternateName": "YOLOG",
+  "url": Astro.site?.toString() || SITE_URL,
+  "description": WEBSITE_CONFIG.DESCRIPTION,
+  "inLanguage": "ko-KR"
 }
 
 ---
@@ -65,7 +76,7 @@ const organizationSchema = {
 <meta name="generator" content={Astro.generator} />
 
 <!-- Sitemap -->
-<link rel="sitemap" href="/sitemap-index.xml" />
+<link rel="sitemap" href="/sitemap.xml" />
 
 <!-- RSS Auto-Discovery -->
 <link rel="alternate" type="application/rss+xml" title="YOLOG RSS Feed" href="/rss.xml" />
@@ -113,11 +124,11 @@ const organizationSchema = {
 ))}
 
 <!-- Twitter -->
-<meta property="twitter:card" content="summary_large_image" />
-<meta property="twitter:url" content={canonicalURL} />
-<meta property="twitter:title" content={formattedTitle} />
-<meta property="twitter:description" content={description} />
-<meta property="twitter:image" content={ogImageURL} />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:url" content={canonicalURL} />
+<meta name="twitter:title" content={formattedTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImageURL} />
 
 <!-- Fonts -->
 <FontLoader />
@@ -127,3 +138,4 @@ const organizationSchema = {
   <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />
 )}
 <script is:inline type="application/ld+json" set:html={JSON.stringify(organizationSchema)} />
+<script is:inline type="application/ld+json" set:html={JSON.stringify(webSiteSchema)} />

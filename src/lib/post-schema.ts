@@ -29,15 +29,16 @@ export function buildBlogPostingSchema({
     dateModified: new Date(updatedDate || date).toISOString(),
     author: {
       "@type": "Person",
-      name: "매튜",
+      name: WEBSITE_CONFIG.AUTHOR,
       url: site?.toString(),
+      sameAs: [WEBSITE_CONFIG.SOCIAL_LINKS.YOUTUBE],
     },
     publisher: {
       "@type": "Organization",
       name: "YOLOG",
       logo: {
         "@type": "ImageObject",
-        url: new URL("/favicon.ico", site).toString(),
+        url: new URL(WEBSITE_CONFIG.OG_IMAGE, site).toString(),
       },
     },
     mainEntityOfPage: {

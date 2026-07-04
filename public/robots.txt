@@ -1,4 +1,29 @@
+# AI 크롤러 명시적 허용 (GEO) — 2026-07 기준 최신 user-agent 목록
+# OpenAI
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+# Anthropic
+User-agent: ClaudeBot
+User-agent: Claude-User
+User-agent: Claude-SearchBot
+# Perplexity
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+# Google (Gemini/AI Overviews 학습·그라운딩 허용)
+User-agent: Google-Extended
+# Apple
+User-agent: Applebot
+User-agent: Applebot-Extended
+# 기타 AI 검색/학습
+User-agent: CCBot
+User-agent: meta-externalagent
+User-agent: Amazonbot
+User-agent: DuckAssistBot
+User-agent: MistralAI-User
+Allow: /
+
 User-agent: *
 Allow: /
 
-Sitemap: https://www.yolog.co.kr/sitemap-index.xml
+Sitemap: https://www.yolog.co.kr/sitemap.xml
