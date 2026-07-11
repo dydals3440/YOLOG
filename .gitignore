@@ -1,13 +1,21 @@
 # build output
 dist/
+.vercel
 
 # generated types
 .astro/
+*.tsbuildinfo
 
 # dependencies
 node_modules/
 
+# lockfiles — bun 단일 lockfile만 사용 (다른 패키지 매니저 lockfile 무시)
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
 # logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -15,20 +23,18 @@ pnpm-debug.log*
 
 # environment variables
 .env
-.env.production
+.env.*
+!.env.example
 
 # macOS-specific files
 .DS_Store
 
-# jetbrains setting folder
+# editor / IDE
 .idea/
+.vscode/settings.json
 
 # draft
 *.draft.mdx
-
-# vscode
-.vscode/settings.json
-.vercel
 
 # docs
 docs/
