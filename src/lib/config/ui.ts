@@ -7,6 +7,8 @@ export const TOAST = {
   MESSAGES: {
     LINK_COPIED: "링크가 복사되었어요!",
     CODE_COPIED: "코드가 복사되었어요!",
+    EMAIL_COPIED: "이메일 주소가 복사되었어요!",
+    EMAIL_COPY_FAILED: "이메일 주소 복사에 실패했어요",
   },
   /** 토스트 자동 닫힘 시간 (ms) */
   DURATION_MS: 3000,
