@@ -1,0 +1,627 @@
+---
+title: SOLID 원칙이란 무엇인가?
+date: 2026-07-23
+updatedDate: 2026-07-23
+tags:
+  [
+    SOLID,
+    SOLID 원칙,
+    단일 책임 원칙,
+    개방 폐쇄 원칙,
+    리스코프 치환 원칙,
+    인터페이스 분리 원칙,
+    의존성 역전 원칙,
+    객체지향 설계,
+    클린 코드,
+    리팩토링,
+    TypeScript,
+  ]
+category: DEVELOPMENT
+image: '/images/solid/thumbnail.webp'
+---
+
+최근 결제와 크레딧 기능을 서버부터 클라이언트까지 개발하고, PG 심사를 받는 과정을 거치고 있습니다.
+
+막상 만들어보니 생각보다 고려할 것이 많았습니다. 월간/연간 결제 주기, 구독 업그레이드와 다운그레이드, 충전 보너스 같은 할인 정책, 결제 실패와 환불 처리까지. 하나하나가 전부 **언제든 바뀔 수 있는 정책**이었습니다.
+
+여기에 일정 문제도 겹쳤습니다. 빠르게 출시해서 고객의 반응을 확인하는 것이 무엇보다 중요한 시기인데, PG 연동은 계약과 [카드사 심사](https://www.tosspayments.com/blog/articles/semo-7)까지 더하면 2주 이상 걸리기도 하고, 심사를 받으려면 결제 흐름이 어느 정도 구현되어 있어야 합니다. 그렇다고 심사가 끝날 때까지 서비스를 멈출 수도 없습니다.
+
+그래서 자연스럽게 이런 계획을 세우게 됩니다.
+
+"심사 기간 동안 배포 서버에서는 계좌이체 안내로 결제를 받아두고, 심사가 끝나면 구현체만 갈아끼워서 바로 PG 결제가 동작하게 하자."
+
+---
+
+이 계획이 성립하려면 조건이 하나 필요합니다. 결제 수단을 바꾸는 일이 정말 **구현체 교체로 끝나야 한다**는 것입니다.
+
+코드가 어떻게 설계되어 있느냐에 따라 이 교체는 한 줄짜리 diff가 될 수도, 결제 코드 전체를 갈아엎는 프로젝트가 될 수도 있습니다. 이 차이를 만드는 것이 오늘 이야기할 **SOLID**입니다.
+
+SOLID는 로버트 C. 마틴이 정리한 다섯 가지 객체지향 설계 원칙입니다. 다섯 개의 정의를 외울 필요는 없습니다. 원칙들이 관통하는 질문은 결국 하나이기 때문입니다.
+
+"요구사항이 바뀌었을 때, 코드를 얼마나 적게 고칠 수 있는가?"
+
+예제 도메인은 요즘 흔한 크레딧 기반 서비스입니다. 사용자가 크레딧을 충전하면(결제), 그 크레딧으로 AI 기능을 사용합니다. 이 충전 코드를 계층형 구조 위에서 다섯 원칙으로 하나씩 리팩토링하며, 마지막 DIP에서 서두의 계획이 실제로 성립하는 모습을 보여드리겠습니다.
+
+계층은 다음 네 가지만 기억하면 됩니다.
+
+```
+presentation    CreditController                요청을 받고 응답한다
+application     ChargeCreditUseCase             시나리오를 조율한다
+domain          CreditAccount, BonusPolicy      비즈니스 규칙을 갖는다
+infrastructure  DrizzleCreditAccountRepository  실제 구현을 담당한다
+```
+
+모든 코드는 SOLID를 이해하는 데 초점을 맞춰 최대한 간결하게 작성했습니다. 동시성 제어, 멱등성 보장, 트랜잭션, 장애 격리처럼 실제 결제라면 반드시 다뤄야 하는 주제는 흐름을 위해 걷어냈습니다. 장애 격리는 이전에 작성한 [서킷 브레이커](https://www.yolog.co.kr/post/circuit-breaker) 글을 참고해주세요.
+
+---
+
+## 단일 책임 원칙 (SRP)
+
+`단일 책임 원칙(Single Responsibility Principle)`은 **하나의 클래스는 변경의 이유가 하나여야 한다**는 원칙입니다.
+
+여기서 중요한 것은 책임이 "기능의 개수"가 아니라 **변경의 이유**라는 점입니다.
+
+### Before
+
+계층을 나눠도 문제는 생깁니다. 가운데 낀 Service가 모든 것을 떠안기 시작할 때입니다.
+
+```ts
+class CreditService {
+  async chargeCredit(userId: string, chargeCreditDto: ChargeCreditDto) {
+    // 충전 패키지 확인
+    const creditPackage = await this.packageRepository.findById(chargeCreditDto.packageId);
+    if (!creditPackage) throw new PackageNotFoundError(chargeCreditDto.packageId);
+
+    // PG 결제
+    await this.pgClient.requestPayment({
+      orderId: chargeCreditDto.orderId,
+      amount: creditPackage.price,
+    });
+
+    // 보너스 크레딧 계산
+    let chargedCredits = creditPackage.credits;
+    if (creditPackage.price >= 50_000) {
+      chargedCredits += Math.floor(creditPackage.credits * 0.1); // 5만 원 이상 10% 보너스
+    }
+
+    // 잔액 반영
+    const creditAccount = await this.accountRepository.findByUserId(userId);
+    await this.accountRepository.save({
+      ...creditAccount,
+      balance: creditAccount.balance + chargedCredits,
+    });
+
+    // 알림
+    await this.mailer.sendChargeCompleted(userId, chargedCredits);
+    await this.kakaoClient.sendChargeCompleted(userId, chargedCredits);
+  }
+}
+```
+
+동작에는 아무 문제가 없습니다. 그런데 이 클래스는 언제 수정될까요?
+
+- "첫 충전에는 보너스 500크레딧을 얹어주세요" → 기획
+- "다음 달부터 결제 요청 파라미터가 하나 추가됩니다" → PG사 공지
+- "충전 완료 알림톡에 이벤트 문구도 넣어주세요" → 마케팅
+
+실제 서비스를 운영하면 이런 요구사항이 방향도, 주기도 제각각으로 들어옵니다. 그리고 전부 `CreditService` 하나를 수정하게 만듭니다.
+
+물론 요즘은 AI 덕분에 코드를 고치는 일 자체는 빨라졌습니다. 하지만 결제처럼 비즈니스와 강하게 결합된 로직을 수정하는 것은 이야기가 다릅니다. 테스트 코드가 있어도 부담스럽고, 없다면 더욱 부담스럽습니다. 로직 하나를 중간에 추가했을 뿐인데 잘 동작하던 기능이 멈추는 일도 생깁니다.
+
+알림 문구를 바꾸는 PR과 결제 로직을 바꾸는 PR이 같은 파일에서 충돌하는 것은 덤입니다. 그래서 이런 코드일수록 **변경에 쉽게 대응할 수 있는 구조**를 먼저 잡고 가는 것이 중요하다고 생각합니다.
+
+### After
+
+변경의 이유대로 분리해보겠습니다. 거대한 `CreditService` 대신, "크레딧 충전"이라는 하나의 시나리오만 담당하는 유스케이스를 만듭니다.
+
+```ts
+class ChargeCreditUseCase {
+  constructor(
+    private packageRepository: CreditPackageRepository,
+    private accountRepository: CreditAccountRepository,
+    private paymentGateway: PaymentGateway,
+    private notificationService: NotificationService,
+  ) {}
+
+  async execute(userId: string, chargeCreditDto: ChargeCreditDto) {
+    // 서로 독립적인 조회는 병렬로 처리한다
+    const [creditPackage, creditAccount] = await Promise.all([
+      this.packageRepository.findById(chargeCreditDto.packageId),
+      this.accountRepository.findByUserId(userId),
+    ]);
+
+    if (!creditPackage) throw new PackageNotFoundError(chargeCreditDto.packageId);
+    if (!creditAccount) throw new AccountNotFoundError(userId);
+
+    await this.paymentGateway.requestPayment({
+      orderId: chargeCreditDto.orderId,
+      amount: creditPackage.price,
+    });
+
+    // 보너스 계산과 잔액 반영은 도메인 규칙이므로 CreditAccount가 책임진다
+    creditAccount.charge(creditPackage);
+    await this.accountRepository.save(creditAccount);
+
+    // 알림 실패가 충전까지 실패시키면 안 되므로 결과를 기다리지 않는다
+    this.notificationService.notifyChargeCompleted(creditAccount).catch((error) => {
+      logger.error('충전 알림 발송 실패', { userId, error });
+    });
+
+    return creditAccount.balance;
+  }
+}
+```
+
+`CreditAccount` 엔티티는 이렇게 생겼습니다.
+
+```ts
+class CreditAccount {
+  private constructor(
+    readonly userId: string,
+    private _balance: number,
+    private _chargeCount: number,
+  ) {}
+
+  get balance() {
+    return this._balance;
+  }
+
+  get chargeCount() {
+    return this._chargeCount;
+  }
+
+  // 충전 — 보너스 규칙은 도메인 안에 있다
+  charge(creditPackage: CreditPackage) {
+    let chargedCredits = creditPackage.credits;
+    if (creditPackage.price >= 50_000) {
+      chargedCredits += Math.floor(creditPackage.credits * 0.1);
+    }
+
+    this._balance += chargedCredits;
+    this._chargeCount += 1;
+  }
+
+  // 사용 — 잔액이라는 상태를 스스로 지킨다
+  spend(credits: number) {
+    if (this._balance < credits) {
+      throw new InsufficientCreditError(this.userId);
+    }
+    this._balance -= credits;
+  }
+}
+```
+
+잔액이라는 상태와 그 상태를 바꾸는 규칙이 한곳에 모였습니다. 외부에서는 `balance`를 마음대로 조작할 수 없고, 반드시 `charge`와 `spend`를 거쳐야 합니다. 나중에 크레딧으로 AI 기능을 사용할 때도 `spend`가 잔액을 지켜줍니다.
+
+반대로 규칙 없는 엔티티와 모든 로직을 떠안은 서비스의 조합을 마틴 파울러는 [빈약한 도메인 모델](https://martinfowler.com/bliki/AnemicDomainModel.html)이라 부르며 안티패턴으로 꼽습니다. 앞의 `CreditService`가 정확히 그 모습이었습니다.
+
+조회 같은 IO는 유스케이스에서 이미 끝났기 때문에, 엔티티 안에는 순수한 규칙만 남습니다. 덕분에 이 규칙은 DB 없이도 테스트할 수 있습니다.
+
+한 가지 더 눈여겨볼 점은 **결제 금액의 출처**입니다. 클라이언트가 보낸 값을 그대로 믿으면 안 되기 때문에, 서버가 조회한 `creditPackage.price`를 기준으로 결제합니다.
+
+알림처럼 성격이 같은 작업은 `NotificationService` 안으로 모입니다. 이메일과 알림톡은 서로를 기다릴 이유가 없으니 병렬로 발송합니다.
+
+```ts
+class NotificationService {
+  async notifyChargeCompleted(creditAccount: CreditAccount) {
+    await Promise.all([
+      this.mailer.sendChargeCompleted(creditAccount),
+      this.kakaoClient.sendChargeCompleted(creditAccount),
+    ]);
+  }
+}
+```
+
+호출하는 쪽에서 `await`를 걸지 않은 것도 의도적입니다. 알림은 얼마든지 실패할 수 있고, 그 실패가 충전까지 실패시켜서는 안 되기 때문입니다. 규모가 커지면 이 부분은 이벤트나 큐로 분리하는 것이 일반적입니다.
+
+이제 보너스 규칙이 바뀌면 `CreditAccount`만, 알림이 바뀌면 `NotificationService`만 수정하면 됩니다.
+
+`ChargeCreditUseCase`에는 "충전 시나리오의 조율"이라는 하나의 책임만 남았습니다. 클래스 이름부터가 변경의 이유를 하나로 좁혀줍니다. Controller는 원래 하던 대로 요청을 받아 넘기기만 합니다.
+
+```ts
+class CreditController {
+  async chargeCredit(req: Request) {
+    const chargeCreditDto = toChargeCreditDto(req.body); // 입력 검증과 변환
+    const balance = await this.chargeCreditUseCase.execute(req.user.id, chargeCreditDto);
+    return ok({ balance });
+  }
+}
+```
+
+한 가지 주의할 점이 있습니다. 클래스를 잘게 쪼개는 것 자체가 목적이 아닙니다.
+
+**함께 바뀌는 것은 모으고, 다른 이유로 바뀌는 것은 분리한다.** 이 기준 없이 쪼개기만 하면 파일 개수만 늘어난 또 다른 복잡함이 생깁니다.
+
+---
+
+## 개방-폐쇄 원칙 (OCP)
+
+`개방-폐쇄 원칙(Open-Closed Principle)`은 **확장에는 열려 있고, 수정에는 닫혀 있어야 한다**는 원칙입니다.
+
+정의가 추상적이니 이렇게 바꿔 읽으면 쉽습니다.
+
+"새 기능이 추가될 때, 기존 코드를 고치지 않고 새 코드를 추가하는 것으로 끝나는가?"
+
+### Before
+
+방금 만든 `CreditAccount.charge`를 보겠습니다. 보너스 이벤트가 늘어날수록 이런 모습이 되기 쉽습니다.
+
+```ts
+class CreditAccount {
+  charge(creditPackage: CreditPackage) {
+    let chargedCredits = creditPackage.credits;
+
+    if (creditPackage.price >= 50_000) {
+      chargedCredits += Math.floor(creditPackage.credits * 0.1); // 5만 원 이상 10%
+    }
+    if (this._chargeCount === 0) {
+      chargedCredits += 500; // 첫 충전 보너스
+    }
+    if (this._grade === 'VIP') {
+      chargedCredits += Math.floor(creditPackage.credits * 0.05); // VIP 5% — 등급 필드까지 엔티티에 추가됐다
+    }
+    // 다음 달 프로모션이 열리면 여기에 if가 하나 더...
+
+    this._balance += chargedCredits;
+    this._chargeCount += 1;
+  }
+}
+```
+
+새 프로모션이 생길 때마다 `charge`를 수정해야 합니다.
+
+문제는 수정할 때마다 **기존 보너스 로직 전체가 영향권에 들어간다**는 것입니다. VIP 보너스를 추가하다가 첫 충전 보너스가 깨질 수 있고, QA는 매번 모든 보너스 조합을 다시 검증해야 합니다.
+
+### After
+
+보너스라는 개념을 인터페이스로 추상화해보겠습니다.
+
+```ts
+interface BonusPolicy {
+  calculateBonus(creditAccount: CreditAccount, creditPackage: CreditPackage): number;
+}
+
+class BulkChargeBonus implements BonusPolicy {
+  calculateBonus(creditAccount: CreditAccount, creditPackage: CreditPackage) {
+    return creditPackage.price >= 50_000 ? Math.floor(creditPackage.credits * 0.1) : 0;
+  }
+}
+
+class FirstChargeBonus implements BonusPolicy {
+  calculateBonus(creditAccount: CreditAccount) {
+    return creditAccount.chargeCount === 0 ? 500 : 0;
+  }
+}
+```
+
+정책 목록은 도메인의 한 파일에서만 조립합니다.
+
+```ts
+// domain/bonus-policies.ts — 새 프로모션은 이 목록에 한 줄 추가하면 끝
+export const activeBonusPolicies: BonusPolicy[] = [
+  new BulkChargeBonus(),
+  new FirstChargeBonus(),
+  new VipBonus(),
+];
+```
+
+`CreditAccount`는 이제 개별 보너스를 하나도 모릅니다. 전달받은 정책들을 적용할 뿐입니다.
+
+```ts
+class CreditAccount {
+  charge(creditPackage: CreditPackage, bonusPolicies: BonusPolicy[]) {
+    const bonusCredits = bonusPolicies.reduce(
+      (total, policy) => total + policy.calculateBonus(this, creditPackage),
+      0,
+    );
+
+    this._balance += creditPackage.credits + bonusCredits;
+    this._chargeCount += 1;
+  }
+}
+```
+
+유스케이스의 호출부는 `creditAccount.charge(creditPackage, activeBonusPolicies)` 한 줄만 바뀝니다.
+
+이제 프로모션이 추가되면 `BonusPolicy` 구현체를 만들어 목록에 넣으면 끝입니다. `charge`도, 기존 정책도 수정되지 않고(닫혀 있음), 새 보너스는 얼마든지 추가할 수 있습니다(열려 있음). 정책 하나하나가 순수한 계산이라 DB 없이 각각 테스트할 수 있습니다.
+
+그렇다면 모든 조건문을 이렇게 바꿔야 할까요? 그렇지 않습니다.
+
+if가 두 개뿐인 코드에 미리 정책 패턴을 도입하는 것은 오버엔지니어링이 되기 쉽습니다. **같은 함수에 조건 분기가 반복해서 추가되고 있다는 신호**가 보일 때, 그때가 OCP를 꺼낼 타이밍입니다.
+
+---
+
+## 리스코프 치환 원칙 (LSP)
+
+`리스코프 치환 원칙(Liskov Substitution Principle)`은 **하위 타입은 상위 타입을 대체할 수 있어야 한다**는 원칙입니다.
+
+TypeScript를 쓰면 시그니처가 맞지 않는 구현은 컴파일러가 걸러주니, LSP는 자동으로 지켜지고 있다고 생각하기 쉽습니다.
+
+하지만 LSP가 말하는 것은 타입 시그니처가 아니라 **행동의 계약**입니다. 크레딧 계정 Repository를 보겠습니다.
+
+```ts
+interface CreditAccountRepository {
+  // 계정이 없으면 null을 반환한다
+  findByUserId(userId: string): Promise<CreditAccount | null>;
+}
+
+class DrizzleCreditAccountRepository implements CreditAccountRepository {
+  async findByUserId(userId: string) {
+    const [accountRecord] = await this.db
+      .select()
+      .from(creditAccounts)
+      .where(eq(creditAccounts.userId, userId));
+
+    return accountRecord ? CreditAccount.from(accountRecord) : null; // 없으면 계약대로 null
+  }
+}
+```
+
+사용하는 쪽은 계약을 믿고 이렇게 작성합니다.
+
+```ts
+const creditAccount = await accountRepository.findByUserId(userId);
+
+if (!creditAccount) {
+  throw new AccountNotFoundError(userId);
+}
+```
+
+시간이 지나 성능 개선을 위해 캐시를 씌운 구현체가 추가됩니다.
+
+```ts
+class CachedCreditAccountRepository implements CreditAccountRepository {
+  async findByUserId(userId: string) {
+    const cachedAccount = await this.cache.get(userId);
+    if (!cachedAccount) {
+      throw new CacheMissError(userId); // ❌ null 대신 예외를 던진다
+    }
+    return cachedAccount;
+  }
+}
+```
+
+시그니처가 같으니 컴파일은 통과합니다.
+
+하지만 이 구현체로 대체하는 순간, 사용처의 `if (!creditAccount)` 분기는 절대 실행되지 않고 처리되지 않은 예외가 위로 터져 나갑니다. **타입은 통과했지만 계약은 위반한 것입니다.**
+
+이런 위반의 신호는 사용처에 나타납니다. 상위 타입만 보고 코드를 작성할 수 없어서 `instanceof`로 구현체를 확인하기 시작한다면, 인터페이스로 추상화한 의미가 이미 사라진 것입니다.
+
+해결은 구현체가 계약을 지키게 만드는 것입니다.
+
+```ts
+class CachedCreditAccountRepository implements CreditAccountRepository {
+  constructor(
+    private cache: CreditAccountCache,
+    private origin: CreditAccountRepository,
+  ) {}
+
+  async findByUserId(userId: string) {
+    const cachedAccount = await this.cache.get(userId);
+    if (cachedAccount) return cachedAccount;
+
+    const creditAccount = await this.origin.findByUserId(userId); // 캐시에 없으면 원본에 위임
+    if (creditAccount) await this.cache.set(userId, creditAccount);
+    return creditAccount; // 계정이 없으면 계약대로 null
+  }
+}
+```
+
+계약을 지키는 순간, 사용처는 어떤 구현체가 오든 신경 쓸 필요가 없어집니다.
+
+인터페이스에 주석으로라도 계약을 명시해두는 습관이 중요한 이유입니다.
+
+---
+
+## 인터페이스 분리 원칙 (ISP)
+
+`인터페이스 분리 원칙(Interface Segregation Principle)`은 **사용하지 않는 메서드에 의존하도록 강요하지 마라**는 원칙입니다.
+
+크레딧 충전은 단건 결제지만, 구독은 빌링키 기반의 정기 결제입니다. 결제 수단을 하나씩 추가하다 보면 인터페이스가 이 모든 것을 떠안으며 커지기 쉽습니다.
+
+```ts
+interface PaymentMethod {
+  pay(amount: number): Promise<PaymentResult>;
+  cancel(paymentId: string): Promise<void>;
+  registerBillingKey(cardInfo: CardInfo): Promise<string>; // 정기 결제용
+  paySubscription(billingKey: string, amount: number): Promise<PaymentResult>;
+}
+```
+
+카드 결제는 네 가지를 모두 구현할 수 있습니다. 그런데 가상계좌 결제를 추가하면 어떻게 될까요?
+
+```ts
+class VirtualAccountPayment implements PaymentMethod {
+  async pay(amount: number) { /* 가상계좌 발급 */ }
+  async cancel(paymentId: string) { /* 입금 전 취소 */ }
+
+  async registerBillingKey(): Promise<string> {
+    throw new Error('가상계좌는 정기 결제를 지원하지 않습니다'); // ❌
+  }
+  async paySubscription(): Promise<PaymentResult> {
+    throw new Error('가상계좌는 정기 결제를 지원하지 않습니다'); // ❌
+  }
+}
+```
+
+구현할 수 없는 메서드를 예외로 채우고 있습니다. 어디서 본 모습 아닌가요?
+
+방금 LSP에서 본 계약 위반이 그대로 재현되고 있습니다. **뚱뚱한 인터페이스는 구현체에게 LSP 위반을 강요합니다.**
+
+역할별로 분리해보겠습니다.
+
+```ts
+interface Payable {
+  pay(amount: number): Promise<PaymentResult>;
+}
+
+interface Cancelable {
+  cancel(paymentId: string): Promise<void>;
+}
+
+interface Subscribable {
+  registerBillingKey(cardInfo: CardInfo): Promise<string>;
+  paySubscription(billingKey: string, amount: number): Promise<PaymentResult>;
+}
+
+class CardPayment implements Payable, Cancelable, Subscribable {
+  /* 네 가지 모두 구현 */
+}
+
+class VirtualAccountPayment implements Payable, Cancelable {
+  /* 가능한 것만 구현 */
+}
+```
+
+이제 구독 결제 화면은 `Subscribable`만 받으면 됩니다.
+
+```ts
+const registerSubscription = async (paymentMethod: Subscribable) => {
+  const billingKey = await paymentMethod.registerBillingKey(cardInfo);
+  // ...
+};
+```
+
+가상계좌가 이 자리에 들어오는 실수는 런타임 예외가 아니라 **컴파일 단계에서 차단**됩니다.
+
+인터페이스를 잘게 나눈 것만으로 타입 시스템이 방어벽이 되어주는 것입니다.
+
+---
+
+## 의존성 역전 원칙 (DIP)
+
+`의존성 역전 원칙(Dependency Inversion Principle)`은 **고수준 모듈이 저수준 모듈에 의존해서는 안 되며, 둘 다 추상화에 의존해야 한다**는 원칙입니다.
+
+정의가 가장 어렵게 들리지만, 실무에서 가장 자주 마주치는 원칙입니다.
+
+이제 글 서두의 계획으로 돌아가겠습니다. 심사 기간 동안 배포 서버는 계좌이체 안내로 결제를 받고 있고, 드디어 토스페이먼츠 심사가 통과됐습니다. 이제 갈아끼울 차례입니다.
+
+이 작업이 정말 구현체 교체로 끝날지, 결제 코드 전체를 뜯는 일이 될지는 지금부터 볼 코드 구조가 결정합니다.
+
+### Before
+
+만약 유스케이스에 임시 결제 코드가 직접 박혀 있다면 어떻게 될까요?
+
+```ts
+import { sendDepositGuide } from './bank-transfer';
+
+class ChargeCreditUseCase {
+  async execute(userId: string, chargeCreditDto: ChargeCreditDto) {
+    // ...충전 흐름...
+
+    // 심사 기간 동안의 임시 결제 — 입금 계좌 안내
+    await sendDepositGuide({
+      orderId: chargeCreditDto.orderId,
+      amount: creditPackage.price,
+      bankAccount: COMPANY_BANK_ACCOUNT,
+    });
+
+    // ...
+  }
+}
+```
+
+크레딧 충전이라는 핵심 시나리오에, 임시로 붙였던 결제 수단의 세부 사항이 그대로 박혀버렸습니다.
+
+토스로 전환하려면 `ChargeCreditUseCase`를 열어 import부터 호출 코드까지 전부 수정해야 하고, 이 클래스를 쓰는 모든 테스트도 함께 수정됩니다.
+
+테스트는 어떨까요? 모듈을 직접 import하고 있으니 모듈 전체를 모킹하는 수밖에 없습니다.
+
+```ts
+// ❌ 테스트가 임시 결제 수단의 모듈 구조에 묶여 있다
+vi.mock('./bank-transfer', () => ({
+  sendDepositGuide: vi.fn(),
+}));
+```
+
+이 테스트는 충전 로직이 아니라 "계좌 안내 모듈을 어떻게 호출하는지"를 검증하고 있습니다.
+
+토스로 전환하는 날, 프로덕션 코드와 테스트 코드가 동시에 전부 깨집니다. "구현체만 갈아끼우기"가 불가능한 구조입니다.
+
+### After
+
+의존성의 방향을 뒤집어보겠습니다. 유스케이스가 필요로 하는 것을 application 계층에 인터페이스로 먼저 선언합니다. 앞의 SRP 예제에서 `paymentGateway`가 바로 이것이었습니다.
+
+```ts
+// application 계층 — 유스케이스가 필요한 것을 계약으로 선언한다 (포트)
+interface PaymentGateway {
+  requestPayment(params: { orderId: string; amount: number }): Promise<void>;
+}
+```
+
+각 PG사는 infrastructure 계층에서 이 계약에 맞춰 구현합니다.
+
+```ts
+// infrastructure 계층 — 계약에 맞춰 구현한다 (어댑터)
+class BankTransferGateway implements PaymentGateway {
+  async requestPayment(params: { orderId: string; amount: number }) {
+    /* 입금 계좌를 안내하고, 입금 확인 대기 상태로 만든다 */
+  }
+}
+
+class TossPaymentGateway implements PaymentGateway {
+  async requestPayment(params: { orderId: string; amount: number }) {
+    /* 토스페이먼츠 클라이언트 호출 */
+  }
+}
+```
+
+심사 통과가 확인된 날, 배포 서버의 결제를 토스로 전환하는 diff는 조립하는 곳의 한 줄입니다.
+
+```diff
+  const chargeCreditUseCase = new ChargeCreditUseCase(
+    // ...
+-   new BankTransferGateway(),
++   new TossPaymentGateway(),
+    // ...
+  );
+```
+
+`ChargeCreditUseCase`는 한 글자도 바뀌지 않습니다. 테스트도 모듈 모킹 없이 가짜 구현을 주입하면 끝입니다.
+
+```ts
+// ✅ 시나리오 자체를 검증한다. PG사가 무엇이든 상관없다
+it('충전 패키지 금액으로 결제를 요청한다', async () => {
+  const fakePaymentGateway: PaymentGateway = { requestPayment: vi.fn() };
+  const chargeCreditUseCase = chargeCreditUseCaseWith({ paymentGateway: fakePaymentGateway });
+
+  await chargeCreditUseCase.execute('user-1', chargeCreditDto);
+
+  expect(fakePaymentGateway.requestPayment).toHaveBeenCalledWith({
+    orderId: chargeCreditDto.orderId,
+    amount: 50_000, // 테스트 헬퍼가 5만 원짜리 패키지를 반환하도록 설정
+  });
+});
+```
+
+나머지 의존성도 같은 방식으로 가짜를 주입합니다. 이런 조립을 도와주는 `chargeCreditUseCaseWith` 같은 테스트 헬퍼를 하나 만들어두면, 실제 DB도 실제 PG도 없이 시나리오 전체를 검증할 수 있습니다.
+
+"역전"이라는 단어의 의미가 여기에 있습니다.
+
+원래는 고수준인 `ChargeCreditUseCase`가 저수준인 결제 수단의 구현을 바라봤지만, 이제는 저수준인 `BankTransferGateway`와 `TossPaymentGateway`가 고수준이 정의한 계약인 `PaymentGateway`를 바라봅니다. **의존성의 방향이 뒤집힌 것입니다.**
+
+이런 인터페이스를 포트, 구현체를 어댑터라고 부르기도 합니다. 모든 의존성이 안쪽(도메인)을 향하게 만드는 이 구조가 로버트 C. 마틴이 말한 [클린 아키텍처](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)의 핵심인 의존성 규칙입니다. Repository도 같은 방식으로 포트로 선언해두면, PG사뿐 아니라 DB까지 교체 가능한 부품이 됩니다.
+
+덕분에 "심사 기간에는 계좌이체로 받고, 심사가 끝나면 토스로 전환"이라는 서두의 계획은 어댑터 하나를 추가하고 조립 코드 한 줄을 바꾸는 것으로 성립합니다.
+
+참고로 DIP는 원칙이고, 이를 실현하는 기법이 생성자로 구현체를 넘겨주는 의존성 주입입니다. React에서는 이를 어떻게 풀어내는지 [React에서의 의존성 주입](https://www.yolog.co.kr/post/dependency-injection) 글에서 다뤘으니 함께 보면 좋습니다.
+
+---
+
+## 마무리
+
+다섯 원칙은 결국 같은 이야기입니다. 변경의 이유대로 나누고, 바뀌는 것을 계약 뒤로 숨기고, 그 계약을 지키게 하는 것. 서두의 계획이 성립한 이유도 여기에 있습니다.
+
+사실 AI 시대에 이런 아키텍처는 갑론을박이 많은 주제입니다. 겹겹의 인터페이스가 AI의 토큰과 컨텍스트만 낭비한다는 쪽도 있고, 명확한 경계가 있어야 AI가 수정 범위를 좁게 잡는다는 쪽도 있습니다. 제 답은 **적정선**입니다. 모든 코드가 SOLID를 지킬 필요는 없습니다. if 문 두 개에 정책 패턴부터 꺼내면 [성급한 추상화](https://www.yolog.co.kr/post/abstraction)가 되고, 코드가 신호를 보낼 때 꺼내 쓰면 충분합니다.
+
+다만 중요한 비즈니스 로직에 테스트를 쓰다 보면 좋은 설계에 대한 고민은 피할 수 없이 따라옵니다. 저도 그렇게 프론트엔드에서 시작해 이번 결제 설계까지 왔습니다. AI가 코드를 잘 짜준다는 것은 인정하지만, 그 "잘"의 기준은 요구하는 사람의 깊이만큼만 올라갑니다.
+
+"오버엔지니어링 아닌가요?"라는 질문에는 아직 저도 답이 없습니다. AI가 더 똑똑해지면 의미가 있을까 싶다가도, 심사가 통과된 날 한 줄을 바꿔 배포를 끝내고 나면 생각이 바뀝니다. 당분간은 이 고민을 안고 가려 합니다.
+
+---
+
+## 참고 자료
+
+- [The Clean Architecture - Robert C. Martin](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+- [The Single Responsibility Principle - Robert C. Martin](https://blog.cleancoder.com/uncle-bob/2014/05/08/SingleReponsibilityPrinciple.html)
+- [Anemic Domain Model - Martin Fowler](https://martinfowler.com/bliki/AnemicDomainModel.html)
