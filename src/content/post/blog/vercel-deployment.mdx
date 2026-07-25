@@ -763,6 +763,18 @@ DNS 표준상 루트 도메인(`@`)에는 CNAME을 사용할 수 없어서 A Rec
 
 ![배포 성공한 URL을 신중히 보셔야 합니다 ✨](/images/vercel-deployment/deployment-success.webp)
 
+여러분들도 만드신 사이트를 이런 식으로 세상에 띄워보고 싶지 않으신가요?
+
+제가 사이드 프로젝트로 만든 `아이두(Aido)`의 공식 웹사이트인 [aido.kr](https://www.aido.kr/)도 지금까지 설명한 과정 그대로 배포되어 있습니다.
+
+Vercel에 프로젝트를 올리고, 직접 구매한 도메인을 `A 레코드`와 `CNAME 레코드`로 연결한 것이 전부입니다.
+
+아이두는 친구들과 함께 할 일을 관리하며 서로 자극을 주고받을 수 있는 AI 할일 관리 서비스인데, **iPhone, Android, Mac, Tablet 등 다양한 기기에서 호환 가능**하니 한 번 써보시면 좋을 것 같습니다!
+
+혹여나 주변에 같이 쓸 친구가 없다면 초대 코드 `WNTQJEEE`로 들어와서 함께 자극을 나누며 성장하면 좋을 것 같습니다!
+
+[App Store](https://apps.apple.com/kr/app/%EC%95%84%EC%9D%B4%EB%91%90-ai-%ED%88%AC%EB%91%90-%ED%94%8C%EB%9E%98%EB%84%88/id6757722325) | [Google Play](https://play.google.com/store/apps/details?id=com.aido.mobile&pcampaignid=web_share&pli=1) | [아이두(Aido) 공식 웹사이트](https://www.aido.kr/) | [공식 인스타그램](https://www.instagram.com/aiddoo_official/)
+
 ---
 
 ## 8. 마무리
@@ -788,4 +800,18 @@ vercel redeploy https://your-deployment-url.vercel.app --prod
 
 `브랜치 푸시`만으로 `테스트 코드`, `린트 검증` 후 배포(`Pull Request Preview`, `Production 배포` 등)가 가능해져 개발 안정성과 효율이 더욱 높아집니다.
 
-해당 부분은 추후에 추가 포스팅을 해도록 하겠습니다!
+해당 부분은 [GitHub CI/CD 파이프라인으로 Vercel 자동 배포하기](/post/github-cicd-vercel) 글에서 이어서 다뤘습니다.
+
+이 글에서 손으로 입력했던 `vercel`, `vercel --prod`를 GitHub Actions가 대신 실행해주기 때문에, 코드를 푸시하는 것만으로 배포가 끝나게 됩니다.
+
+---
+
+📚 **이어지는 글:**
+
+- [GitHub CI/CD 파이프라인으로 Vercel 자동 배포하기](/post/github-cicd-vercel)
+
+---
+
+이 글을 읽고, 이 방식으로 배포해 운영하고 있는 저희 서비스에 관심이 생기셨다면 아래 링크를 통해 다운을 받아서 활용해보세요!
+
+[App Store](https://apps.apple.com/kr/app/%EC%95%84%EC%9D%B4%EB%91%90-ai-%ED%88%AC%EB%91%90-%ED%94%8C%EB%9E%98%EB%84%88/id6757722325) | [Google Play](https://play.google.com/store/apps/details?id=com.aido.mobile&pcampaignid=web_share&pli=1) | [아이두(Aido) 공식 웹사이트](https://www.aido.kr/) | [공식 인스타그램](https://www.instagram.com/aiddoo_official/)
