@@ -1,5 +1,6 @@
-import { defineCollection, z } from "astro:content";
+import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
+import { z } from "astro/zod";
 import { BLOG_CATEGORIES, type BlogCategory } from "./consts";
 
 // BLOG_CATEGORIES의 키들을 타입으로 추출 (ALL 제외)

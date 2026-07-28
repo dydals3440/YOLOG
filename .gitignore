@@ -41,3 +41,6 @@ docs/
 
 # claude
 .claude/
+
+# local agent workflow state
+.superpowers/
