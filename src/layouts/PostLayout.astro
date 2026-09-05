@@ -11,6 +11,7 @@ import MediumZoomScript from '@/components/post/MediumZoomScript.astro'
 import MermaidScript from '@/components/post/MermaidScript.astro'
 import PageActions from '@/components/post/PageActions'
 import PostImage from '@/components/post/PostImage.astro'
+import PostTable from '@/components/post/PostTable.astro'
 import ReadingProgress from '@/components/post/ReadingProgress'
 import RelatedPosts from '@/components/post/RelatedPosts.astro'
 import SocialShare from '@/components/post/SocialShare'
@@ -103,7 +104,7 @@ const articleSection = category ? BLOG_CATEGORIES[category as BlogCategory] : un
   </section>
   <section>
     <article data-animate data-animate-speed="fast" class="mdx">
-      <Content components={{ img: PostImage }} />
+      <Content components={{ img: PostImage, table: PostTable }} />
     </article>
     <GoogleAdsense
       slot="1234567890"
