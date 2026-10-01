@@ -13,7 +13,13 @@
           el.removeAttribute('data-processed')
           el.textContent = sources[i]
         })
-        mermaid.initialize({ startOnLoad: false, theme: isDark() ? 'dark' : 'default' })
+        // Mermaid 12의 기본 배치와 스타일 변경 대신 기존 다이어그램 모양을 유지한다.
+        mermaid.initialize({
+          startOnLoad: false,
+          layout: 'dagre',
+          look: 'classic',
+          theme: isDark() ? 'dark' : 'default',
+        })
         await mermaid.run({ nodes })
       }
 

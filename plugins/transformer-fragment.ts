@@ -1,4 +1,4 @@
-import type { Element } from "node_modules/rehype-autolink-headings/lib";
+import type { Element } from "hast";
 import { addClassToHast, type ShikiTransformer } from "shiki";
 
 const ignoreLangList = new Set(["", "plaintext"]);
