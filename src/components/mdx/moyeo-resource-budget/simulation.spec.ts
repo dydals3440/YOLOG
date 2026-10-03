@@ -4,6 +4,7 @@ import {
   batch,
   connectionDemo,
   eventLoopAt,
+  ioModelAt,
   fanoutComparison,
   parallelComparison,
   poolAt,
@@ -76,7 +77,7 @@ test("병렬 묶음의 속도와 화면 조회의 대기는 본문 수치와 일
   });
 });
 
-test("정기 검사 자리를 분리하면 긴 외부 요청 뒤의 2.5초 대기를 피한다", () => {
+test("예약 확인 자리를 분리하면 긴 외부 요청 뒤의 2.5초 대기를 피한다", () => {
   const shared = simulatePool([...batch(4, "provider", 3000), ...batch(1, "tick", 250, 500)], 4);
   const dedicated = simulatePool(batch(1, "tick", 250, 500), 1);
   const tick = shared.executions.find((request) => request.group === "tick");
@@ -118,6 +119,36 @@ test("본문의 완료된 Promise와 0ms 타이머 예시는 동기 코드 다�
   assert.deepEqual(output, ["동기 코드"]);
   await Promise.all([reaction, finished]);
   assert.deepEqual(output, ["동기 코드", "Promise", "타이머"]);
+});
+
+test("비동기 I/O의 대기는 겹쳐도 JS 실행은 하나씩 진행된다", () => {
+  assert.equal(ioModelAt(0).completed.length, 0);
+  assert.equal(ioModelAt(0.45).waiting.length, 3);
+  for (let tick = 0; tick <= 1400; tick += 1) {
+    const state = ioModelAt(tick / 1400);
+    assert.ok(state.executing.length <= 1);
+    assert.equal(state.requests.length, 3);
+    for (const request of state.requests) {
+      assert.ok(request.dispatched < request.waiting);
+      assert.ok(request.waiting < request.ready);
+      assert.ok(request.ready < request.ended);
+    }
+  }
+  assert.equal(ioModelAt(1).completed.length, 3);
+});
+
+test("병렬 차트는 공통 시간축 안에서 완료를 표시한다", () => {
+  for (const width of [280, 664]) {
+    const texts = (progress: number) =>
+      buildScene("parallel", progress, width)
+        .marks.filter((mark) => mark.kind === "text")
+        .map((mark) => mark.text);
+    assert.equal(texts(0).filter((text) => text === "8개 중 0개 완료").length, 3);
+    assert.equal(texts(1).filter((text) => text === "8개 중 8개 완료").length, 3);
+    assert.equal(texts(1).filter((text) => text.startsWith("묶음 완료")).length, 3);
+    assert.equal(texts(1).filter((text) => text === "2.2초").length, 3);
+    assert.equal(texts(0.45).filter((text) => text.startsWith("묶음 완료")).length, 1);
+  }
 });
 
 test("좁은 화면과 가로 배치 경계에서 모든 도형이 그림 영역 안에 머문다", () => {

@@ -6,8 +6,8 @@ import ThemeToggle from '@/components/ui/ThemeToggle'
 <div class="blur-layer" aria-hidden="true"></div>
 <header class="fixed left-0 right-0 top-0 z-10 transition-all duration-300" data-header>
   <div class="container mx-auto flex max-w-content items-center justify-between">
-    <nav>
-      <ul class="flex items-center gap-8 py-5 md:py-4">
+    <nav class="min-w-0">
+      <ul class="flex items-center gap-8 whitespace-nowrap py-5 md:py-4 sm:gap-3">
         <li>
           <NavLink href="/" class="text-base font-semibold tracking-tight">yolog</NavLink>
         </li>
@@ -17,9 +17,12 @@ import ThemeToggle from '@/components/ui/ThemeToggle'
         <li>
           <a href="https://www.aido.kr/" class="inline-block text-sm text-second no-underline transition-colors hover:text-heading" target="_blank" rel="noopener noreferrer">아이두</a>
         </li>
+        <li>
+          <a href="https://moyeo.io" class="inline-block text-sm text-second no-underline transition-colors hover:text-heading" target="_blank" rel="noopener noreferrer">모여</a>
+        </li>
       </ul>
     </nav>
-    <div>
+    <div class="ml-3 shrink-0">
       <ThemeToggle client:only="react" />
     </div>
   </div>

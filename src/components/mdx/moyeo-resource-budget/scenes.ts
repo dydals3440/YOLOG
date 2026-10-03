@@ -3,6 +3,7 @@ import {
   batch,
   connectionDemo,
   eventLoopAt,
+  ioModelAt,
   fanoutComparison,
   parallelComparison,
   poolAt,
@@ -14,6 +15,7 @@ export type SceneName =
   | "symptoms"
   | "pool"
   | "fanout"
+  | "io-models"
   | "event-loop"
   | "parallel"
   | "locks"
@@ -22,6 +24,7 @@ export type SceneName =
   | "notify";
 export type DiagramName =
   | "jobs"
+  | "freshness"
   | "collection"
   | "transaction"
   | "deadlock"
@@ -53,6 +56,13 @@ export const scenes: Record<
       "작업 네 개가 DB 호출 네 개씩 실행하는 16개 요청 예시다. 왼쪽은 전부 시작해 풀에서 기다리고, 오른쪽은 작업당 두 개씩 시작해 나머지가 작업 안에서 기다린다. 당시 실제 작업 하나가 동시에 쓰려던 연결은 4~7개였다.",
     duration: 14,
     snapshot: 0.35,
+  },
+  "io-models": {
+    title: "SNS 응답을 기다리는 동안, 다른 요청은?",
+    description:
+      "요청 세 개의 실행과 네트워크 대기를 비교한다. 왼쪽은 JavaScript 실행 스레드 하나에서 짧게 요청을 시작하고 응답 콜백을 처리한다. 기다리는 네트워크 작업은 별도로 진행된다. 오른쪽은 일반 스레드가 요청 하나를 맡아 응답을 기다리는 블로킹 모델이다. 시간은 설명용 가정이며 런타임 성능 비교가 아니다.",
+    duration: 12,
+    snapshot: 0.45,
   },
   "event-loop": {
     title: "콜백은 언제 실행될까?",
@@ -99,6 +109,11 @@ export const scenes: Record<
 };
 
 export const diagrams: Record<DiagramName, { title: string; description: string }> = {
+  freshness: {
+    title: "수집이 늦어져도, 기존 댓글은 계속 보여준다",
+    description:
+      '"모여"는 서버가 알려준 다음 확인 가능 시각에 맞춰 갱신을 요청한다. 요청 접수와 수집 완료는 별개다. 처리 상태를 확인하고 변경 알림이 오면 관련 캐시를 갱신한다. 화면이 보이지 않을 때는 게시물 자동 갱신을 예약하지 않는다.',
+  },
   transaction: {
     title: "외부 응답을 기다릴 때, DB 연결은?",
     description:
@@ -630,45 +645,128 @@ export function buildScene(scene: SceneName, progress: number, width = 664): Fra
     });
     return d.frame(layout.height);
   }
+  if (scene === "io-models") {
+    const state = ioModelAt(p);
+    const layout = panels(width, 2, 397);
+    layout.boxes.forEach(({ x, y }, index) => {
+      const w = layout.panelWidth;
+      const chartX = x + 48;
+      const chartWidth = w - 60;
+      const at = (time: number) => chartX + (time / 1400) * chartWidth;
+      const segment = (start: number, end: number, rowY: number, ink: Ink) => {
+        const visibleEnd = Math.min(state.time, end);
+        if (visibleEnd > start)
+          d.rect(at(start), rowY, at(visibleEnd) - at(start), 15, ink, undefined, 2);
+      };
+      d.text(index === 0 ? "비동기 I/O" : "스레드별 블로킹 I/O", x, y + 8, "blue", 15, true);
+      d.wrap(
+        index === 0 ? "JS 실행 1개 · 대기는 별도로" : "일반 스레드 3개 · 각자 대기",
+        x,
+        y + 34,
+        w,
+        "muted",
+        12,
+      );
+      d.text(index === 0 ? "JS 실행 스레드" : "요청을 맡은 스레드", x, y + 85, "text", 13, true);
+      if (index === 0) {
+        d.rect(chartX, y + 99, chartWidth, 32, "surface", "border", 3);
+        d.text("JS", x, y + 120, "muted", 12);
+        state.requests.forEach((request) => {
+          segment(request.dispatched, request.waiting, y + 107, "blue");
+          segment(request.ready, request.ended, y + 107, "blue");
+        });
+        d.text("네트워크 작업 · 런타임 / OS", x, y + 163, "orange", 12, true);
+      }
+      if (index === 1) {
+        d.wrap("대기 중에도 담당 스레드는 유지", x, y + 124, w, "orange", 12);
+      }
+      state.requests.forEach((request, i) => {
+        const rowY = y + 184 + i * 39;
+        d.text(index === 0 ? `요청 ${request.id}` : `T${request.id}`, x, rowY + 13, "muted", 11);
+        d.rect(chartX, rowY - 4, chartWidth, 24, "surface", "border", 3);
+        if (index === 1) segment(request.dispatched, request.waiting, rowY, "blue");
+        segment(request.waiting, request.ready, rowY, "orange");
+        if (index === 1) segment(request.ready, request.ended, rowY, "blue");
+        if (request.phase === "completed") d.dot(at(request.ended), rowY + 7, "green", 4);
+      });
+      d.text("0", chartX, y + 311, "muted", 11);
+      d.text("1.4초", chartX + chartWidth, y + 311, "muted", 11, false, "end");
+      d.text(
+        index === 0
+          ? `JS 실행 중 ${state.executing.length} / 1`
+          : `응답 대기 중 ${state.waiting.length}개`,
+        x,
+        y + 341,
+        "blue",
+        13,
+        true,
+      );
+      d.text(`3개 중 ${state.completed.length}개 완료`, x, y + 369, "green", 13, true);
+    });
+    return d.frame(layout.height);
+  }
   if (scene === "parallel") {
     const t = p * 2200;
-    const rowHeight = 234;
+    const compact = width < 400;
+    const rowHeight = compact ? 310 : 253;
     parallelComparison.forEach(({ name, simulation }, i) => {
       const y = 16 + i * rowHeight;
       const state = poolAt(simulation, t);
       const screen = simulation.executions.find((request) => request.group === "screen");
       const background = simulation.executions.filter((request) => request.group === "background");
       const last = Math.max(...background.map((request) => request.ended));
+      const completed = background.filter((request) => request.ended <= t).length;
       d.text(`${i + 1}. ${name}`, 12, y + 6, i === 2 ? "orange" : "blue", 15, true);
       d.text(
         `DB 풀 점유 ${state.running.length} / 4`,
-        width - 12,
-        y + 6,
+        compact ? 12 : width - 12,
+        y + (compact ? 30 : 6),
         "muted",
         12,
         false,
-        "end",
+        compact ? "start" : "end",
       );
-      const labelWidth = width < 400 ? 68 : 96;
-      const xx = labelWidth + 12;
+      const top = y + (compact ? 56 : 34);
+      const xx = compact ? 80 : 108;
       const ww = width - xx - 18;
-      d.rect(xx, y + 34, ww, 86, "surface", "border", 0);
+      const at = (time: number) => xx + (time / 2200) * ww;
+      d.rect(xx, top, ww, 86, "surface", "border", 0);
       background.forEach((request) => {
-        const fillWidth = (Math.max(0, Math.min(t, request.ended) - request.started) / 2200) * ww;
-        const yy = y + 40 + request.slot * 19;
+        const fillWidth =
+          at(Math.max(request.started, Math.min(t, request.ended))) - at(request.started);
         if (fillWidth > 0)
-          d.rect(xx + (request.started / 2200) * ww, yy, fillWidth, 12, "blue", undefined, 2);
+          d.rect(
+            at(request.started),
+            top + 6 + request.slot * 19,
+            fillWidth,
+            12,
+            "blue",
+            undefined,
+            2,
+          );
       });
-      d.text("DB 작업", 12, y + 59, "muted", 13);
-      d.text("화면 조회", 12, y + 145, "green", 13, true);
+      d.text("DB 작업", 12, top + 25, "muted", 13);
+      if (t >= last) {
+        d.line(
+          [
+            [at(last), top],
+            [at(last), top + 86],
+          ],
+          "blue",
+          1,
+          true,
+        );
+        d.dot(at(last), top + 86, "green", 4);
+      }
+      d.text("화면 조회", 12, top + 111, "green", 13, true);
       if (screen) {
-        const yy = y + 132;
+        const yy = top + 99;
         const waitEnd = Math.min(t, screen.started);
         if (waitEnd > screen.arrived)
           d.rect(
-            xx + (screen.arrived / 2200) * ww,
+            at(screen.arrived),
             yy,
-            ((waitEnd - screen.arrived) / 2200) * ww,
+            at(waitEnd) - at(screen.arrived),
             15,
             "orangeSoft",
             "orange",
@@ -676,56 +774,60 @@ export function buildScene(scene: SceneName, progress: number, width = 664): Fra
           );
         if (t > screen.started)
           d.rect(
-            xx + (screen.started / 2200) * ww,
+            at(screen.started),
             yy,
-            Math.max(3, ((Math.min(t, screen.ended) - screen.started) / 2200) * ww),
+            at(Math.min(t, screen.ended)) - at(screen.started),
             15,
             "green",
             undefined,
             2,
           );
-        d.text(
-          `화면 조회 ${ms(screen.ended - screen.arrived)}`,
-          12,
-          y + 192,
-          i === 2 ? "orange" : "green",
-          14,
-          true,
-        );
+        const status =
+          t < screen.arrived
+            ? "화면 조회 · 도착 전"
+            : t < screen.started
+              ? "화면 조회 · 연결 대기"
+              : t < screen.ended
+                ? "화면 조회 · 처리 중"
+                : `화면 조회 완료 · ${ms(screen.ended - screen.arrived)}`;
+        d.text(status, 12, top + 158, t >= screen.ended && i === 2 ? "orange" : "green", 13, true);
       }
       d.line(
         [
-          [xx + (Math.min(t, 2200) / 2200) * ww, y + 28],
-          [xx + (Math.min(t, 2200) / 2200) * ww, y + 154],
+          [at(t), top - 6],
+          [at(t), top + 121],
         ],
         "muted",
         1,
         true,
       );
-      d.text("0", xx, y + 173, "muted", 11);
-      d.text("2.2초", xx + ww, y + 173, "muted", 11, false, "end");
-      d.text(`묶음 완료 ${seconds(last)}`, width - 12, y + 192, "blue", 13, false, "end");
+      d.text("0", xx, top + 139, "muted", 11);
+      d.text("2.2초", xx + ww, top + 139, "muted", 11, false, "end");
+      d.text(`8개 중 ${completed}개 완료`, 12, top + 184, "blue", 13, true);
+      d.text(
+        t >= last ? `묶음 완료 · ${seconds(last)}` : "묶음 처리 중",
+        compact ? 12 : width - 12,
+        top + (compact ? 210 : 184),
+        "blue",
+        12,
+        false,
+        compact ? "start" : "end",
+      );
       if (i < 2)
         d.line([
-          [12, y + 216],
-          [width - 12, y + 216],
+          [12, y + rowHeight - 17],
+          [width - 12, y + rowHeight - 17],
         ]);
     });
-    return d.frame(718);
+    return d.frame(16 + rowHeight * 3);
   }
   if (scene === "locks") {
-    const layout = panels(width, 2, 290);
+    const layout = panels(width, 2, 314);
     const busy = p > 0.16 && p < 0.75;
     layout.boxes.forEach(({ x, y }, i) => {
       const w = layout.panelWidth;
-      d.text(
-        i === 0 ? "연결을 잡고 기다림" : "락을 못 얻으면 연결 반납",
-        x,
-        y + 8,
-        i === 0 ? "orange" : "green",
-        14,
-        true,
-      );
+      d.text(i === 0 ? "대기형 락" : "try-lock", x, y + 8, i === 0 ? "orange" : "green", 14, true);
+      d.text(i === 0 ? "얻을 때까지 기다림" : "즉시 성공 여부 확인", x, y + 29, "muted", 12);
       d.rect(x, y + 37, w, 41, "blueSoft", "blue");
       d.text("채널 처리 중인 작업 A", x + w / 2, y + 63, "blue", 14, true, "middle");
       ["B", "C", "D"].forEach((name, j) => {
@@ -774,7 +876,7 @@ export function buildScene(scene: SceneName, progress: number, width = 664): Fra
     layout.boxes.forEach(({ x, y }, i) => {
       const w = layout.panelWidth;
       d.text(
-        i === 0 ? "공용 실행 자리 4개" : "외부 요청 3 + 정기 검사 1",
+        i === 0 ? "공용 실행 자리 4개" : "외부 요청 3 + 예약 확인 1",
         x,
         y + 6,
         i === 0 ? "orange" : "green",
@@ -809,7 +911,7 @@ export function buildScene(scene: SceneName, progress: number, width = 664): Fra
             3,
           );
         d.text(
-          i === 1 && j === 3 ? "정기 검사 자리" : `실행 자리 ${j + 1}`,
+          i === 1 && j === 3 ? "예약 확인 자리" : `실행 자리 ${j + 1}`,
           x + 8,
           yy + 20,
           request ? "text" : "muted",
@@ -818,12 +920,12 @@ export function buildScene(scene: SceneName, progress: number, width = 664): Fra
       }
       d.text(
         t < 500
-          ? "정기 검사: 아직 도착 전"
+          ? "예약 확인: 아직 도착 전"
           : tick && t < tick.started
-            ? "정기 검사: 줄에서 대기"
+            ? "예약 확인: 줄에서 대기"
             : tick && t < tick.ended
-              ? "정기 검사: 처리 중"
-              : "정기 검사: 완료",
+              ? "예약 확인: 처리 중"
+              : "예약 확인: 완료",
         x,
         y + 231,
         i === 0 ? "orange" : "green",
@@ -1011,6 +1113,22 @@ export function buildScene(scene: SceneName, progress: number, width = 664): Fra
 
 export function buildDiagram(kind: DiagramName, width = 664): Frame {
   const d = new Drawing(width);
+  if (kind === "freshness") {
+    const rows = [
+      ["① 기존 댓글은 계속 표시", "마지막 확인 시각 · 지연 이유 안내"],
+      ["② 서버가 다음 확인 시각을 알려줌", "SNS 한도와 수집 상태를 반영"],
+      ["③ 보이는 화면에서 갱신 요청", "요청 접수 ≠ 수집 완료"],
+      ["④ 워커 수집 후 필요한 화면 갱신", "상태 확인 · 변경 알림으로 관련 캐시 갱신"],
+    ];
+    rows.forEach(([title, detail], i) => {
+      const y = 12 + i * 112;
+      d.rect(12, y, width - 24, 87, i === 0 || i === 3 ? "greenSoft" : "surface", "border");
+      d.wrap(title, 25, y + 27, width - 50, i === 0 || i === 3 ? "green" : "blue", 13);
+      d.wrap(detail, 25, y + 59, width - 50, "muted", 11);
+      if (i < 3) d.arrow(width / 2, y + 91, width / 2, y + 107);
+    });
+    return d.frame(455);
+  }
   if (kind === "transaction") {
     const layout = panels(width, 2, 429);
     layout.boxes.forEach(({ x, y }, i) => {

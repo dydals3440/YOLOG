@@ -59,6 +59,37 @@ export function eventLoopAt(progress: number, longSynchronousWork = false) {
   };
 }
 
+/** Conceptual I/O timings; dispatch and callbacks never overlap on the JS thread. */
+export function ioModelAt(progress: number) {
+  const time = Math.max(0, Math.min(1, progress)) * 1400;
+  const requests = Array.from({ length: 3 }, (_, index) => {
+    const dispatched = index * 60;
+    const waiting = dispatched + 60;
+    const ready = 1000 + index * 80;
+    const ended = ready + 60;
+    const phase =
+      time < dispatched
+        ? "pending"
+        : time < waiting
+          ? "dispatch"
+          : time < ready
+            ? "waiting"
+            : time < ended
+              ? "callback"
+              : "completed";
+    return { id: index + 1, dispatched, waiting, ready, ended, phase };
+  });
+  return {
+    time,
+    requests,
+    executing: requests.filter(
+      (request) => request.phase === "dispatch" || request.phase === "callback",
+    ),
+    waiting: requests.filter((request) => request.phase === "waiting"),
+    completed: requests.filter((request) => request.phase === "completed"),
+  };
+}
+
 /** Admission limits protect a job's own queue before it joins the shared DB pool. */
 export function simulatePool(
   requests: readonly Request[],

@@ -12,7 +12,7 @@ export default function ResourceDiagram({ kind }: { kind: DiagramName }) {
             ? "실제 측정"
             : kind === "transaction" || kind === "deadlock"
               ? "개념 예시"
-              : kind === "jobs" || kind === "collection"
+              : kind === "jobs" || kind === "collection" || kind === "freshness"
                 ? "동작 흐름"
                 : "현재 설정"}
         </span>
