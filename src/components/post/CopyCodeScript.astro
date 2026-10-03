@@ -2,8 +2,17 @@
   const codeBlockList = document.querySelectorAll('.mdx [data-code-fragment]')
 
   codeBlockList.forEach((codeBlock) => {
-    const code = codeBlock.querySelector('pre > code').innerText
+    const codeElement = codeBlock.querySelector('pre > code')
     const copyButton = codeBlock.querySelector('.copy')
+    if (!codeElement || !copyButton) return
+
+    const lines = Array.from(codeElement.querySelectorAll(':scope > .line'))
+    const code = lines.length
+      ? lines
+          .filter((line) => !line.classList.contains('remove'))
+          .map((line) => line.textContent)
+          .join('\n')
+      : codeElement.textContent ?? ''
 
     let timeoutId = null
     let blurTimeoutId = null
