@@ -14,7 +14,7 @@
     "fmt:check": "oxfmt --check",
     "check": "oxlint && oxfmt --check",
     "typecheck": "astro check && tsc --noEmit",
-    "verify:site": "node scripts/verify-site.mjs",
+    "verify:site": "node --env-file-if-exists=.env --test --test-reporter=spec tests/site/*.test.mjs",
     "validate": "bun run check && bun run typecheck && bun run build && bun run verify:site"
   },
   "dependencies": {

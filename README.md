@@ -12,11 +12,15 @@ bun run validate
 ```
 
 `validate`는 lint/format, Astro/TypeScript, 정적 빌드, 생성된 SEO·분석 설정을 확인합니다.
-HTML/XML 검증은 개발 의존성인 Cheerio 파서를 사용합니다.
+`verify:site`는 Node 기본 테스트 러너로 `tests/site/seo.test.mjs`와
+`tests/site/analytics.test.mjs`를 실행합니다. 파일 탐색은 Node의 glob,
+HTML/XML 파싱은 Cheerio를 사용합니다. 실패 시 검사 항목과 파일 경로가 표시됩니다.
 GitHub Actions가 PR과 main에서 실행하고, Vercel Preview 빌드의 분석 제외도 검증합니다.
 `verify:site`는 빌드 후 실행하며 canonical, OG, JSON-LD, 전체 사이트맵, RSS,
 광고 스크립트 중복, GA 초기화 중복, 로컬 호스트 제외를 확인합니다.
 GA 검증에는 실제 운영 데이터를 전송하지 않습니다.
+로컬 검증은 `.env`를 읽고, CI의 `EXPECT_ANALYTICS`는 기대하는 태그 포함 여부를 명시합니다.
+실제 결과에서 기대값을 추측하지 않으므로 태그가 실수로 빠져도 검사가 실패합니다.
 의존성 보안 점검은 `bun audit`로 실행합니다. 배포는 Vercel의 Git 연동을 사용하며,
 사용하지 않는 Vercel CLI 패키지는 설치하지 않습니다(`@astrojs/vercel` 어댑터는 유지).
 
