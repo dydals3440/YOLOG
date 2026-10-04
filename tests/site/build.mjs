@@ -17,6 +17,6 @@ export async function loadPages() {
   );
   assert(files.includes("index.html"), "Build output missing. Run bun run build first.");
   return Promise.all(
-    files.sort().map(async (file) => ({ file, $: load(await readArtifact(file)) })),
+    files.toSorted().map(async (file) => ({ file, $: load(await readArtifact(file)) })),
   );
 }

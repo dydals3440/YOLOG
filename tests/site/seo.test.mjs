@@ -105,11 +105,15 @@ describe("Deployed SEO", () => {
     const modifiedDates = new Map(
       articles.map((page) => [canonicalOf(page), meta(page.$, "article:modified_time")]),
     );
+    const maps = await Promise.all(
+      sitemapFiles.map(async (file) => {
+        const url = new URL(file);
+        assert.equal(url.origin, SITE_URL, "Unexpected sitemap host");
+        return load(await readArtifact(url.pathname.slice(1)), { xml: true });
+      }),
+    );
     const locations = [];
-    for (const file of sitemapFiles) {
-      const url = new URL(file);
-      assert.equal(url.origin, SITE_URL, "Unexpected sitemap host");
-      const $ = load(await readArtifact(url.pathname.slice(1)), { xml: true });
+    for (const $ of maps) {
       for (const node of $("urlset > url").toArray()) {
         const location = $(node).find("loc").text();
         locations.push(location);
