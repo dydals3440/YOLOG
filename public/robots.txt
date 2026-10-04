@@ -26,4 +26,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://www.yolog.co.kr/sitemap.xml
+Sitemap: https://www.yolog.co.kr/sitemap-index.xml

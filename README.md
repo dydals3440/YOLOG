@@ -12,10 +12,13 @@ bun run validate
 ```
 
 `validate`는 lint/format, Astro/TypeScript, 정적 빌드, 생성된 SEO·분석 설정을 확인합니다.
+HTML/XML 검증은 개발 의존성인 Cheerio 파서를 사용합니다.
 GitHub Actions가 PR과 main에서 실행하고, Vercel Preview 빌드의 분석 제외도 검증합니다.
 `verify:site`는 빌드 후 실행하며 canonical, OG, JSON-LD, 전체 사이트맵, RSS,
 광고 스크립트 중복, GA 초기화 중복, 로컬 호스트 제외를 확인합니다.
 GA 검증에는 실제 운영 데이터를 전송하지 않습니다.
+의존성 보안 점검은 `bun audit`로 실행합니다. 배포는 Vercel의 Git 연동을 사용하며,
+사용하지 않는 Vercel CLI 패키지는 설치하지 않습니다(`@astrojs/vercel` 어댑터는 유지).
 
 ## 글 작성
 
@@ -46,9 +49,12 @@ draft: true
 
 ## GA4
 
-운영 속성은 **yolog (491206269)**, 웹 스트림은 **11290256543**,
-측정 ID는 **G-V4GXLPB8GD**입니다. Vercel **Production** 환경에만
-`PUBLIC_GA_ID`를 설정하세요. 측정 ID는 공개 식별자이며 비밀 키가 아닙니다.
+GA 관리 화면에서 블로그 웹 스트림의 측정 ID를 확인한 뒤 Vercel **Production** 환경에만
+`PUBLIC_GA_ID`를 설정하세요. 로컬 `.env`는 Git에서 제외합니다.
+측정 ID는 브라우저에 전달되는 공개 식별자이며 비밀 키가 아닙니다.
+API secret·서비스 계정 키·접근 토큰에는 `PUBLIC_` 접두사를 사용하지 말고
+Vercel 서버 환경 변수나 GitHub Actions Secrets에 보관합니다.
+CI는 실제 GA 속성과 무관한 테스트용 측정 ID를 사용합니다.
 
 `Monitoring.astro`가 Google 태그를 한 번 초기화합니다. 문서 이동은 기본
 `page_view`를 사용하며 수동 page_view 이벤트를 추가하지 않습니다.
@@ -73,7 +79,7 @@ Page loads, Scrolls, Outbound clicks, Video engagement, File downloads를 켭니
 일반 문서 탐색만 사용하므로 history 기반 page_view도 끕니다.
 향후 Astro ClientRouter를 도입하면 페이지뷰 측정 방식을 다시 점검하세요.
 
-Search Console 도메인 속성 **yolog.co.kr**은 이미 이 GA 스트림에 연결되어 있습니다.
+Search Console의 블로그 도메인 속성은 이미 GA 스트림에 연결되어 있습니다.
 GA Reports의 Search Console 보고서에서 실제 검색어와 유입 페이지를 확인합니다.
 Search Console 검색어는 방문자 개별 이벤트와 연결되지 않으며 보고에 지연이 있습니다.
 
@@ -84,9 +90,10 @@ Astro, Vercel, canonical, OG, JSON-LD, 공유 링크, RSS, 사이트맵이 같�
 404는 `noindex`, 공개 글은 큰 이미지 미리보기를 허용합니다.
 
 - [Search Console](https://search.google.com/search-console?resource_id=sc-domain%3Ayolog.co.kr)
-- [GA4](https://analytics.google.com/analytics/web/#/a356834544p491206269/reports/intelligenthome)
-- [사이트맵](https://www.yolog.co.kr/sitemap.xml), [RSS](https://www.yolog.co.kr/rss.xml)
-- 예전에 제출한 `/sitemap-index.xml`도 현재 사이트맵을 가리키도록 유지합니다.
+- [GA4](https://analytics.google.com/)
+- [사이트맵](https://www.yolog.co.kr/sitemap-index.xml), [RSS](https://www.yolog.co.kr/rss.xml)
+- 공식 `@astrojs/sitemap`이 실제 정적 경로에서 `/sitemap-index.xml`과 `/sitemap-0.xml`을 생성합니다.
+  기존 `/sitemap.xml`은 index로 영구 리디렉션합니다. 글의 lastmod는 생성된 수정일 메타데이터를 재사용합니다.
 
 **발행할 때:** validate → PR 검증 → main 병합/배포 → 글 주소/이미지 확인.
 새 글은 Search Console URL 검사에서 필요할 때 색인 생성을 요청합니다.

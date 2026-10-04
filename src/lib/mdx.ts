@@ -9,8 +9,8 @@ export const isBlogPost = (post: { id: string }) => {
 };
 
 export const getPostCollection = async (): Promise<CollectionEntry<"post">[]> => {
-  const posts = await getCollection("post");
-  return sortPostsByDate(posts.filter((post) => !post.data.draft && !post.id.includes(".draft")));
+  const posts = await getCollection("post", ({ data }) => !data.draft);
+  return sortPostsByDate(posts);
 };
 
 export const resolveSlug = (slug: string) => {

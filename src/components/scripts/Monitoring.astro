@@ -10,7 +10,7 @@ const hostname = new URL(SITE_URL).hostname
 ---
 
 {enabled && (
-  <script is:inline define:vars={{ gaId, hostname, contentGroup }}>
+  <script id="yolog-ga" is:inline define:vars={{ gaId, hostname, contentGroup }}>
     // 로컬 preview와 임의의 복제 도메인에서 운영 통계를 수집하지 않는다.
     if (location.hostname === hostname && !window.gtag) {
       window.dataLayer = window.dataLayer || [];
