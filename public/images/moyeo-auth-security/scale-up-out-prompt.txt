@@ -1,0 +1,11 @@
+Generated with the built-in ImageGen tool. Converted to WebP with Sharp at 1440px wide, quality 88.
+Source: /Users/matthew/.codex/generated_images/01a106c2-cb37-7203-8c43-84499dafca95/exec-d1ff5126-9723-49b9-811d-33fb2a26f762.png
+
+Use case: scientific-educational
+Asset type: one wide 2:1 Korean developer blog illustration explaining Scale Up and Scale Out.
+Style: warm pastel gouache on cream lightly textured paper, cozy friendly technical editorial illustration, navy crisp Korean lettering, blue browser and sage green servers with gentle faces, soft orange and purple highlights, spacious simple arrows.
+Title "서버를 키울까, 여러 대로 나눌까?"
+Two equal panels separated by a subtle vertical dashed line.
+LEFT title "Scale Up", subtitle "한 대의 CPU · 메모리를 늘린다". Small green server with small CPU and memory symbols transforms via a single right arrow to a larger green server with larger CPU/memory symbols. Below a compact blue browser with a cookie envelope sends a request to the ONE larger server. Label "서버는 한 대".
+RIGHT title "Scale Out", subtitle "여러 서버로 요청을 나눈다". Blue browser with a cookie envelope sends requests via a small neutral junction labelled "요청 분산" to TWO equal-sized green servers, stacked vertically, labelled "API A" and "API B". Under both servers one purple shared database cylinder labelled "공유 세션 DB". Both servers have clear separate arrows toward the same shared DB; no local DB per server. Bottom panel label "어느 서버에서도 같은 세션 조회".
+Constraints: accurate contrast: Scale Up grows capacity of one machine; Scale Out adds machines. Browser cookie envelopes represent tokens attached to requests, not whole session data. Right shared DB architecture is a simplified future expansion example of Moyeo's DB-backed sessions, not a claim two API servers run today. Exclude SSR proxy details, authentication cookies stored in server memory, Redis, metrics, fake speeds, no brand logos, no watermark. Only specified text, crisp readable labels, plentiful whitespace.

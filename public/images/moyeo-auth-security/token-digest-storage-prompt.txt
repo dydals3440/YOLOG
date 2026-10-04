@@ -1,0 +1,12 @@
+Generated with the built-in ImageGen tool. Converted to WebP with Sharp at 1440px wide, quality 88.
+Source: /Users/matthew/.codex/generated_images/01a106c2-cb37-7203-8c43-84499dafca95/exec-701ece42-8b8f-4f8c-98d5-5d4469e93598.png
+
+Use case: scientific-educational
+Asset type: one 2:1 landscape educational illustration for a Korean developer blog.
+Primary request: illustrate Moyeo storing an HMAC Digest in PostgreSQL, while the browser keeps the original opaque session token. Explain issuance and later lookup.
+Style: cozy pastel gouache on cream textured paper, blue friendly laptop, sage green friendly API server, muted lavender database cylinder, clean professional spacious layout, large crisp Korean labels. Same hand-painted animation-like style as existing SSR cookie illustration.
+Composition: two horizontal rows, three actors aligned in columns. Main title "원문은 브라우저에, Digest는 DB에".
+TOP heading "로그인 성공". Center green server labelled "토큰 발급 · HMAC 계산". LEFT arrow points from center server toward blue laptop; arrow label "원문 토큰". Left laptop caption "브라우저에 보관". RIGHT arrow points from center server toward lavender database; arrow label "Digest". Database caption "DB에 저장".
+BOTTOM heading "다음 요청". Blue laptop on left, green server in center, lavender database on right. Arrow left-to-center points right labelled "원문 토큰". Center server caption "같은 키로 HMAC 계산". Arrow center-to-right points right labelled "Digest로 세션 조회". Database caption "유효한 세션인지 확인".
+Small visual secret-key icon beside the server represents HMAC key; key never goes to browser or database. Two rows separated with a subtle dashed line. Token envelope has a neutral abstract pattern, not a real token.
+Constraints: show the exact directions specified. HMAC is a computation, not reversible encryption; no decoding arrow, no decrypted password, no private data. No guarantee against stolen browser tokens. No fake actual token/digest strings, no irrelevant actors, no watermark. Korean words and HMAC/Digest accurate. All captions readable at blog width.

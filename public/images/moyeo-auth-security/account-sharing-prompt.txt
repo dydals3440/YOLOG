@@ -1,0 +1,10 @@
+Generated with the built-in ImageGen tool. Converted to WebP with Sharp at 1440px wide, quality 86.
+Source: /Users/matthew/.codex/generated_images/01a106c2-cb37-7203-8c43-84499dafca95/exec-e21cd1fa-35d7-4fe8-bcc7-43d0500bae24.png
+
+Use case: illustration-story
+Asset type: wide editorial illustration embedded in a Korean developer blog.
+Primary request: illustrate why a paid service manages account sharing, using Netflix as an analogy.
+Scene: warm cream paper background. On the left, a friendly dark charcoal cartoon character holds one subscription key card with a small recognizable red Netflix N logo. In the center, several friendly cartoon people use a laptop, phone, tablet and television, all visually connected to that one account key. On the right, a small server rack and database with a gently growing stack of coins show the operator continues paying infrastructure costs.
+Style: tasteful pastel gouache, hand-drawn animation-like illustration, subtle paper grain, simple rounded forms, soft blue, sage, lavender and warm orange accents, coherent with a cozy security-themed developer blog illustration.
+Composition: very wide horizontal thumbnail, about 2:1 ratio, clear spacious composition with three easy-to-read visual groups, large objects and little clutter. The Netflix N is a contextual analogy, not a sponsored advertisement.
+Constraints: no captions, no Korean or English text, no numbers, no watermark; use only the red N mark as the brand cue. No accusations or hacker imagery. Show friendly everyday use and ongoing server costs.

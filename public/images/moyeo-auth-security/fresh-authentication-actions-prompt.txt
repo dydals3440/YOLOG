@@ -1,0 +1,12 @@
+Generated with the built-in ImageGen tool. Converted to WebP with Sharp at 1440px wide, quality 88.
+Source: /Users/matthew/.codex/generated_images/01a106c2-cb37-7203-8c43-84499dafca95/exec-1baf4295-0337-4389-8b05-28f8bc02d006.png
+
+Use case: scientific-educational
+Asset type: wide 2:1 Korean developer blog illustration.
+Primary request: show actual Moyeo sensitive actions requiring a recent identity confirmation and explain that an expired 15-minute confirmation does NOT log the user out.
+Style: warm pastel gouache cream textured paper, rounded icon cards, navy Korean typography, sage green blue muted orange and coral, restrained smiling browser/server characters, match existing cozy educational illustrations. Generous whitespace, readable large Korean labels.
+Top title "로그인 중이어도, 중요한 작업은 한 번 더 확인".
+Upper half: six equal pastel icon cards in 3 columns and 2 rows. Exact card labels: "다른 기기 로그아웃" (device icon), "이메일 변경 · 탈퇴" (account envelope icon), "소셜 연결 · 해제" (linked keys icon), "소유권 이전 · 종료" (workspace icon), "채널 연결 · 재인증" (connected app icon), "요금제 · 결제수단 변경" (payment icon). These are representative actual protected actions, not a universal claim about every field edit.
+Lower half: a clean 3-stage left-to-right path with distinct arrows. Left small blue logged-in browser labelled "최근 본인 확인 만료", tiny clock "15분". Middle a soft orange identity dialog labelled "비밀번호 또는 연결된 소셜 계정으로 확인". Right green service server labelled "권한과 조건을 다시 확인". A small checkmark and "작업 진행" at the right.
+Bottom short dark navy sentence "15분이 지나도 로그인은 유지된다".
+Constraints: represent current session identity confirmation, not creating a new login session, no OTP or SMS or MFA icons, no guarantee confirmation alone grants permission, no automatic OAuth retry implied, no password change card (actual password change directly verifies current password), no cookie theft, no brand logos, no URLs, no watermark. Render only specified exact quoted labels, no additional paragraphs. Maintain crisp text and clear hierarchy.

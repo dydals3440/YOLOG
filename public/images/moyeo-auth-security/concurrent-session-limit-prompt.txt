@@ -1,0 +1,12 @@
+Generated with the built-in ImageGen tool. Converted to WebP with Sharp at 1440px wide, quality 88.
+Source: /Users/matthew/.codex/generated_images/01a106c2-cb37-7203-8c43-84499dafca95/exec-e914d0fe-5cfd-4bc7-b14f-4a56c96f3724.png
+
+Use case: scientific-educational
+Asset type: one 2:1 landscape comparison illustration for a Korean developer blog.
+Primary request: make the database race condition in enforcing five active sessions easy to understand. Starting count is four, and two valid login attempts for the SAME ACCOUNT arrive together. Compare unsafe independent checks with Moyeo's sequential processing using a user-row lock.
+Style: cozy pastel gouache on cream textured paper, rounded friendly small servers and login envelopes, soft blue, sage green, muted peach/red. Large crisp accurate Korean text; clean spacious professional layout matching existing SSR cookie illustration.
+Composition: main title "동시 로그인도 5개를 넘지 않게". Small subtitle "같은 계정 · 활성 세션 4개 · 로그인 2건".
+Two equal side-by-side panels, left pale peach, right pale sage green, separated by subtle dashed line.
+LEFT title "동시에 확인하면". Two parallel request cards labelled "로그인 A" and "로그인 B". Each reads "4개 확인 → 1개 추가". Parallel arrows merge toward a small database at bottom labelled "활성 6개". This is the problematic hypothetical implementation, two checks both see four before either inserts.
+RIGHT title "모여는 순서대로 처리". Vertical sequential flow with large step cards. First card "로그인 A", smaller line "4개 확인 → 추가 → 5개". Single downward arrow. Second card "로그인 B", smaller line "5개 확인 → 기존 1개 종료 → 추가". Result database at bottom labelled "활성 5개". Small lock beside right path labelled "사용자 행 잠금". Lock means same-account updates serialize, not a global login lock. Both valid logins succeed; B replaces one old active session.
+Constraints: exact arithmetic, exactly two new login attempts and one same account. No rejection of sixth login. No claim that all users wait on the same lock. No fake measured metrics, no physical-device counting. Do not depict user A and user B as different accounts: A/B here are login request labels. No watermark, no dense paragraph. Each panel has its own outcome, and no arrows link panels.
