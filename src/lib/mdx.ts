@@ -9,7 +9,7 @@ export const isBlogPost = (post: { id: string }) => {
 };
 
 export const getPostCollection = async (): Promise<CollectionEntry<"post">[]> => {
-  const posts = await getCollection("post");
+  const posts = await getCollection("post", ({ data }) => !data.draft);
   return sortPostsByDate(posts);
 };
 
@@ -34,35 +34,29 @@ export const getPostInfoList = async (): Promise<PostInfoModel[]> => {
 };
 
 export const generateDescription = (content: string) => {
-  const parsedContent = content
-    // import/export 문 제거
-    .replace(/import\s+.+?\s+from\s+['"].+?['"];?\s*/g, "")
-    .replace(/export\s+.+?;?\s*/g, "")
-    .replace(/:{3}.*?:{3}/gs, "")
-    // HTML 태그 완전히 제거 (script, style 포함 모든 태그)
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+  const text = content
+    // 코드·MDX 컴포넌트·제목 대신 본문의 설명을 검색 미리보기에 사용한다.
+    .replace(/^import[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, "")
+    .replace(/^export\s+.*$/gm, "")
+    .replace(/```[\s\S]*?```|~~~[\s\S]*?~~~/g, "")
+    .replace(/^#{1,6}\s+.*$/gm, "")
+    .replace(/^:{3}.*$/gm, "")
+    .replace(/<script\b[\s\S]*?<\/script>|<style\b[\s\S]*?<\/style>/gi, "")
     .replace(/<[^>]+>/g, "")
-    // 이미지 마크다운 제거
     .replace(/!\[.*?\]\(.*?\)/g, "")
-    // 링크 마크다운에서 텍스트만 추출
-    .replace(/\[(.*?)\]\(.*?\)/g, "$1")
-    // URL 제거
-    .replace(/(?<!\S)((http)(s?):\/\/|www\.).+?(?=\s)/g, "")
-    // 마크다운 문법 제거
-    .replace(/[#*|[\]]|(-{3,})|(`{3})(\S*)(?=\s)/g, "")
-    // HTML 엔티티 디코드
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/https?:\/\/\S+|www\.\S+/g, "")
+    .replace(/[#*|`~]|(-{3,})/g, "")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&amp;/g, "&")
-    // 다중 공백을 단일 공백으로
     .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 157);
+    .trim();
 
-  return `${parsedContent}...`;
+  if (text.length <= 160) return text;
+  return `${text.slice(0, 157).trimEnd()}...`;
 };
 
 /**

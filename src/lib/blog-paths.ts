@@ -1,4 +1,4 @@
-import { getCollection } from "astro:content";
+import { getPostCollection } from "@/lib/mdx";
 
 import { BLOG_CATEGORIES, type BlogCategory } from "@/consts";
 import {
@@ -10,7 +10,7 @@ import {
 import { PAGINATION } from "@/lib/config";
 
 export async function buildBlogListingPaths() {
-  const allPosts = await getCollection("post");
+  const allPosts = await getPostCollection();
   const categories = Object.keys(BLOG_CATEGORIES)
     .filter((c) => c !== "ALL")
     .map((c) => c.toLowerCase());

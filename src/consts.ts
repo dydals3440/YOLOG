@@ -1,6 +1,6 @@
 export const WEBSITE_CONFIG = {
   TITLE: "개발자 매튜",
-  TITLE_TEMPLATE: "개발자 매튜 | %s",
+  TITLE_TEMPLATE: "%s | 개발자 매튜",
   DESCRIPTION:
     "소프트웨어 개발자 매튜입니다. 에듀테크 장학카드 관리 서비스를 만들고, 사이드로 친구와 함께 성장하는 AI 투두 플래너 아이두를 개발하고 있습니다. 개발 경험과 생각을 기록합니다.",
   OG_IMAGE: "/images/og.png",

@@ -1,40 +1,43 @@
 ---
-import { isProduction } from '@/lib/utils'
+import { isLiveBuild } from '@/lib/analytics-config'
+import { SITE_URL } from '@/lib/config'
+
+interface Props { contentGroup?: string }
+const { contentGroup = '사이트' } = Astro.props
+const gaId = import.meta.env.PUBLIC_GA_ID?.trim()
+const enabled = isLiveBuild && /^G-[A-Z0-9]+$/.test(gaId ?? '') && gaId !== 'G-XXXXXXXXXX'
+const hostname = new URL(SITE_URL).hostname
 ---
 
-{/* google analytics */}
-{
-  isProduction && (
-    <script
-      is:inline
-      async
-      src={`https://www.googletagmanager.com/gtag/js?id=${import.meta.env.PUBLIC_GA_ID}`}
-    />
-  )
-}
-{
-  isProduction && (
-    <script
-      is:inline
-      async
-      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3296643559689345"
-      crossorigin="anonymous"
-    />
-  )
-}
-<script>
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-nocheck
-  import { isProduction } from '@/lib/utils'
-
-  if (isProduction) {
-    const gaId = import.meta.env.PUBLIC_GA_ID
-
-    window.dataLayer = window.dataLayer || []
-    function gtag() {
-      dataLayer.push(arguments)
+{enabled && (
+  <script id="yolog-ga" is:inline define:vars={{ gaId, hostname, contentGroup }}>
+    // 로컬 preview와 임의의 복제 도메인에서 운영 통계를 수집하지 않는다.
+    if (location.hostname === hostname && !window.gtag) {
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function () { window.dataLayer.push(arguments); };
+      const pageUrl = new URL(location.href);
+      pageUrl.hash = '';
+      // 유입 분석에 쓰는 값만 보존한다. 임의의 query 값은 수집하지 않는다.
+      for (const key of [...pageUrl.searchParams.keys()]) {
+        if (!/^(utm_(source|medium|campaign|id|term|content)|gclid|dclid|gbraid|wbraid)$/.test(key)) {
+          pageUrl.searchParams.delete(key);
+        }
+      }
+      window.gtag('js', new Date());
+      // 일반 문서 탐색이므로 자동 page_view를 한 번만 보낸다.
+      window.gtag('config', gaId, {
+        page_location: pageUrl.href,
+        content_group: contentGroup,
+      });
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = 'https://www.googletagmanager.com/gtag/js?id=' + gaId;
+      document.head.appendChild(script);
     }
-    gtag('js', new Date())
-    gtag('config', gaId)
-  }
-</script>
+  </script>
+)}
+{isLiveBuild && (
+  <script is:inline async
+    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3296643559689345"
+    crossorigin="anonymous" />
+)}

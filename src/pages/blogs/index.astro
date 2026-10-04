@@ -1,5 +1,5 @@
 ---
-import { getCollection } from 'astro:content'
+import { getPostCollection } from '@/lib/mdx'
 
 import YongGlass from '@/components/YongGlass.astro'
 import BlogList from '@/components/blogs/BlogList.astro'
@@ -9,7 +9,7 @@ import BaseLayout from '@/layouts/BaseLayout.astro'
 import { createCategoryList, paginateArray, sortPostsByDate } from '@/lib/blog-utils'
 import { PAGINATION, getSiteUrl } from '@/lib/config'
 
-const allPosts = await getCollection('post')
+const allPosts = await getPostCollection()
 const sortedPosts = sortPostsByDate(allPosts)
 const categories = createCategoryList(allPosts)
 const { items: posts, pagination } = paginateArray(sortedPosts, 1, PAGINATION.POSTS_PER_PAGE)

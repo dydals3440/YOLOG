@@ -12,6 +12,7 @@ export async function GET(context: APIContext) {
     title: WEBSITE_CONFIG.TITLE,
     description: WEBSITE_CONFIG.DESCRIPTION,
     site: context.site,
+    trailingSlash: false,
     xmlns: {
       atom: "http://www.w3.org/2005/Atom",
       dc: "http://purl.org/dc/elements/1.1/",
@@ -22,7 +23,7 @@ export async function GET(context: APIContext) {
         : undefined;
       return {
         title: post.data.title,
-        link: `/post/${resolveSlug(post.id)}/`,
+        link: `/post/${resolveSlug(post.id)}`,
         pubDate: new Date(post.data.date),
         description: post.data.description || generateDescription(post.body ?? ""),
         categories: [...(categoryLabel ? [categoryLabel] : []), ...(post.data.tags ?? [])],

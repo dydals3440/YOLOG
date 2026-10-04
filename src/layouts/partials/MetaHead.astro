@@ -4,12 +4,13 @@ import '@/styles/global.css'
 import { WEBSITE_CONFIG } from '@/consts'
 import type { SEOModel } from '@/types'
 import { SITE_URL } from '@/lib/config'
+import { serializeJsonLd } from '@/lib/structured-data'
 
 import FontLoader from './FontLoader.astro'
 
 interface Props extends SEOModel {}
 
-const canonicalURL = new URL(Astro.url.pathname, Astro.site)
+const canonicalURL = new URL(Astro.url.pathname.replace(/\/$/, '') || '/', Astro.site)
 
 const {
   title = WEBSITE_CONFIG.TITLE,
@@ -25,6 +26,7 @@ const {
   articleSection,
   articleTags,
   excludeWebPageSchema = false,
+  noindex = false,
 } = Astro.props
 const formattedTitle = title === WEBSITE_CONFIG.TITLE ? title : WEBSITE_CONFIG.TITLE_TEMPLATE.replace('%s', title)
 
@@ -77,7 +79,7 @@ const webSiteSchema = {
 <meta name="generator" content={Astro.generator} />
 
 <!-- Sitemap -->
-<link rel="sitemap" href="/sitemap.xml" />
+<link rel="sitemap" href="/sitemap-index.xml" />
 
 <!-- RSS Auto-Discovery -->
 <link rel="alternate" type="application/rss+xml" title="YOLOG RSS Feed" href="/rss.xml" />
@@ -90,6 +92,7 @@ const webSiteSchema = {
 {nextUrl && <link rel="next" href={nextUrl} />}
 
 <!-- Primary Meta Tags -->
+<meta name="robots" content={noindex ? 'noindex, follow' : 'index, follow, max-image-preview:large'} />
 <title>{formattedTitle}</title>
 <meta name="title" content={formattedTitle} />
 <meta name="description" content={description} />
@@ -136,7 +139,7 @@ const webSiteSchema = {
 
 <!-- Structured Data -->
 {!excludeWebPageSchema && (
-  <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+  <script is:inline type="application/ld+json" set:html={serializeJsonLd(structuredData)} />
 )}
-<script is:inline type="application/ld+json" set:html={JSON.stringify(organizationSchema)} />
-<script is:inline type="application/ld+json" set:html={JSON.stringify(webSiteSchema)} />
+<script is:inline type="application/ld+json" set:html={serializeJsonLd(organizationSchema)} />
+<script is:inline type="application/ld+json" set:html={serializeJsonLd(webSiteSchema)} />

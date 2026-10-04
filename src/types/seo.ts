@@ -3,6 +3,7 @@
  */
 
 export interface SEOModel {
+  noindex?: boolean;
   title?: string;
   description?: string;
   image?: string;

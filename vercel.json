@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "trailingSlash": false,
   "installCommand": "npx --yes --allow-scripts=bun bun@1.4.2 install --frozen-lockfile",
   "buildCommand": "npx --yes --allow-scripts=bun bun@1.4.2 run build"
 }

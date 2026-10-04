@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { trackShare } from "@/lib/analytics";
 import {
   CopyCheckIcon,
   FacebookIcon,
@@ -60,6 +61,7 @@ const SocialShare = ({ title, url }: SocialShareProps) => {
     try {
       await copyToClipboard(url);
       setIsCopied(true);
+      trackShare("copy_link");
       toast({
         title: "링크가 복사되었습니다",
         description: "클립보드에 저장되었습니다",
@@ -98,7 +100,10 @@ const SocialShare = ({ title, url }: SocialShareProps) => {
         {SHARE_OPTIONS.map(({ platform, icon, label }) => (
           <ShareButton
             key={platform}
-            onClick={() => openShareWindow(shareUrls[platform])}
+            onClick={() => {
+              openShareWindow(shareUrls[platform]);
+              trackShare(platform);
+            }}
             title={label}
             ariaLabel={label}
           >

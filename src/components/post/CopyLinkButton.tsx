@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { trackShare } from "@/lib/analytics";
 
 import { Check, Link2 } from "lucide-react";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
@@ -15,7 +16,9 @@ const CopyLinkButton = () => {
 
   const handleCopyLink = useCallback(async () => {
     try {
-      await copyToClipboard(window.location.href);
+      const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href;
+      await copyToClipboard(canonical ?? window.location.href);
+      trackShare("copy_link");
       setIsCopied(true);
       toast({
         title: "링크가 복사되었습니다",

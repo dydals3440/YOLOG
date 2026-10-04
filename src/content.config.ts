@@ -14,10 +14,11 @@ if (categoryKeys.length === 0) {
 const categoryValues = categoryKeys as [BlogCategory, ...BlogCategory[]];
 
 const post = defineCollection({
-  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/post" }),
+  loader: glob({ pattern: ["**/*.{md,mdx}", "!**/*.draft.{md,mdx}"], base: "./src/content/post" }),
   schema: z.object({
-    title: z.string(),
-    description: z.string().optional(),
+    title: z.string().trim().min(1),
+    draft: z.boolean().default(false),
+    description: z.string().trim().min(1).optional(),
     date: z.coerce.date(),
     updatedDate: z.coerce.date().optional(),
     image: z.string().optional(),
