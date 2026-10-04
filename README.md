@@ -16,6 +16,8 @@ bun run validate
 `verify:site`는 Node 기본 테스트 러너로 `tests/site/seo.test.mjs`와
 `tests/site/analytics.test.mjs`를 실행합니다. 파일 탐색은 Node의 glob,
 HTML/XML 파싱은 Cheerio를 사용합니다. 실패 시 검사 항목과 파일 경로가 표시됩니다.
+테스트 이름과 실패 메시지는 한국어로 작성하고 Given / When / Then으로 조건·실행·검증을 구분합니다.
+파일 읽기와 GA 브라우저 대역은 별도 도우미에 두며, 각 테스트는 하나의 동작을 검증합니다.
 GitHub Actions가 PR과 main에서 실행하고, Vercel Preview 빌드의 분석 제외도 검증합니다.
 `verify:site`는 빌드 후 실행하며 canonical, OG, JSON-LD, 전체 사이트맵, RSS,
 광고 스크립트 중복, GA 초기화 중복, 로컬 호스트 제외를 확인합니다.

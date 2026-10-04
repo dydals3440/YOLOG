@@ -15,7 +15,7 @@ export async function loadPages() {
   const files = await Array.fromAsync(
     glob("**/*.html", { cwd: staticDir, exclude: ["naver*.html"] }),
   );
-  assert(files.includes("index.html"), "Build output missing. Run bun run build first.");
+  assert(files.includes("index.html"), "빌드 결과가 없습니다. 먼저 bun run build를 실행하세요.");
   return Promise.all(
     files.toSorted().map(async (file) => ({ file, $: load(await readArtifact(file)) })),
   );
