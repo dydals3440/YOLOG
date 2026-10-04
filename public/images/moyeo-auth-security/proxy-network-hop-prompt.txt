@@ -1,0 +1,10 @@
+Generated with the built-in ImageGen tool. Converted to WebP with Sharp at 1440px wide, quality 88.
+Source: /Users/matthew/.codex/generated_images/01a106c2-cb37-7203-8c43-84499dafca95/exec-9b842bc3-2808-42ba-b633-6753a09d0753.png
+
+Use case: scientific-educational
+Asset type: one wide explanatory illustration for a Korean developer blog, about 2:1 ratio.
+Primary request: make the extra network hop in a web API proxy intuitive by comparing two browser request paths. This is a browser API request comparison, not SSR rendering.
+Style: soft pastel hand-painted gouache with paper grain, cream background, rounded cheerful laptop and small server characters, same cozy animation-like editorial style as an account-sharing illustration. Blue browser, sage-green web proxy, muted orange API server. Spacious and professional; labels large and sharp.
+Composition: two horizontal rows, aligned browser on left and API on right. Top row has a laptop/browser linked directly to an orange API server by one continuous double-headed arrow. Bottom row has a laptop/browser, then a green web server/proxy, then an orange API server, linked with two double-headed arrows. A tiny clock near the green proxy hints at additional processing and round-trip time. A little envelope on the arrows represents the request. Keep the same endpoints aligned for instant comparison.
+Text (verbatim): top row heading "직접 호출", bottom row heading "프록시 경유"; laptop labels "브라우저"; green middle server label "TanStack Start"; orange server labels "NestJS"; small simple caption below middle server "중계 처리 + 네트워크 왕복". All text must be accurate, uncluttered, large and legible.
+Constraints: exactly two distinct paths. The top row has 2 actors and the bottom has 3 actors. No fake latency numbers, no suggestion that a proxy guarantees security, no locks or shields, no extra database/CDN actors, no watermark, no unrelated decorative text. Show both directions of request/response with double-headed arrows.

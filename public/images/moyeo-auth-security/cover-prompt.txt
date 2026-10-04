@@ -1,0 +1,16 @@
+Use case: illustration-story
+Asset type: Korean technical blog thumbnail, landscape 8:5 composition, intended final size 1600x1000.
+Primary request: A warm, charming editorial illustration about secure login and five-device sessions for a small collaborative SaaS named Moyeo. NO lettering or numbers.
+Scene: cream paper background, a friendly rounded lavender messenger character with a tiny cream megaphone face is checking a small key-shaped cookie at a desk. A softly rounded server cabinet with a small shield emblem sits beside it. Exactly five small browser/device cards float in a loose arc above the desk, each with a simple anonymous avatar and a tiny green check. An envelope with a coral notification dot suggests a new-device login email. A flowing blue ribbon connects devices to the server.
+Style: handmade pastel gouache and colored-pencil picture-book editorial illustration, delicate paper grain, soft imperfect edges, subtle chalk texture. Clear shapes and ample negative space. Sophisticated, calm, playful, friendly; not glossy 3D.
+Palette: warm ivory, muted periwinkle and lavender, sage green, dusty sky blue, soft ochre, small coral accents.
+Composition: central lower desk scene with the five device cards distributed across the upper half; readable at thumbnail size. Full-bleed creamy backdrop, no frame, no dashboard charts.
+Constraints: original character and composition; do not reproduce any reference mascot or detective scene. No text, no letters, no digits, no watermark, no padlock wallpaper, no hackers in hoodies. This is a static image with an animated-cartoon visual style, not an animation.
+
+Generation: built-in image_gen tool (imagegen skill).
+Final asset: thumbnail.webp, 1600 × 1000, WebP quality 84.
+The generated PNG was converted with Sharp; original generated files remain unchanged.
+
+Screenshot edits: built-in image_gen, original email/admin screenshots supplied by the user.
+Requested edit: remove recipient/contact areas from the email; retain only the account-management panel for admin. Preserve original Korean content and UI.
+These are edited presentation examples derived from screenshots, not pixel-identical originals. Captions deliberately call them examples.

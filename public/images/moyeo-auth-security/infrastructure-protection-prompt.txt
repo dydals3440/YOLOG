@@ -1,0 +1,12 @@
+Generated with the built-in ImageGen tool. Converted to WebP with Sharp at 1440px wide, quality 88.
+Source: /Users/matthew/.codex/generated_images/01a106c2-cb37-7203-8c43-84499dafca95/exec-aa66796c-8815-4b87-8769-4158d3022fb8.png
+
+Use case: scientific-educational
+Asset type: a single very wide educational illustration for a Korean developer blog about the security of its cloud infrastructure.
+Primary request: explain three complementary protections in a simple picture: protect information in transit, protect stored information, and restrict entry paths.
+Style: cozy pastel hand-painted gouache, warm cream paper grain, rounded friendly server and computer characters, soft blue, sage green, lavender and orange. Consistent with the previous proxy-route and account-sharing blog illustrations. Large clear labels, simple visual storytelling.
+Composition: three roomy equal side-by-side panels across one wide horizontal illustration, approximately 2:1 ratio, separated only by soft dotted lines.
+Left panel: friendly laptop sends an envelope through a translucent locked blue connection to a friendly server. Heading exactly "통신할 때 보호". Short label "HTTPS".
+Middle panel: a lavender database cylinder and small hard disk with a golden padlock clearly attached to stored data, not blocking legitimate use. Heading exactly "저장할 때 보호". Short label "저장소 암호화".
+Right panel: a green cloud gateway connects via an allowed blue path to an orange API server, then to a purple database. A separate outside red arrow directed at the API server is stopped by a small closed gate. Heading exactly "들어오는 길 제한". Short labels "Tunnel" and "앱 서버만 DB 접속".
+Constraints: no extra text, no fake metrics, no implication that encryption prevents all attacks or that uptime is guaranteed. Keep only the specified labels. No branded logos, no watermark, no hackers, no crowded technical dashboard. Make actors and paths readable at blog width.
