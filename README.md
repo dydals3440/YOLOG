@@ -11,7 +11,8 @@ bun run dev
 bun run validate
 ```
 
-`validate`는 lint/format, Astro/TypeScript, 정적 빌드, 생성된 SEO·분석 설정을 확인합니다.
+`validate`는 lint/format, Astro/TypeScript, 단위 테스트, 정적 빌드, 생성된 SEO·분석 설정을 확인합니다.
+`bun run test`는 JSON-LD 직렬화가 콘텐츠를 보존하면서 script 태그 삽입을 막는지 검사합니다.
 `verify:site`는 Node 기본 테스트 러너로 `tests/site/seo.test.mjs`와
 `tests/site/analytics.test.mjs`를 실행합니다. 파일 탐색은 Node의 glob,
 HTML/XML 파싱은 Cheerio를 사용합니다. 실패 시 검사 항목과 파일 경로가 표시됩니다.

@@ -22,6 +22,7 @@ import { formatDate } from '@/lib/blog-utils'
 import { RELATED_POSTS, getSiteUrl } from '@/lib/config'
 import { generateDescription, getPostCollection, parseToc } from '@/lib/mdx'
 import { buildBlogPostingSchema, buildBreadcrumbSchema } from '@/lib/post-schema'
+import { serializeJsonLd } from '@/lib/structured-data'
 import { getRelatedPosts } from '@/lib/related-posts'
 
 import BaseLayout from './BaseLayout.astro'
@@ -65,8 +66,8 @@ const articleSection = category ? BLOG_CATEGORIES[category as BlogCategory] : un
   }}
 >
   <ReadingProgress client:only="react" />
-  <script is:inline type="application/ld+json" set:html={JSON.stringify(blogPostingSchema).replace(/</g, '\\u003c')} />
-  <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema).replace(/</g, '\\u003c')} />
+  <script is:inline type="application/ld+json" set:html={serializeJsonLd(blogPostingSchema)} />
+  <script is:inline type="application/ld+json" set:html={serializeJsonLd(breadcrumbSchema)} />
   <LeftSidebar>
     <a
       class="group flex w-fit items-center gap-1.5 text-third transition-colors hover:text-primary lg:gap-2"

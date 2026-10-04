@@ -14,8 +14,9 @@
     "fmt:check": "oxfmt --check",
     "check": "oxlint && oxfmt --check",
     "typecheck": "astro check && tsc --noEmit",
+    "test": "node --test --test-reporter=spec tests/unit/*.test.mjs",
     "verify:site": "node --env-file-if-exists=.env --test --test-reporter=spec tests/site/*.test.mjs",
-    "validate": "bun run check && bun run typecheck && bun run build && bun run verify:site"
+    "validate": "bun run check && bun run typecheck && bun run test && bun run build && bun run verify:site"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "^7.3.1",

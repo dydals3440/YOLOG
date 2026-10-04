@@ -4,6 +4,7 @@ import '@/styles/global.css'
 import { WEBSITE_CONFIG } from '@/consts'
 import type { SEOModel } from '@/types'
 import { SITE_URL } from '@/lib/config'
+import { serializeJsonLd } from '@/lib/structured-data'
 
 import FontLoader from './FontLoader.astro'
 
@@ -138,7 +139,7 @@ const webSiteSchema = {
 
 <!-- Structured Data -->
 {!excludeWebPageSchema && (
-  <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData).replace(/</g, '\\u003c')} />
+  <script is:inline type="application/ld+json" set:html={serializeJsonLd(structuredData)} />
 )}
-<script is:inline type="application/ld+json" set:html={JSON.stringify(organizationSchema).replace(/</g, '\\u003c')} />
-<script is:inline type="application/ld+json" set:html={JSON.stringify(webSiteSchema).replace(/</g, '\\u003c')} />
+<script is:inline type="application/ld+json" set:html={serializeJsonLd(organizationSchema)} />
+<script is:inline type="application/ld+json" set:html={serializeJsonLd(webSiteSchema)} />
