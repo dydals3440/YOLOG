@@ -1,5 +1,5 @@
 ---
-import { isProduction } from '@/lib/utils'
+import { isLiveBuild } from '@/lib/analytics-config'
 
 interface Props {
   slot: string
@@ -11,7 +11,7 @@ interface Props {
 const { slot, format = 'auto', responsive = true, className = '' } = Astro.props
 ---
 
-{isProduction && (
+{isLiveBuild && (
   <div class={`google-adsense-container ${className}`}>
     <ins class="adsbygoogle"
          style="display:block"

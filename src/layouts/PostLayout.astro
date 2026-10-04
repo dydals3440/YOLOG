@@ -1,7 +1,7 @@
 ---
 import '@/styles/mdx.css'
 
-import { type CollectionEntry, getCollection, render } from 'astro:content'
+import { type CollectionEntry, render } from 'astro:content'
 
 import GoogleAdsense from '@/components/GoogleAdsense.astro'
 import PostNavigation from '@/components/common/PostNavigation.astro'
@@ -20,7 +20,7 @@ import LeftSidebar from '@/layouts/partials/LeftSidebar.astro'
 import { BLOG_CATEGORIES, type BlogCategory, WEBSITE_CONFIG } from '@/consts'
 import { formatDate } from '@/lib/blog-utils'
 import { RELATED_POSTS, getSiteUrl } from '@/lib/config'
-import { generateDescription, parseToc } from '@/lib/mdx'
+import { generateDescription, getPostCollection, parseToc } from '@/lib/mdx'
 import { buildBlogPostingSchema, buildBreadcrumbSchema } from '@/lib/post-schema'
 import { getRelatedPosts } from '@/lib/related-posts'
 
@@ -43,7 +43,7 @@ const { Content } = await render(post)
 const blogPostingSchema = buildBlogPostingSchema({ post, description, site: Astro.site, url: Astro.url })
 const breadcrumbSchema = buildBreadcrumbSchema({ post, siteUrl: getSiteUrl(Astro.site) })
 
-const allPosts = await getCollection('post')
+const allPosts = await getPostCollection()
 const relatedPosts = getRelatedPosts({ currentPost: post, allPosts, maxPosts: RELATED_POSTS.MAX_COUNT })
 
 const articleSection = category ? BLOG_CATEGORIES[category as BlogCategory] : undefined
@@ -65,8 +65,8 @@ const articleSection = category ? BLOG_CATEGORIES[category as BlogCategory] : un
   }}
 >
   <ReadingProgress client:only="react" />
-  <script is:inline type="application/ld+json" set:html={JSON.stringify(blogPostingSchema)} />
-  <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(blogPostingSchema).replace(/</g, '\\u003c')} />
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema).replace(/</g, '\\u003c')} />
   <LeftSidebar>
     <a
       class="group flex w-fit items-center gap-1.5 text-third transition-colors hover:text-primary lg:gap-2"
@@ -92,18 +92,21 @@ const articleSection = category ? BLOG_CATEGORIES[category as BlogCategory] : un
   <section>
     <div class="pt-12 pb-8 sm:pt-8 sm:pb-6">
       <time datetime={formatDate(date, 'YYYY-MM-DD')} class="text-xs text-third">{formattedDate}</time>
+      {updatedDate && updatedDate > date && (
+        <span class="ml-3 text-xs text-third">수정 <time datetime={formatDate(updatedDate, 'YYYY-MM-DD')}>{formatDate(updatedDate)}</time></span>
+      )}
       <h1 class="mt-3 text-3xl font-bold tracking-tight leading-tight sm:text-2xl">{title}</h1>
       <div class="mt-6">
         <SocialShare
           title={title}
-          url={Astro.url.href}
+          url={new URL(Astro.url.pathname.replace(/\/$/, ''), Astro.site).href}
           client:only="react"
         />
       </div>
     </div>
   </section>
   <section>
-    <article data-animate data-animate-speed="fast" class="mdx">
+    <article data-post-id={post.id} data-animate data-animate-speed="fast" class="mdx">
       <Content components={{ img: PostImage, table: PostTable }} />
     </article>
     <GoogleAdsense

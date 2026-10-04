@@ -21,6 +21,7 @@ export function buildBlogPostingSchema({
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     headline: title,
+    inLanguage: "ko-KR",
     description,
     image: image
       ? new URL(image, site).toString()
@@ -43,7 +44,7 @@ export function buildBlogPostingSchema({
     },
     mainEntityOfPage: {
       "@type": "WebPage",
-      "@id": url.toString(),
+      "@id": new URL(url.pathname.replace(/\/$/, "") || "/", site).toString(),
     },
     ...(tags && tags.length > 0 ? { keywords: tags.join(", ") } : {}),
   };

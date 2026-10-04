@@ -16,7 +16,7 @@ export async function GET(context: APIContext) {
       }
       const items = categoryPosts.map((post) => {
         const description = post.data.description || generateDescription(post.body ?? "");
-        return `- [${post.data.title}](${siteUrl}/post/${resolveSlug(post.id)}/): ${description}`;
+        return `- [${post.data.title}](${siteUrl}/post/${resolveSlug(post.id)}): ${description}`;
       });
       return `## ${label}\n\n${items.join("\n")}`;
     })

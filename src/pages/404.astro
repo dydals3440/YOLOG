@@ -4,7 +4,7 @@ import Yong404 from '@/components/Yong404.astro'
 import BaseLayout from '@/layouts/BaseLayout.astro'
 ---
 
-<BaseLayout seo={{ title: '404' }}>
+<BaseLayout seo={{ title: '404', noindex: true }}>
   <section data-animate data-animate-speed="slow">
     <div class="flex flex-col h-dvh items-center justify-center gap-2">
       <Text404 />

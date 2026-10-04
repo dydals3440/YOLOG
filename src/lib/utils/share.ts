@@ -1,3 +1,5 @@
+import { trackShare } from "@/lib/analytics";
+
 export type SharePlatform = "twitter" | "facebook" | "linkedin" | "native";
 
 export interface ShareUrls {
@@ -30,6 +32,7 @@ export const shareNative = async (title: string, url: string): Promise<void> => 
 
   try {
     await navigator.share({ title, url });
+    trackShare("native");
   } catch (err) {
     if ((err as Error).name !== "AbortError") {
       console.error("Share failed:", err);

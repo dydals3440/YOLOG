@@ -13,7 +13,9 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "check": "oxlint && oxfmt --check",
-    "typecheck": "astro check && tsc --noEmit"
+    "typecheck": "astro check && tsc --noEmit",
+    "verify:site": "node scripts/verify-site.mjs",
+    "validate": "bun run check && bun run typecheck && bun run build && bun run verify:site"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "^7.3.1",

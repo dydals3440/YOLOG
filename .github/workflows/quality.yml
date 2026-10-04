@@ -1,0 +1,29 @@
+name: Blog quality
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: blog-quality-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PUBLIC_GA_ID: G-V4GXLPB8GD
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - run: bun run validate
+      - name: Verify preview excludes monitoring
+        run: |
+          VERCEL_ENV=preview bun run build
+          EXPECT_ANALYTICS=off bun run verify:site

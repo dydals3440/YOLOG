@@ -9,7 +9,7 @@ import ThemeHead from '@/components/scripts/ThemeHead.astro'
 import { Toaster } from '@/components/ui/Toaster'
 import Analytics from '@vercel/analytics/astro'
 import SpeedInsights from "@vercel/speed-insights/astro"
-import { isProduction } from '@/lib/utils'
+import { isLiveBuild } from '@/lib/analytics-config'
 
 import type { BaseLayoutProps } from '@/types'
 
@@ -22,15 +22,12 @@ const { seo, class: className } = Astro.props
   <head>
     <MetaHead {...seo} />
     <ThemeHead />
-    <Monitoring />
-    {isProduction && (
-      <script is:inline async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3296643559689345" crossorigin="anonymous"></script>
-    )}
+    <Monitoring contentGroup={seo?.articleSection} />
   </head>
   <body>
     <Header />
-    <Analytics />
-    <SpeedInsights />
+    {isLiveBuild && <Analytics />}
+    {isLiveBuild && <SpeedInsights />}
     <main class={className}>
       <div class="container main-container mx-auto max-w-content pt-page">
         <slot />
