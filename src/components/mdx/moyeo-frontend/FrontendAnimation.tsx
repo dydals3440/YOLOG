@@ -149,7 +149,7 @@ export default function FrontendAnimation({ scene }: { scene: SceneName }) {
     setIndex(nextIndex);
   };
   const play = () => {
-    if (!playing && (index === story.length - 1 || !clock.current.started)) {
+    if (!playing && index === story.length - 1) {
       clock.current = { identity: "", elapsed: 0, started: false };
       setRevision((value) => value + 1);
       setIndex(0);
