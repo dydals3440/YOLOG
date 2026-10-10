@@ -1,0 +1,272 @@
+.mf-code-example {
+  --code-highlighted: rgb(59 130 246 / 12%);
+}
+body:has(.mf-code-example) h1 {
+  word-break: keep-all;
+  text-wrap: balance;
+}
+.mf-code-example :is(h2, h3, h4, [data-code-title]) {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+.dark .mf-code-example {
+  --code-highlighted: rgb(96 165 250 / 18%);
+}
+.mf-code-example pre.astro-code span.highlighted.error {
+  background-color: var(--vp-code-line-error-color) !important;
+}
+.mf-code-example pre.astro-code span.highlighted.warning {
+  background-color: var(--vp-code-line-warning-color) !important;
+}
+html.dark .mf-code-example pre.astro-code span.highlighted span {
+  background-color: transparent !important;
+}
+
+.mf-demo {
+  --mr-text: #334155;
+  --mr-muted: #606d7c;
+  --mr-border: #dfddd4;
+  --mr-surface: #f5f3ee;
+  --mr-background: #fdfcf8;
+  --mr-blue: #1d73be;
+  --mr-green: #237c4c;
+  --mr-orange: #ac5b10;
+  --mr-purple: #7952bc;
+  --mr-red: #cf4146;
+  --mr-blueSoft: #eaf3fb;
+  --mr-greenSoft: #eaf5ee;
+  --mr-orangeSoft: #fcf2e7;
+  --mr-purpleSoft: #f0ebf8;
+  --mr-redSoft: #fdf0f0;
+  padding: 20px 16px;
+  margin: 2rem 0;
+  border: 1px solid var(--mr-border);
+  border-radius: 18px;
+  background: var(--mr-background);
+  color: var(--mr-text);
+  line-height: 1.65;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+.dark .mf-demo {
+  --mr-text: #e2e8f0;
+  --mr-muted: #aab7c7;
+  --mr-border: #404c5b;
+  --mr-surface: #202935;
+  --mr-background: #171e28;
+  --mr-blue: #7bbcf4;
+  --mr-green: #83cfaa;
+  --mr-orange: #f1b06c;
+  --mr-purple: #bea5f2;
+  --mr-red: #ff969b;
+  --mr-blueSoft: #25384b;
+  --mr-greenSoft: #263b33;
+  --mr-orangeSoft: #423325;
+  --mr-purpleSoft: #343049;
+  --mr-redSoft: #442a33;
+}
+.mdx figure.mf-demo {
+  box-shadow: none;
+  overflow: visible;
+}
+.mdx figure.mf-demo > div {
+  border: 0;
+  border-radius: 0;
+}
+.mf-demo .mf-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mf-demo .mf-heading strong {
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--mr-text);
+}
+.mf-demo .mf-heading > span {
+  color: var(--mr-muted);
+  font-size: 11px;
+}
+.mf-demo button {
+  appearance: none;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--mr-border);
+  border-radius: 9px;
+  background: var(--mr-surface);
+  color: var(--mr-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.mf-demo button[aria-pressed="true"] {
+  color: var(--mr-blue);
+  border-color: var(--mr-blue);
+  background: var(--mr-blueSoft);
+}
+.mf-demo button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.mf-demo button:focus-visible,
+.mf-demo summary:focus-visible {
+  outline: 2px solid var(--mr-blue);
+  outline-offset: 3px;
+}
+.mf-demo .mf-graphic {
+  container-type: inline-size;
+  width: 100%;
+  margin-top: 14px;
+}
+.mf-demo svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.mf-demo .mf-mobile,
+.mf-demo canvas {
+  display: none;
+}
+.mf-demo.is-ready canvas {
+  display: block;
+  width: 100%;
+}
+.mf-demo.is-ready .mf-fallback {
+  display: none;
+}
+.mf-demo .mf-status {
+  padding: 14px 12px;
+  background: var(--mr-surface);
+  border-radius: 12px !important;
+}
+.mf-demo .mf-step {
+  display: block;
+  color: var(--mr-muted);
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+.mf-demo .mf-status strong {
+  display: block;
+  font-size: 14px;
+  color: var(--mr-text);
+  font-weight: 650;
+}
+.mf-demo .mf-status p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--mr-text);
+}
+.mf-demo .mf-note {
+  display: block;
+  color: var(--mr-purple);
+  font-size: 12px;
+  margin-top: 7px;
+  font-weight: 600;
+}
+.mf-demo .mf-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+.mf-demo .mf-choices {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+.mf-demo .mf-controls > span {
+  font-size: 11px;
+  color: var(--mr-muted);
+  margin-right: auto;
+}
+.mf-demo .mf-transcript {
+  border-top: 1px solid var(--mr-border);
+  margin-top: 14px;
+  padding-top: 12px;
+  font-size: 12px;
+}
+.mf-demo summary {
+  cursor: pointer;
+  color: var(--mr-muted);
+}
+.mf-demo .mf-transcript ol {
+  padding-left: 20px;
+  margin: 12px 0;
+}
+.mf-demo .mf-transcript li {
+  margin-bottom: 10px;
+}
+.mf-demo .mf-transcript p {
+  margin: 4px 0;
+  font-size: 12px;
+}
+.mdx figure.mf-demo figcaption {
+  position: static;
+  background: none;
+  display: block;
+  padding: 0;
+  margin: 14px 0 0;
+  color: var(--mr-muted);
+  font-size: 12px;
+  text-align: left;
+  line-height: 1.75;
+  opacity: 1;
+  transform: none;
+}
+@container (max-width: 539px) {
+  .mf-demo .mf-desktop {
+    display: none;
+  }
+  .mf-demo .mf-mobile {
+    display: block;
+    max-width: 320px;
+    margin-inline: auto;
+  }
+}
+@media (max-width: 600px) {
+  .mf-demo {
+    padding: 16px 10px;
+  }
+  .mf-demo .mf-controls > span {
+    flex-basis: 100%;
+  }
+}
+
+/* Keep controls quiet until the interactive canvas has been painted. */
+.mf-demo:not(.is-ready) :is(.mf-controls, .mf-choices) {
+  display: none;
+}
+
+/* 한국어 본문이 음절 중간에서 끊기지 않게 하고, 긴 코드·주소는 화면 안에서 접는다. */
+.mdx :is(p, li, blockquote) {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.mdx table {
+  min-width: 36rem;
+}
+
+/* 이 글의 긴 예제가 모바일에서 중첩된 여백 때문에 좁아지지 않게 한다. */
+@media (max-width: 600px) {
+  .main-container:has(.mf-code-example) {
+    padding-inline: 0;
+  }
+}
+
+/* 인접한 각주 번호가 하나의 숫자로 보이지 않도록 구분한다. */
+.mf-code-example sup + sup {
+  margin-inline-start: 0.2em;
+}
