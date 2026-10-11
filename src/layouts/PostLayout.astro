@@ -71,8 +71,8 @@ const articleSection = category ? BLOG_CATEGORIES[category as BlogCategory] : un
   <LeftSidebar>
     <a
       class="group flex w-fit items-center gap-1.5 text-third transition-colors hover:text-primary lg:gap-2"
-      href="#"
-      onclick="history.back(); return false;"
+      href="/blogs"
+      data-post-back
       data-animate
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform group-hover:-translate-x-0.5"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
@@ -129,3 +129,9 @@ const articleSection = category ? BLOG_CATEGORIES[category as BlogCategory] : un
   <CopyCodeScript />
   <MermaidScript />
 </BaseLayout>
+
+<script>
+  import { setupPostNavigation } from '@/lib/post-navigation'
+
+  setupPostNavigation()
+</script>
