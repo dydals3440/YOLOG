@@ -1,22 +1,22 @@
 ---
 title: SaaS 구독 결제를 만들며 이해한 Facade 패턴
-description: 구독 결제에 기능이 붙을수록 결제사의 사용법까지 알아야 했어요. NestJS에서 Service를 조합하고 결제 계약을 정리하며 Facade가 필요한 이유를 살펴봐요.
+description: 토스페이먼츠 정기결제 코드가 커지며 구독 로직이 결제사 규격에 묶였어요. NestJS에서 Facade와 Adapter로 갱신 흐름과 결제 계약을 나눈 과정을 정리했어요.
 date: 2026-09-05
-updatedDate: 2026-09-05
-tags: [Facade Pattern, 퍼사드 패턴, 디자인 패턴, NestJS, TypeScript, 토스페이먼츠, SaaS, 정기결제]
+updatedDate: 2026-10-14
+tags: [Facade Pattern, 퍼사드 패턴, Adapter Pattern, 디자인 패턴, NestJS, TypeScript, 토스페이먼츠, 자동결제, 빌링키, 정기결제]
 category: DESIGN_PATTERN
 image: "/images/facade-pattern/thumbnail.webp"
 ---
 
-SaaS 서비스를 처음부터 끝까지 만들면서 클라이언트와 서버를 모두 개발했어요. 결제도 처음에는 단순했는데, 요구사항이 하나둘 늘어나면서 코드가 복잡해지고 읽기도 어려워지기 시작했어요.
+[모여](https://moyeo.io)라는 SaaS를 처음부터 끝까지 만들면서 클라이언트와 서버를 모두 개발했어요. 결제도 처음에는 단순했는데, 요구사항이 하나둘 늘어나면서 코드가 복잡해지고 읽기도 어려워지기 시작했어요.
 
-구독을 갱신하려는 코드에서 결제수단을 찾고, 토스페이먼츠에 맞춰 요청을 만들고, 승인 결과를 확인해 이용 기간을 반영하는 과정까지 직접 챙기고 있었어요. 비슷한 기능을 추가할 때마다 이 순서와 토스의 규격을 다시 알아야 했고, 결제 처리를 바꾸려면 여러 곳을 함께 살펴봐야 했어요.
+구독을 갱신하는 코드가 결제수단 조회와 토스페이먼츠 요청 구성은 물론, 승인 결과를 확인해 이용 기간을 반영하는 일까지 직접 챙기고 있었어요. 비슷한 기능을 추가할 때마다 이 순서와 토스의 규격을 다시 알아야 했고, 결제 처리를 바꾸려면 여러 곳을 함께 살펴봐야 했어요.
 
-그래서 구독 갱신을 요청하는 쪽에서 이 과정을 전부 알아야 할지 고민했어요. 필요한 작업은 한곳에서 조합하고, 호출하는 쪽은 갱신을 요청하는 데 집중할 수 있으면 좋겠다고 생각했죠. 그 과정에서 Facade 패턴을 도입했어요. 어떤 코드를 묶고 어떤 책임을 남겼는지, NestJS 예제로 풀어볼게요.
+그래서 구독 갱신을 요청하는 쪽에서 이 과정을 전부 알아야 할지 고민했어요. 필요한 작업은 한곳에서 조합하고, 호출하는 쪽은 갱신을 요청하는 데 집중할 수 있으면 좋겠다고 생각했죠. 그 과정에서 Facade 패턴을 도입했어요. 어떤 코드를 묶고 어떤 책임을 남겼는지, NestJS 예제로 풀어 볼게요.
 
 ![복잡한 구독 결제 흐름을 하나의 창구로 정리하는 Facade](/images/facade-pattern/thumbnail.webp)
 
-> 코드는 설명에 필요한 흐름을 중심으로 간추렸어요. 일부 구현은 생략되어 있어요.
+> 코드는 설명에 필요한 흐름만 남기고 간추렸어요. 실제 모여 코드와 다른 부분은 해당 위치에서 함께 짚을게요.
 
 ## 처음에는 결제에 성공하면 끝인 줄 알았어요
 
@@ -102,17 +102,17 @@ class RenewSubscriptionJob {
 
 `prepareFirstCharge()`는 청구서에 연결된 결제 시도를 저장하고 처음 실행할 작업만 선점해요. 주문번호와 멱등키도 이때 만들어 보관해요. 이미 처리했거나 결과를 확인 중인 요청은 여기서 다시 승인하지 않아요.
 
-HTTP 호출은 Client로 옮겼지만, 구독 갱신 코드는 여전히 토스가 어떤 키를 요구하고, 어떤 상태를 성공으로 보는지 알아야 해요. `billingKey`와 `customerKey`로 요청을 만들고, `DONE`과 `REJECT_CARD_PAYMENT`를 해석하고 있으니까요. **구독을 갱신하는 로직이 토스의 API 규격에 강하게 결합된 상태예요.**
+HTTP 호출은 Client로 옮겼지만, 구독 갱신 코드는 여전히 토스가 어떤 키를 요구하고, 어떤 상태를 성공으로 보는지 알아야 해요. `billingKey`와 `customerKey`로 요청을 만들고, `DONE`과 `REJECT_CARD_PAYMENT`를 해석하고 있으니까요. 구독을 갱신하는 로직이 **토스의 API 규격**에 강하게 묶여 있어요.
 
-이제 카드 변경 후 다시 결제하는 기능을 붙인다고 해볼게요. 그쪽에서도 키를 조회하고, 토스 요청을 만들고, 같은 오류 코드를 해석해야 해요. 비슷한 코드를 복사하거나, 기존 함수에 조건을 더 붙이게 되기 쉬워요.
+이제 카드 변경 후 다시 결제하는 기능을 붙인다고 해 볼게요. 그쪽에서도 키를 조회하고, 토스 요청을 만들고, 같은 오류 코드를 해석해야 해요. 비슷한 코드를 복사하거나, 기존 함수에 조건을 더 붙이게 되기 쉬워요.
 
 ![구독 갱신 코드에 결제 요청과 이용 권한 처리가 뒤섞인 모습](/images/facade-pattern/before-facade.webp)
 
-여기서 문득 이런 생각이 들었어요. 토스 연동을 준비하다 심사가 예상보다 길어져, 출시 일정에 맞추려면 다른 결제사로 바꿔야 한다면요? 이 코드는 어디까지 수정해야 할까요? 토스 응답을 기준으로 작성한 테스트도 전부 찾아봐야 할까요?
+기능이 하나 늘 때마다 이런 연결이 하나씩 더 얽혀요. 결제사를 바꿔야 한다면 더 곤란해지고요. 토스 연동을 준비하면서 카드사 심사가 길어지면 어떡하나 걱정했는데, 실제로 2026년 10월 14일 출시 때까지 심사가 끝나지 않았거든요. 출시 일정에 맞추려고 다른 결제사로 바꿔야 했다면 이 코드는 어디까지 고쳐야 했을까요?
 
-Client만 교체해서 끝나지 않아요. 토스의 상태와 오류를 해석하는 갱신·재결제 코드, 관련 테스트까지 함께 살펴봐야 하죠. 지금 잘 동작하는 것과 변경에 유연한 것은 다른 문제였어요. 그래서 결제사에 대한 지식을 한곳에 모으고, 구독 쪽에서는 필요한 결과만 알도록 바꾸고 싶었어요.
+Client만 교체해서 끝나지 않아요. 토스의 상태와 오류를 해석하는 갱신·재결제 코드는 물론, 토스 응답을 기준으로 작성한 테스트까지 전부 찾아봐야 하죠. 지금 잘 동작하는 것과 변경에 유연한 것은 다른 문제였어요. 그래서 결제사에 대한 지식은 한곳에 모으고, 구독 쪽은 필요한 결과만 알도록 바꾸고 싶었어요.
 
-## 우선 복잡한 사용 과정을 묶어볼게요
+## 우선 복잡한 사용 과정을 묶어 볼게요
 
 Facade는 복잡한 하위 시스템을 쉽게 사용할 수 있는 인터페이스를 제공하는 패턴이에요. 여기서는 구독과 결제 Service를 조합해, 호출자가 구독 갱신의 세부 순서를 매번 작성하지 않게 만들어요.
 
@@ -191,15 +191,15 @@ export type PaymentResult =
 
 `SUCCEEDED`는 승인을 확인하고 내부 결제 기록까지 저장한 결과예요. `paymentId`는 우리 DB의 ID이고, 토스의 `paymentKey`는 결제 모듈 안에 보관해요.
 
-`FAILED`는 실패가 확인된 경우예요. 반면 `PENDING`은 처리가 진행 중이거나 결과를 아직 확정할 수 없는 경우예요. timeout이 발생해도 실제 승인은 끝났을 수 있으니 둘을 구분해야 해요.
+`FAILED`는 실패가 확인된 경우이고, `PENDING`은 처리가 진행 중이거나 결과를 아직 확정할 수 없는 경우예요. timeout이 발생해도 실제 승인은 끝났을 수 있으니 둘을 구분해야 해요.
 
-상태마다 필요한 필드가 달라서 discriminated union을 사용했어요. [TypeScript의 narrowing](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions)을 통해 성공한 경우에만 `paymentId`를 사용할 수 있어요. 모든 필드를 optional로 두는 것보다, 성공인데 결제 ID가 없는 데이터를 막기 쉬워요.
+상태 이름도 토스의 `DONE`을 빌려 오지 않았어요. 결제사와 상관없이 성공·실패·미확정만 표현하도록 우리 계약에서 정한 이름이에요.
 
-이 상태명은 우리 결제 계약에서 정한 이름이에요. 토스의 `DONE`을 그대로 가져오지 않고 결제의 성공·실패·미확정 여부를 표현한 것이죠.
+상태마다 필요한 필드가 달라서 discriminated union을 사용했어요. `status`를 확인하면 [TypeScript의 narrowing](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions)이 타입을 좁혀 주므로, 성공한 경우에만 `paymentId`를 꺼낼 수 있어요. 모든 필드를 optional로 두는 것보다 성공인데 결제 ID가 없는 데이터를 막기도 쉽고요.
 
 ## Facade에는 구독 갱신의 순서가 남아요
 
-이제 `PaymentService`가 토스 응답 대신 `PaymentResult`를 반환하게 만들게요. 바뀌는 부분부터 보면, 토스의 승인 상태를 해석하던 자리에 내부 결제 결과가 들어와요.
+이제 `PaymentService`가 토스 응답 대신 `PaymentResult`를 반환하도록 바꿔 볼게요. 바뀌는 부분부터 보면, 토스의 승인 상태를 해석하던 자리에 내부 결제 결과가 들어와요.
 
 ```ts
 // 구독 갱신 메서드의 결제 처리 부분
@@ -215,7 +215,7 @@ if (paymentResult.status !== "SUCCEEDED") { // [!code ++]
 await this.subscriptionService.applyPayment(invoice.id, paymentResult.paymentId); // [!code ++]
 ```
 
-이제 Facade는 `DONE`이나 `paymentKey`를 알 필요가 없어요. 전체 코드는 다음과 같아요.
+이제 Facade는 `DONE`이나 `paymentKey`를 알 필요가 없어요. 전체 코드도 함께 볼게요.
 
 ```ts
 // subscription-billing.facade.ts
@@ -261,11 +261,13 @@ export class SubscriptionBillingFacade {
 
 이 Facade는 백그라운드 작업을 처리하는 Worker에서 실행해요. Worker는 `renewSubscription(subscriptionId)`를 호출하고 청구 시도를 추적할 수 있도록 작업을 기록해 둬요. 메서드 실행이 끝났다고 결제까지 성공한 것은 아니므로, 화면에서는 저장된 결제·구독 상태를 조회해요.
 
-Facade가 여러 Service를 조합하는 것은 자연스러운 사용법이에요. 다만 Service를 몇 개 이상 주입해야 Facade가 되는 것은 아니에요. **호출자가 복잡한 사용 순서를 반복하지 않아도 되는지**가 더 중요한 기준이에요. [Facade의 기본 설명](https://www.informit.com/articles/article.aspx?p=347700&seqNum=3)도 하위 시스템을 쉽게 사용하는 데 초점을 맞추고 있어요.
+Facade가 여러 Service를 조합하는 경우는 흔해요. 그렇다고 Service를 몇 개 이상 주입해야 Facade가 되는 것은 아니에요. 제가 본 기준은 **호출자가 복잡한 사용 순서를 반복하지 않아도 되는지**였어요. [Facade의 기본 설명](https://www.informit.com/articles/article.aspx?p=347700&seqNum=3)도 하위 시스템을 쉽게 사용하는 데 초점을 맞추고 있어요.
 
 ![Facade가 구독과 결제 Service를 연결하고, 성공한 결제만 구독에 반영하는 흐름](/images/facade-pattern/facade-flow.webp)
 
-역할도 이 정도로 구분하면 충분해요.
+호출하는 쪽은 Facade에 갱신을 한 번 요청할 뿐이에요. 결제가 성공했을 때만 구독 쪽으로 이어지고, 실패하거나 미확정인 결제는 이용 기간에 닿지 않아요.
+
+각 객체의 역할은 이 정도로 나누면 충분해요.
 
 | 구성 요소                   | 담당하는 일                               |
 | --------------------------- | ----------------------------------------- |
@@ -275,6 +277,8 @@ Facade가 여러 Service를 조합하는 것은 자연스러운 사용법이에�
 | `PaymentService`            | 결제 시도 관리, 실행·조회, 결과 기록      |
 | `TossPaymentGateway`        | 내부 결제 계약과 토스 규격 사이의 변환    |
 | `TossBillingClient`         | HTTP 요청과 외부 데이터 검증              |
+
+호출 방향으로 이어 보면 Worker에서 토스 API까지 한 방향으로 내려가요.
 
 <div className="overflow-x-auto" role="region" aria-label="구독 결제 구조" tabIndex={0}>
 <div className="min-w-[420px]">
@@ -293,20 +297,24 @@ flowchart TD
 </div>
 </div>
 
-Facade에는 구독 갱신의 순서가 남고, 요금 계산과 결제 시도 관리는 각각의 객체가 맡아요. 아래 구현을 펼쳐보면 이 책임이 어떻게 나뉘는지 확인할 수 있어요.
+실제 모여 코드에서는 이 Facade 자리를 Use Case 세 개가 나눠 맡아요. 청구 기간이 오면 `ProcessWorkspaceSubscriptionPeriod`가 청구서를 만들고, `ProcessBillingInvoiceCharge`가 결제를 요청하고, 결과를 놓친 결제는 `ReconcileBillingPayment`가 조회로 확인해요. 토스 연동은 모두 `PaymentGateway` port 뒤에 있고요. 글에서는 패턴이 잘 보이도록 이 흐름을 `SubscriptionBillingFacade` 하나로 모았어요.
+
+예제로 돌아오면, Facade에는 구독 갱신의 순서가 남고 요금 계산과 결제 시도 관리는 각각의 객체가 맡아요. 아래 구현을 펼쳐 보면 이 책임이 어떻게 나뉘는지 확인할 수 있어요.
 
 <details>
 <summary>구독 Entity와 Service 구현</summary>
 
 예제에서 사용할 구독 조건은 아래처럼 정할게요.
 
-| 항목      | 조건                                          |
+| 항목      | 예제 조건                                     |
 | --------- | --------------------------------------------- |
-| 월간 구독 | 한 달 10,000원                                |
-| 연간 구독 | 12개월 100,000원 일괄 결제                    |
-| 무료 체험 | 월간·연간 모두 최초 한 달                     |
+| 월간 구독 | 한 달 10,000원(예시 금액)                     |
+| 연간 구독 | 12개월 100,000원 일괄 결제(예시 금액)         |
+| 무료 체험 | 월간·연간 모두 가입 후 14일                   |
 | 첫 청구   | 체험 종료 시 선택한 요금 청구                 |
 | 만료      | 한국 시간 자정, 갱신 승인 미확인 시 무료 전환 |
+
+금액은 계산을 쉽게 보여 주려고 정한 예시예요. 실제 모여는 워크스페이스 단위로 채널 수만큼 청구하고 유료는 3채널부터 팔아요. 2026년 10월 7일부터 Pro는 채널당 월 5,900원·연 59,000원, Team은 채널당 월 9,900원·연 99,000원이에요. 체험 14일은 실제 정책과 같아요.
 
 이 규칙은 구독 자신의 상태를 보고 판단하는 동작이므로 `Subscription` Entity에 모을게요. NestJS나 ORM의 decorator 없이 작성한 클래스예요.
 
@@ -330,10 +338,13 @@ export class Subscription {
     }
 
     const plan = PLAN_PRICES[this.#state.billingCycle];
-    // 최초 무료 체험 한 달과 이미 반영한 유료 기간을 건너뛰어요.
-    const monthsAfterSignup = 1 + this.#state.completedBillingPeriods * plan.months;
-    const periodStartsAt = getBillingDate(this.#state.signupDate, monthsAfterSignup);
-    const periodEndsAt = getBillingDate(this.#state.signupDate, monthsAfterSignup + plan.months);
+    // 첫 청구일에서 이미 반영한 유료 기간만큼 건너뛰어요.
+    const monthsAfterFirstBilling = this.#state.completedBillingPeriods * plan.months;
+    const periodStartsAt = getBillingDate(this.#state.firstBillingDate, monthsAfterFirstBilling);
+    const periodEndsAt = getBillingDate(
+      this.#state.firstBillingDate,
+      monthsAfterFirstBilling + plan.months,
+    );
     // 청구 시점이 아직 오지 않았거나 해당 이용 기간이 모두 지났으면 청구하지 않아요.
     if (now < periodStartsAt || now >= periodEndsAt) {
       return null;
@@ -385,11 +396,11 @@ export class Subscription {
 
 Entity는 외부 API를 호출하거나 DB에 저장하지 않아요. 현재 구독 상태와 전달받은 시각으로 청구서를 만들 수 있는지 판단하고, 결제가 확인되면 그 청구서의 기간을 적용해요.
 
-상태는 JavaScript의 [private field](https://www.typescriptlang.org/docs/handbook/2/classes.html#caveats)인 `#state`에 보관해요. `id`는 조회만 가능한 getter로 공개하고, 이용 기간은 `applyPaidInvoice()`를 통해 변경해요. `paidUntil`에 원하는 날짜를 바로 대입하는 setter는 두지 않았어요. `getAccessLevel(now)`는 전달받은 시각으로 권한을 판단하므로 getter 대신 메서드로 유지해요.
+상태는 JavaScript의 [private field](https://www.typescriptlang.org/docs/handbook/2/classes.html#caveats)인 `#state`에 보관해요. `id`는 조회만 가능한 getter로 공개하고, 이용 기간은 `applyPaidInvoice()`로만 바꿀 수 있어요. `paidUntil`에 원하는 날짜를 바로 대입하는 setter는 두지 않았어요. `getAccessLevel(now)`는 전달받은 시각으로 권한을 판단하므로 getter 대신 메서드로 유지해요.
 
 필드를 숨기는 것만으로 객체의 참조까지 분리되는 것은 아니에요. 생성자로 받은 상태와 `toState()`가 반환하는 상태는 `structuredClone()`으로 복사해요. 이 상태는 일반 객체와 `Date`로 구성되어 있어서, 중첩된 날짜를 수정해도 Entity 내부에는 영향을 주지 않아요.
 
-`completedBillingPeriods`는 반영이 끝난 유료 기간의 개수예요. 첫 결제에서는 `0`이고, 결제된 기간을 반영할 때 하나씩 증가해요. `monthsAfterSignup`을 계산할 때 더한 `1`은 최초 한 달 무료 체험을 뜻해요.
+`completedBillingPeriods`는 반영이 끝난 유료 기간의 개수예요. 첫 결제에서는 `0`이고, 결제된 기간을 반영할 때 하나씩 증가해요. `firstBillingDate`는 가입일에 14일을 더한 체험 종료일이에요. 가입할 때 한 번 정해 두고, 이후 청구일은 모두 이 날짜에서 계산해요.
 
 한 청구 기간이 통째로 지난 구독은 밀린 요금을 자동으로 청구하지 않아요. 다시 구독하려면 새 청구 기간을 정하는 별도 흐름이 필요해요.
 
@@ -406,7 +417,7 @@ export interface SubscriptionState {
   accountId: string;
   paymentMethodId: string;
   billingCycle: BillingCycle;
-  signupDate: BillingDate;
+  firstBillingDate: BillingDate;
   completedBillingPeriods: number;
   autoRenewalEnabled: boolean;
   trialEndsAt: Date;
@@ -446,21 +457,21 @@ export interface BillingDate {
   day: number;
 }
 
-export function getBillingDate(signupDate: BillingDate, monthsAfterSignup: number): Date {
+export function getBillingDate(firstBillingDate: BillingDate, monthsAfter: number): Date {
   const targetMonth = new Date(
-    Date.UTC(signupDate.year, signupDate.month - 1 + monthsAfterSignup, 1),
+    Date.UTC(firstBillingDate.year, firstBillingDate.month - 1 + monthsAfter, 1),
   );
   const year = targetMonth.getUTCFullYear();
   const month = targetMonth.getUTCMonth();
   const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-  const day = Math.min(signupDate.day, lastDay);
+  const day = Math.min(firstBillingDate.day, lastDay);
 
   // 한국 시간 자정을 UTC로 변환해 저장해요.
   return new Date(Date.UTC(year, month, day, -9));
 }
 ```
 
-가입 날짜에서 매번 계산하기 때문에 1월 31일 가입자는 2월 말일 다음에 3월 31일로 돌아와요. 한 달을 30일로 바꾸거나, 보정된 2월 날짜에 계속 한 달씩 더하지 않아요.
+첫 청구일에서 매번 계산하기 때문에 1월 31일에 첫 청구한 구독은 2월 말일 다음에 3월 31일로 돌아와요. 한 달을 30일로 바꾸거나, 보정된 2월 날짜에 계속 한 달씩 더하지 않아요.
 
 `trialEndsAt`은 가입 시 저장하고 체험 사용 이력도 따로 보존해요. 결제수단을 다시 등록했다고 무료 체험이 시작되어서는 안 돼요. 예제에서는 가입 후 요금제 변경은 다루지 않아요.
 
@@ -512,7 +523,7 @@ export class SubscriptionService {
 
 `prepareRenewal()`은 Entity의 판단을 받아 같은 구독 기간의 청구서를 한 번만 만들어요. 금액과 이용 기간은 청구서에 저장한 값을 사용해요. 나중에 가격표가 바뀌어도 이미 만든 청구서의 금액이 바뀌지는 않아요.
 
-`applyPayment()`는 실제 성공 기록이 이 청구서와 일치하는지 확인한 다음 구독을 변경해요. 청구서와 구독을 잠그고, 구독 저장과 청구서의 결제 완료 처리를 하나의 transaction으로 묶어요. 외부 결제를 기다리는 동안 DB transaction을 열어두지는 않아요.
+`applyPayment()`는 실제 성공 기록이 이 청구서와 일치하는지 확인한 다음 구독을 변경해요. 청구서와 구독을 잠그고, 구독 저장과 청구서의 결제 완료 처리를 하나의 transaction으로 묶어요. 외부 결제를 기다리는 동안 DB transaction을 열어 두지는 않아요.
 
 ```ts
 // subscription.repository.ts
@@ -646,7 +657,9 @@ export abstract class PaymentRepository {
 
 선점에는 만료 가능한 잠금과 `lockToken`을 사용해요. 저장 시에도 token을 검사해, 오래된 작업이 최신 결과를 덮어쓰지 못하게 해요. 승인 요청을 보낸 적이 있는 작업은 잠금이 만료됐다고 바로 다시 청구하지 않아요.
 
-카드 거절이 확인된 뒤 사용자가 재결제를 요청한다면 별도의 시도를 만들 수 있어요. 다만 기존 청구서에 성공한 결제가 없는지 다시 확인해야 해요. 이 글의 갱신 작업은 실패한 결제를 자동으로 새 시도로 바꾸지 않아요.
+카드 거절이 확인된 뒤 다시 청구할 때는 별도의 시도를 만들어요. 이때도 기존 청구서에 성공한 결제가 없는지 먼저 확인해야 하죠. 예제에서는 재청구를 생략했지만, 실제 모여는 첫 실패 뒤 7일 유예를 두고 그 안에서 1일·3일·6일째에 자동으로 다시 청구해요.
+
+모든 실패를 다시 청구하지는 않아요. 정지되거나 만료된 카드처럼 결제수단을 바꿔야 하는 거절은 같은 카드로 몇 번을 시도해도 성공하지 않으니 자동 재청구에서 빼요. 실패 사유를 `CARD_DECLINED`와 `INVALID_PAYMENT_METHOD`로 나눠 둔 이유이기도 해요.
 
 </details>
 
@@ -695,14 +708,16 @@ sequenceDiagram
     participant T as 토스페이먼츠
 
     U->>W: 카드 등록 선택
+    W->>S: 등록 시작 요청
+    S-->>W: customerKey · successUrl(state 포함) · 브라우저 cookie
     W->>T: requestBillingAuth
-    T-->>W: 인증 후 successUrl로 redirect
-    Note over W: authKey · customerKey 수신
-    W->>S: 등록 완료 요청
-    S->>S: 로그인 계정과 등록 세션 확인
+    T-->>U: 카드 인증 후 successUrl로 redirect
+    U->>S: successUrl 요청(authKey · customerKey · state)
+    S->>S: 로그인 세션 · cookie · state 확인
     S->>T: 빌링키 발급 요청
     T-->>S: billingKey
     S->>S: 결제수단 저장
+    S-->>U: 303 redirect로 웹 화면 복귀
     Note over S,T: 체험 중에는 승인 요청 없음
     S->>S: 청구일에 갱신 Worker 실행
     S->>T: 자동결제 승인 요청
@@ -715,7 +730,9 @@ sequenceDiagram
 
 [토스 자동결제 연동 가이드](https://docs.tosspayments.com/guides/v2/billing/integration)처럼 서버에서 빌링키를 발급받아 고객과 연결해 두고, 청구할 때 이 키를 사용해요. 자동결제는 별도 계약이 필요한 기능이고, 이 예제는 카드 자동결제를 기준으로 해요.
 
-`customerKey`는 서버에서 UUID처럼 추측하기 어려운 값으로 생성해요. 카드 등록 완료 요청에서는 로그인한 계정의 등록 세션과 저장된 고객 키를 대조해요. 브라우저가 전달한 값만 보고 다른 계정에 연결하면 안 돼요.
+`customerKey`는 서버에서 UUID처럼 추측하기 어려운 값으로 생성해요. `successUrl`도 웹 화면이 아니라 서버 API 주소(`/api/v1/billing/payment-method-authorizations/{id}/callbacks/toss-payments/success?state=...`)로 정했어요. 토스가 브라우저를 이 주소로 보내면 서버가 로그인 세션, 등록을 시작한 브라우저에 심어 둔 cookie, 주소의 `state`를 저장된 등록 기록과 대조해요. 모두 맞을 때만 빌링키를 발급받고, 끝나면 웹 화면으로 303 redirect해요.
+
+웹앱이 `authKey`를 받아 서버로 넘기는 방식도 있지만, 모여는 서버가 콜백을 직접 받아 확인까지 한 번에 끝내요. 브라우저가 전달한 값만 보고 다른 계정에 카드를 연결하는 일이 없어야 하니까요.
 
 <div className="overflow-x-auto" role="region" aria-label="자동결제 API 비교" tabIndex={0}>
 
@@ -729,7 +746,7 @@ sequenceDiagram
 
 토스가 구독 요금이나 청구 일정을 관리해 주는 것은 아니에요. 무료 체험, 월간·연간 요금, 다음 청구일은 우리 서버가 결정하고 그 시점에 승인 API를 호출해요.
 
-요청과 응답은 Zod로 확인해요.
+Gateway가 주고받는 내부 계약과, 토스 요청·응답을 검증하는 Zod 스키마예요. `PaymentGateway`는 앞에서 본 그대로라 생략했어요.
 
 ```ts
 // contracts.ts
@@ -746,13 +763,6 @@ export type GatewayPaymentResult =
   | { status: "SUCCEEDED"; providerPaymentId: string; approvedAt: Date }
   | { status: "FAILED"; failureCode: PaymentFailureCode }
   | { status: "PENDING" };
-
-export interface PaymentGateway {
-  charge(request: PaymentRequest): Promise<GatewayPaymentResult>;
-  findPayment(request: PaymentRequest): Promise<GatewayPaymentResult>;
-}
-
-export const PAYMENT_GATEWAY = Symbol("PAYMENT_GATEWAY");
 ```
 
 ```ts
@@ -760,7 +770,8 @@ export const PAYMENT_GATEWAY = Symbol("PAYMENT_GATEWAY");
 import { z } from "zod";
 
 export const tossBillingBodySchema = z.object({
-  customerKey: z.string().regex(/^[A-Za-z0-9_\-=.@]{2,50}$/),
+  // 2~50자이고, 특수문자(-, _, =, ., @)를 하나 이상 포함해야 해요.
+  customerKey: z.string().regex(/^(?=.{2,50}$)(?=.*[-_=.@])[-A-Za-z0-9_=.@]+$/),
   amount: z.number().int().min(100),
   orderId: z.string().regex(/^[A-Za-z0-9_-]{6,64}$/),
   orderName: z.string().min(1).max(100),
@@ -996,13 +1007,13 @@ export abstract class TossPaymentMethodRepository {
 
 운영 로그에는 내부 결제 ID와 오류 코드를 남기고, 인증 헤더나 빌링키가 들어간 URL 전체는 기록하지 않아요. 내부 오류의 `cause`도 API 응답으로 직렬화하지 않아요.
 
-HTTP timeout을 65초로 둔 이유.
+### 승인 요청 timeout을 60초로 둔 이유
 
 [토스의 자동결제 승인 문서](https://docs.tosspayments.com/reference#자동결제-승인)는 승인에 최대 60초가 걸릴 수 있으니 timeout을 최소 60초로 설정하라고 안내해요.
 
-이 예제는 여유를 조금 더해 **승인 요청을 65초**로 설정했어요. 실무에서 항상 65초를 쓰는 규칙은 아니에요. 조회는 별도 요청이므로 예제의 대기 예산을 10초로 정했어요.
+그래서 **승인 요청은 60초**로 맞췄어요. 모여의 토스 Adapter는 승인 timeout이 60초보다 짧게 설정되면 생성 단계에서 거절해요. 누군가 값을 줄여도 문서의 하한 아래로 내려가지 않게 하려는 장치예요. 조회는 별도 요청이므로 10초로 정했어요.
 
-Worker의 제한 시간도 승인 대기와 결과 저장을 마칠 수 있게 잡아야 해요. 일반 HTTP 요청 전체에 같은 timeout을 적용하거나, 브라우저가 65초 동안 연결을 유지해야 한다고 가정하지는 않아요.
+Worker의 제한 시간도 승인 대기와 결과 저장을 마칠 수 있게 잡아야 해요. 일반 HTTP 요청 전체에 같은 timeout을 적용하거나, 브라우저가 60초 동안 연결을 유지해야 한다고 가정하지는 않아요.
 
 ```ts
 // toss-billing.client.ts
@@ -1030,7 +1041,7 @@ export class TossUnconfirmedResponseError extends Error {}
 
 export const TOSS_SECRET_KEY = Symbol("TOSS_SECRET_KEY");
 const TOSS_API_URL = "https://api.tosspayments.com";
-const TOSS_CHARGE_TIMEOUT_MS = 65_000;
+const TOSS_CHARGE_TIMEOUT_MS = 60_000;
 const TOSS_LOOKUP_TIMEOUT_MS = 10_000;
 
 @Injectable()
@@ -1159,7 +1170,7 @@ export class BillingModule {}
 
 ## 결제사를 바꿔도 구독 갱신 흐름은 유지돼요
 
-이제 신규 결제를 포트원 연동으로 전환한다고 해볼게요. 새 Gateway가 `PaymentGateway`를 구현하도록 만들고, 주입할 구현을 바꿀 수 있어요.
+처음에 던진 질문으로 돌아가서, 신규 결제를 포트원 연동으로 전환한다고 해 볼게요. 새 Gateway가 `PaymentGateway`를 구현하도록 만들고, 주입할 구현을 바꿀 수 있어요.
 
 ```ts
 // BillingModule에서 신규 결제에 사용할 Gateway를 교체해요.
@@ -1172,7 +1183,27 @@ const paymentGatewayProvider = {
 
 새 연동의 요청과 응답 변환은 Gateway와 Client에서 구현해요. Facade의 청구 준비·결제·구독 반영 순서와 Entity의 요금·기간 계산은 유지할 수 있고요.
 
-기존 거래는 원래 결제사에서 조회해야 해요. 실제 전환에서는 결제 시도에 결제사를 함께 저장하고 그에 맞는 Gateway로 보내야 해요. 기존 빌링키가 그대로 이전되는 것도 아니므로 결제수단 재등록이 필요할 수 있고요.
+기존 거래는 원래 결제사에서 조회해야 해요. 그래서 전환할 때는 결제 시도에 결제사를 함께 저장하고, 그에 맞는 Gateway로 보내야 해요. 기존 빌링키가 그대로 이전되는 것도 아니라서 결제수단을 다시 등록받아야 할 수도 있고요.
+
+### 실제로 바뀐 것은 결제사가 아니었어요
+
+다행히 모여는 결제사를 바꾸지 않았어요. 심사를 기다리는 동안 바뀐 것은 계약 뒤쪽이었어요.
+
+먼저 9월 25일에 토스 Adapter를 정리했어요. 청구, 카드 인증, 빌링키 발급과 해지, 결제 조회로 나뉘어 있던 Adapter 다섯 개를 `toss-payment.adapter.ts`의 `TossPaymentGateway` 하나로 합쳤어요. 이제 이 클래스가 `PaymentGateway` port 전체를 구현해요.
+
+결제 환경도 live와 test로 나눴어요. `PaymentGatewayResolver`가 환경마다 다른 토스 키로 만든 Gateway를 골라 주는데, 운영자나 Tester가 소유한 워크스페이스는 test 환경으로 결제해요. 덕분에 카드사 심사관도 실제 청구 없이 카드 등록부터 해지까지 확인할 수 있어요.
+
+이때 호출하는 쪽은 요청 값이 아니라 저장된 결제 기록의 환경을 넘겨요. 다른 환경의 키로 조회하거나 청구하는 일을 막으려는 선택이에요.
+
+가장 큰 변화는 결제를 닫은 채로 출시한 일이에요. 앞에서 말한 카드사 심사가 출시일까지 끝나지 않았거든요. 결제 기능은 모두 만들어 뒀지만 `BILLING_CHECKOUT_ENABLED`의 기본값이 `false`라서 live 환경의 결제 시작은 잠겨 있어요.
+
+![모여 요금제 화면의 Free, Pro, Team 카드와 결제는 곧 열린다는 안내](/images/facade-pattern/pricing-checkout-notice.webp)
+
+지금 모여 요금제 화면이에요. 유료 요금제 버튼은 결제가 아니라 "Pro 신청", "Team 신청"이고, 아래에는 "결제는 곧 열려요. 가입한 뒤 워크스페이스에서 신청하면 확인하고 열어 드려요."라는 안내가 붙어 있어요.
+
+결제가 닫혀 있는 동안 유료 요금제는 신청으로 받아요. `RequestWorkspacePlan`이 신청을 남기면 운영자가 확인해 이행하거나 거절하는 식이에요.
+
+결제를 시작할 수 있는지는 `CheckoutAvailability` 한 곳에서만 판단해요. 구독 갱신 흐름은 이 판단을 몰라도 되니, 심사가 끝나면 코드를 고치지 않고 플래그만 켜서 결제를 열 수 있어요.
 
 ## 테스트에서는 결제 결과를 Stub으로 바꿔요
 
@@ -1200,7 +1231,7 @@ export class PaymentServiceStub implements Pick<PaymentService, "payInvoice"> {
 
 구독 쪽은 실제 `SubscriptionService`와 Entity를 사용하고, 저장소는 데이터를 메모리에 보관하는 Fake로 바꿀게요. [Stub과 Mock의 차이](https://martinfowler.com/articles/mocksArentStubs.html)는 어떤 도구로 만들었는지보다 무엇을 대신하고 어떻게 검증하는지에 있어요. 여기서는 메서드의 호출 순서 대신, 갱신 후 청구서 상태와 이용 가능한 기간을 확인해요.
 
-Vitest로 Given–When–Then을 나누면 다음처럼 읽혀요. `createTestContext()`는 결제 Stub과 메모리 저장소를 연결하는 테스트 준비 함수예요.
+Vitest로 Given/When/Then을 나누면 다음처럼 읽혀요. `createTestContext()`는 결제 Stub과 메모리 저장소를 연결하는 테스트 준비 함수예요.
 
 ```ts
 // subscription-billing.facade.spec.ts
@@ -1277,9 +1308,9 @@ describe("구독 갱신", () => {
 
 성공하면 청구서가 결제 완료 상태가 되고, 청구한 기간 동안 유료 기능을 이용할 수 있어요. 실패하거나 결과를 확정하지 못했다면 무료 상태를 유지해요. 무료 체험 중에는 결제를 요청하면 오류가 나는 Stub을 넣어, 불필요한 청구도 잡아내요.
 
-이렇게 계약이 정리되어 있으면 AI로 테스트 초안을 만들 때도 편해요. Facade 코드와 `PaymentResult`를 보여주고, 결제 결과별로 어떤 상태가 되어야 하는지 알려주면 돼요. 토스의 복잡한 응답을 매번 설명할 필요 없이, Stub의 반환값을 바꾸며 성공·거절·미확정 시나리오를 작성할 수 있어요.
+이렇게 계약이 정리되어 있으면 AI로 테스트 초안을 만들 때도 편해요. Facade 코드와 `PaymentResult`를 보여 주고, 결제 결과별로 어떤 상태가 되어야 하는지 알려 주면 돼요. 토스의 복잡한 응답을 매번 설명할 필요 없이, Stub의 반환값을 바꾸며 성공·거절·미확정 시나리오를 작성할 수 있어요.
 
-생성된 테스트를 읽는 기준도 분명해져요. 결제에 성공한 기간만 유료로 열리는지, 미확정 결제에 권한을 부여하지 않는지 보면 되니까요. **계약과 기대하는 결과가 명확할수록, AI가 만든 테스트도 검토하고 고치기 쉬워져요.**
+생성된 테스트를 읽는 기준도 분명해져요. 결제에 성공한 기간만 유료로 열리는지, 미확정 결제에 권한을 부여하지 않는지 보면 되니까요. **계약과 기대 결과**가 분명할수록 AI가 만든 테스트도 검토하고 고치기 쉬워요.
 
 `vi`는 현재 시각을 고정하는 데만 사용했어요. `vi.fn()`이나 호출 횟수 검증 없이도 구독 갱신의 결과를 확인할 수 있어요. 요금과 날짜 계산은 Entity 테스트에서 따로 검증해요.
 
@@ -1382,7 +1413,8 @@ export async function createTestContext(paymentResult: PaymentResult | Error) {
     accountId: "account_001",
     paymentMethodId: "method_001",
     billingCycle: "MONTHLY",
-    signupDate: { year: 2026, month: 9, day: 5 },
+    // 9월 21일 가입, 14일 체험 뒤 10월 5일이 첫 청구일이에요.
+    firstBillingDate: { year: 2026, month: 10, day: 5 },
     completedBillingPeriods: 0,
     autoRenewalEnabled: true,
     trialEndsAt: new Date("2026-10-05T00:00:00+09:00"),
@@ -1443,27 +1475,27 @@ export default defineConfig({
 });
 ```
 
-이 예제는 NestJS 12.0.1과 Vitest로 확인했어요. `reflect-metadata`는 NestJS가 내부에서 불러오므로 테스트마다 import할 필요는 없어요. 패키지 의존성과 SWC의 decorator metadata 설정은 유지해요.
+이 예제는 작성 당시(2026년 9월) NestJS 12.0.1과 Vitest로 확인했어요. 지금 모여는 NestJS 12.1.3과 Vitest 5.0.4를 써요. `reflect-metadata`는 NestJS가 내부에서 불러오므로 테스트마다 import할 필요는 없어요. 패키지 의존성과 SWC의 decorator metadata 설정은 유지해요.
 
 </details>
 
 ## 빠르게 만드는 것과 계속 빠르게 만드는 것
 
-AI로 개발하면서 이 차이를 자주 생각해요. 요즘은 눈에 보이는 기능을 구현하는 일만큼은 AI가 저보다 훨씬 잘한다고 느끼는 순간이 점점 많아지고 있어요. 다만 제가 구조를 이해하지 못한 채 결과만 받아들이면, 서비스가 커졌을 때 어디를 고쳐야 할지 모르는 순간이 올 것 같아요. 당장의 구현 속도에 만족하는 사이 기술 부채도 빠르게 쌓일 수 있고요.
+AI로 개발하면서 이 차이를 자주 생각해요. 눈에 보이는 기능을 만드는 일은 이제 AI가 저보다 빠를 때가 많아요. 다만 제가 구조를 이해하지 못한 채 결과만 받아들이면, 서비스가 커졌을 때 어디를 고쳐야 할지 모르는 순간이 올 것 같아요. 당장의 구현 속도에 만족하는 사이 기술 부채도 빠르게 쌓일 수 있고요.
 
-초기 스타트업에서는 PMF를 찾기 위해 빨리 만들고 검증하는 일이 중요해요. 처음부터 완벽한 설계를 하는 건 불가능하고, 무엇을 완벽하다고 보는지도 사람과 서비스마다 다를 거예요.
+초기 스타트업은 PMF를 찾으려고 빨리 만들고 검증해야 해요. 처음부터 완벽한 설계를 하는 건 불가능하고, 무엇을 완벽하다고 보는지도 사람과 서비스마다 다를 거예요.
 
-그래도 결제처럼 서비스의 핵심이 되는 비즈니스 로직은, 흐름을 이해하고 유지보수할 수 있을 정도로 구조를 잡아두는 게 중요하다고 생각해요. 서비스가 성장해 요구사항이 바뀌거나 중요한 로직에서 장애가 발생했을 때, 원인을 찾고 영향 범위를 확인해 수정할 수 있어야 하니까요. 그 구조를 고민하는 데 처음에는 시간이 조금 더 들더라도, 이후의 변경과 장애 대응에 드는 시간과 비용을 줄여줄 수 있다고 봐요.
+그래도 결제처럼 돈과 이용 권한이 걸린 로직은 흐름을 설명하고 고칠 수 있을 만큼은 구조를 잡아 둬야 한다고 생각해요. 요구사항이 바뀌거나 결제에서 장애가 났을 때 원인을 찾고 영향 범위를 확인해 수정할 수 있어야 하니까요. 처음에 구조를 고민하는 시간은 조금 더 들어도, 이후의 변경과 장애 대응에 드는 시간은 줄어든다고 봐요.
 
 ![시간이 흐르며 달라지는 두 개발 방식의 누적 구현량](/images/facade-pattern/development-progress.webp)
 
-곡선의 기울기는 개발 속도, 높이는 그동안 구현한 양을 뜻해요. 변경 비용이 쌓일 때 생길 수 있는 차이를 그린 개념도예요.
+곡선의 기울기는 개발 속도, 높이는 그동안 구현한 양이에요. 구조를 미룬 쪽은 처음에 빠르게 올라가지만, 변경 비용이 쌓이면서 점점 평평해져요. 실제로 측정한 값이 아니라 이 차이를 설명하려고 그린 개념도예요.
 
-이 예제에서는 그 출발점으로 Facade를 도입했어요. **AI가 코드를 빠르게 작성해 주더라도, 무엇이 바뀔 때 어디를 고쳐야 하는지는 이해하고 싶었어요.** 언젠가는 이런 판단까지 AI가 더 잘할지도 모르겠지만, 지금은 제가 설명할 수 있는 구조 안에서 함께 개발하려고 해요.
+이 예제에서는 그 출발점으로 Facade를 도입했어요. AI가 코드를 빠르게 작성해 주더라도, **무엇이 바뀔 때 어디를 고쳐야 하는지**는 제가 이해하고 싶었어요. 언젠가는 이런 판단까지 AI가 더 잘할지도 모르겠지만, 지금은 제가 설명할 수 있는 구조 안에서 함께 개발하려고 해요.
 
 ## Facade를 만들 때 놓치기 쉬운 것들
 
-### 외부 API를 그대로 옮겨놓기
+### 외부 API를 그대로 옮겨 놓기
 
 `issueBillingKey()`, `approveBillingPayment()`를 같은 클래스에 모아도 호출자가 실행 순서를 알아야 한다면 단순화한 범위가 작아요. 이 글에서는 `renewSubscription()`처럼 호출자가 하려는 일을 표현했어요.
 
@@ -1471,7 +1503,7 @@ AI로 개발하면서 이 차이를 자주 생각해요. 요즘은 눈에 보이
 
 구독 갱신에 필요하다고 할인, 이메일, 통계, 환불까지 한 Facade에 넣을 필요는 없어요. 이 Facade는 청구와 구독 반영이라는 응집된 흐름을 맡고, 계산과 저장은 해당 객체에 남겨요.
 
-### 중요한 차이까지 숨기기
+### 꼭 구분할 차이까지 숨기기
 
 카드 거절과 timeout을 모두 `false`로 반환하면 다음 행동을 정할 수 없어요. 내부 계약을 단순하게 만들더라도 확인된 실패와 미확정 결과는 구분해야 해요.
 
@@ -1480,13 +1512,13 @@ AI로 개발하면서 이 차이를 자주 생각해요. 요즘은 눈에 보이
 <details>
 <summary>이용 기간 만료와 미확정 결제의 복구</summary>
 
-예를 들어 9월 5일 가입했다면 체험은 10월 5일 `00:00`에 끝나요. 월간 결제가 성공하면 11월 5일 `00:00`까지, 연간 결제가 성공하면 다음 해 10월 5일 `00:00`까지 이용할 수 있어요.
+예를 들어 9월 21일에 가입했다면 14일 체험은 10월 5일 `00:00`에 끝나요. 월간 결제가 성공하면 11월 5일 `00:00`까지, 연간 결제가 성공하면 다음 해 10월 5일 `00:00`까지 이용할 수 있어요.
 
-가입 시각부터 정확히 30일을 제공하는 정책은 아니에요. 예제에서는 가입 날짜의 한국 시간 자정을 기준으로 정했으므로 화면에도 종료 시각을 안내해요.
+결제 시각부터 정확히 30일을 더하는 방식은 아니에요. 예제에서는 첫 청구일의 한국 시간 자정을 기준으로 정했으므로 화면에도 종료 시각을 안내해요.
 
 자정 배치가 유료 여부를 바꿀 때까지 기다리는 대신, 서버의 권한 검사에서 `subscription.getAccessLevel(now)`로 종료 시각을 확인해요. `<`로 비교하므로 종료 시각에 도달하면 기존 권한은 끝나요.
 
-갱신 승인을 아직 확인하지 못했다면 무료 플랜을 적용해요. 유예 없는 정책이므로 승인 확인 전까지 잠깐 무료로 보일 수 있어요. 그 간격을 허용하지 않는 서비스라면 사전 청구나 유예 기간을 별도로 정해야 해요.
+예제는 유예 없이 단순화했으므로, 갱신 승인을 아직 확인하지 못했다면 무료 플랜을 적용해요. 그래서 승인 확인 전까지 잠깐 무료로 보일 수 있어요. 실제 모여는 결제가 실패해도 바로 낮추지 않고 7일 유예를 둬요. 유예 동안은 유료 한도를 유지하면서 자동으로 다시 청구하고, 그래도 결제되지 않은 채 유예가 끝나면 이용을 제한해요.
 
 이용 권한이 끝났다고 진행 중인 결제까지 실패한 것은 아니에요. 미확정 결제는 별도 Worker가 조회하고, 확인된 승인은 같은 구독 반영 경로로 보내요.
 
@@ -1497,6 +1529,10 @@ await subscriptionBillingFacade.reconcilePayment(paymentId);
 ```
 
 앞서 만든 `reconcilePayment()`를 Worker가 내부 결제 ID로 호출해요. 갱신을 해제했거나 기존 이용 기간이 끝났어도 이미 보낸 결제의 확인은 계속되어야 해요.
+
+결제 결과는 토스가 보내는 webhook으로도 들어와요. webhook 주소에는 환경별 endpoint token을 넣어 두고, 컨트롤러가 이 token부터 검증해요. 결제 상태 변경(`PAYMENT_STATUS_CHANGED`)과 빌링키 삭제(`BILLING_DELETED`)는 각각의 Use Case가 provider event inbox에 넣고, 같은 주문·상태로 다시 온 알림은 inbox에서 한 건으로 묶어요.
+
+결제 상태 변경 알림에는 서명이 없어요. 그래서 알림에 적힌 상태를 그대로 믿지 않고, Worker가 토스 조회로 사실을 확인한 뒤에만 결제 기록을 바꿔요.
 
 반대로 승인 기록은 저장됐는데 구독 반영만 실패했다면, 성공한 결제와 미반영 청구서를 찾아 `SubscriptionService.applyPayment()`를 다시 실행해요. 결제를 다시 요청할 필요는 없어요.
 
@@ -1524,16 +1560,10 @@ await subscriptionBillingFacade.reconcilePayment(paymentId);
 await subscriptionBillingFacade.renewSubscription(subscriptionId);
 ```
 
-반면 Adapter는 호출자가 기대하는 인터페이스에 다른 객체를 맞춰줘요. 앞서 만든 `TossPaymentGateway`의 조회 기능만 간추려 볼게요.
+반면 Adapter는 호출자가 기대하는 인터페이스에 다른 객체를 맞춰 줘요. 앞서 만든 `TossPaymentGateway`에서 조회 기능만 간추려 볼게요.
 
 ```ts
 // adapter-example.ts
-import type { GatewayPaymentResult, PaymentRequest } from "./contracts";
-import { TossBillingClient } from "./toss-billing.client";
-import { mapTossError, mapTossPayment } from "./toss-payment.mapper";
-import type { TossPaymentResponse } from "./toss.schema";
-
-// 앞서 만든 TossPaymentGateway에서 조회 기능만 간추린 예제예요.
 class TossPaymentGateway {
   constructor(private readonly tossBillingClient: TossBillingClient) {}
 
@@ -1558,6 +1588,8 @@ class TossPaymentGateway {
 
 예를 들어 토스의 `DONE`은 `SUCCEEDED`로, `paymentKey`는 결제 모듈에서 사용하는 `providerPaymentId`로 바뀌어요. 앞서 작성한 `mapTossPayment()`가 주문번호·금액을 대조하고 이 변환을 처리해요. 구독 기간을 계산하거나 갱신 순서를 조합하지는 않아요.
 
-그래서 `TossPaymentGateway`는 Adapter 역할도 한다고 볼 수 있어요. 결제사를 바꾸면 새 연동도 같은 `PaymentGateway` 계약에 맞추고, Facade는 청구 준비·결제·구독 반영이라는 흐름을 그대로 사용해요. **Facade는 복잡한 사용 과정을 단순하게 만들고, Adapter는 서로 다른 인터페이스를 맞춰요.** 함께 사용할 수 있지만 목적이 다른 패턴이에요.
+그래서 `TossPaymentGateway`는 Adapter 역할을 한다고 볼 수 있어요. 실제 모여 코드에서도 이 클래스는 `toss-payment.adapter.ts`에 있어요. 결제사를 바꾸면 새 연동도 같은 `PaymentGateway` 계약에 맞추고, Facade는 청구 준비·결제·구독 반영이라는 흐름을 그대로 사용해요.
 
-Facade를 적용하며 얻고 싶었던 것도 이 정도였어요. **기능이 늘어나도, 사용하는 쪽에서 모든 내부 사정을 알 필요는 없게 만드는 것**이요.
+정리하면 Facade는 **사용 과정을 단순하게** 만들고, Adapter는 **서로 다른 인터페이스를 맞춰요**. 함께 쓸 수 있지만 목적이 다른 패턴이에요.
+
+모여의 결제는 지금도 카드사 심사를 기다리며 닫혀 있어요. 그사이 토스 Adapter를 합치고 live와 test 환경을 나눴지만, 구독을 다루는 Use Case는 여전히 `PaymentGateway` 계약만 알아요. 기능이 늘어도 사용하는 쪽은 내부 사정을 몰라도 되게 하는 것, Facade로 얻고 싶었던 것도 그거였어요.
