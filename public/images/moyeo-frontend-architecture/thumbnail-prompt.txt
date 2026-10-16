@@ -1,0 +1,10 @@
+Generated with the built-in ImageGen tool. Source: /Users/matthew/.codex/generated_images/01a10be3-bde4-79e2-af9c-3d718a21a675/exec-5eaad03b-5fc5-4017-8e4e-d4fbc576b40b.png. Converted to WebP with Sharp at 1440px wide (1440x720, 2:1), quality 88.
+
+Use case: scientific-educational
+Asset type: one wide 2:1 editorial illustration for a Korean developer blog post about Moyeo frontend architecture.
+Primary request: cover image. A solo developer and a friendly AI assistant build a web app together on a desk, guided by a short checklist of rules pinned on the wall.
+Style/medium: warm pastel hand-painted gouache on cream paper with subtle paper grain. Cozy animation-like editorial illustration consistent with this blog's other Moyeo posts: a small round dark-navy character with big friendly eyes as the solo developer, a blue smiling browser laptop, sage green server, muted coral accents, dark navy friendly clear Korean type, generous whitespace. Minimal friendly faces, clean explanation.
+Composition: LEFT the navy developer character typing on the blue laptop; a small floating friendly AI sparkle-bot hands over neat code cards. CENTER the laptop screen shows a clean app layout made of stacked blocks (vertical and horizontal stacks, clearly aligned). RIGHT a cork board with three short pinned cards: "URL이 화면 상태의 기준", "계약 하나", "규칙은 코드에". A small cat peeks from the desk edge.
+Text: render exactly the three quoted Korean labels, no other text, no title.
+Constraints: no brand logos, no real product screenshots, no code syntax, no watermark. One image.
+Framing: fill the whole 2:1 frame edge to edge. Do not leave empty cream bands above or below the illustration; the scene must reach the top and bottom edges.

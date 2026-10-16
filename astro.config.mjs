@@ -108,5 +108,21 @@ export default defineConfig({
   ],
   vite: {
     plugins: [tailwindcss()],
+    build: {
+      // 기준을 넘는 청크는 Mermaid가 필요할 때만 불러오는 ELK 배치 엔진(약 1,456kB)과 Langium 파서뿐이다.
+      chunkSizeWarningLimit: 1500,
+      rolldownOptions: {
+        onLog(level, log, handler) {
+          // Astro는 이 지시문을 더 읽지 않아 rolldown이 버려도 결과가 같다(withastro/astro#18087).
+          if (
+            log.code === "MODULE_LEVEL_DIRECTIVE" &&
+            log.message.includes("use astro:head-inject")
+          ) {
+            return;
+          }
+          handler(level, log);
+        },
+      },
+    },
   },
 });

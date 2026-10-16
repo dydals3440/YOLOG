@@ -1,0 +1,9 @@
+Generated with built-in image_gen.
+Reference: thumbnail.webp (style only).
+
+Use case: illustration-story
+Asset type: Korean engineering blog explanatory image, landscape.
+Use the reference ONLY for warm watercolor/gouache style, cream paper, dusty blue, muted sage and peach. Create a clean three-panel illustrated sequence explaining stale AI responses without covering UI with decoration.
+Panel 1: a small editor card with heading "요청" and large handwritten "본문 A", an outgoing envelope with tiny sparkle suggesting AI.
+Panel 2: same editor card heading "편집" and large "본문 B", a pencil on the card, indicating user changed text while waiting.
+Panel 3: editor card heading "응답" showing large "본문 B" preserved with a sage check mark. Beside the card the arriving envelope contains small "A의 제안"; it stays outside the editor, no overwrite. A small peach stop marker on path from envelope to editor. Subtle left-to-right arrows only between the three panels. Large legible Korean words only those specified. Composition generous cream whitespace; all three panels equally sized with clean separation, no busy background, no footer, no code, no invented text. Similar hand-painted charming style to reference, but focus on cause and effect and preserving user writing.
