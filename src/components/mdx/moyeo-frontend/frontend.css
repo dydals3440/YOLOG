@@ -46,10 +46,7 @@ html.dark .mf-code-example pre.astro-code span.highlighted span {
   background: var(--mr-background);
   color: var(--mr-text);
   line-height: 1.65;
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
 }
 .dark .mf-demo {
   --mr-text: #e2e8f0;

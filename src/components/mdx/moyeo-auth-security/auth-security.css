@@ -21,10 +21,7 @@
   background: var(--mr-background);
   color: var(--mr-text);
   line-height: 1.65;
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
 }
 .dark .ma-demo {
   --mr-text: #e2e8f0;
