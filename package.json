@@ -19,9 +19,9 @@
     "validate": "bun run check && bun run typecheck && bun run test && bun run build && bun run verify:site"
   },
   "dependencies": {
-    "@astrojs/markdown-remark": "^7.3.3",
-    "@astrojs/mdx": "^8.1.0",
-    "@astrojs/react": "^7.1.0",
+    "@astrojs/markdown-remark": "^7.3.4",
+    "@astrojs/mdx": "^8.1.1",
+    "@astrojs/react": "^7.1.1",
     "@astrojs/rss": "^4.0.19",
     "@astrojs/sitemap": "^3.7.4",
     "@astrojs/vercel": "^11.0.16",
@@ -32,13 +32,13 @@
     "@tailwindcss/vite": "^4.3.3",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
-    "astro": "^7.4.1",
-    "baseline-browser-mapping": "^2.11.30",
-    "caniuse-lite": "^1.0.30001817",
+    "astro": "^7.4.2",
+    "baseline-browser-mapping": "^2.11.32",
+    "caniuse-lite": "^1.0.30001819",
     "dayjs": "^1.11.23",
-    "es-toolkit": "^1.52.0",
-    "lucide-react": "^1.60.0",
-    "medium-zoom": "1.1.0",
+    "es-toolkit": "^1.53.0",
+    "lucide-react": "^1.61.0",
+    "medium-zoom": "1.1.1",
     "mermaid": "^12.2.0",
     "nanostores": "^1.5.5",
     "plaiceholder": "3.0.0",
@@ -50,7 +50,7 @@
     "typescript": "npm:@typescript/typescript6@6.0.2"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.11",
+    "@astrojs/check": "^0.9.12",
     "@shikijs/transformers": "^4.5.0",
     "@types/hast": "^3.0.5",
     "@types/node": "^26.6.5",
@@ -71,7 +71,7 @@
     "shiki": "^4.5.0",
     "tailwind-merge": "^3.7.0",
     "tsx": "^4.23.15",
-    "unist-util-visit": "^5.1.0"
+    "unist-util-visit": "^5.2.0"
   },
   "overrides": {
     "ajv@8": "^8.20.0",
@@ -84,7 +84,8 @@
     "path-to-regexp@8": "^8.4.2",
     "smol-toml": "^1.9.0",
     "tar": "^7.5.22",
-    "undici@5": "^6.29.0"
+    "undici@5": "^6.29.0",
+    "zod@4.1.11": "^4.6.6"
   },
-  "packageManager": "bun@1.4.2"
+  "packageManager": "bun@1.4.4"
 }
