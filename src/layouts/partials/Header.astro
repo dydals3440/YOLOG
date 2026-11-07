@@ -5,9 +5,9 @@ import ThemeToggle from '@/components/ui/ThemeToggle'
 
 <div class="blur-layer" aria-hidden="true"></div>
 <header class="fixed left-0 right-0 top-0 z-10 transition-all duration-300" data-header>
-  <div class="container mx-auto flex max-w-content items-center justify-between">
-    <nav class="min-w-0">
-      <ul class="flex items-center gap-8 whitespace-nowrap py-5 md:py-4 sm:gap-3">
+  <div class="container mx-auto flex h-full max-w-content items-center justify-between">
+    <nav class="h-full min-w-0">
+      <ul class="flex h-full items-center gap-8 whitespace-nowrap sm:gap-3">
         <li>
           <NavLink href="/" class="text-base font-semibold tracking-tight">yolog</NavLink>
         </li>
@@ -32,9 +32,8 @@ import ThemeToggle from '@/components/ui/ThemeToggle'
   @reference "@/styles/global.css";
 
   .blur-layer {
-    @apply pointer-events-none fixed inset-0 z-10 h-[var(--header-height)] bg-background/70 backdrop-blur-[--blur-size];
+    @apply pointer-events-none fixed inset-0 z-10 h-[var(--header-height)] bg-background/70 backdrop-blur-(--blur-size);
     --blur-size: 10px;
-    --header-height: 3.5rem;
   }
 
   [data-header] {
@@ -47,12 +46,6 @@ import ThemeToggle from '@/components/ui/ThemeToggle'
 
   :global(.scrolled-up) [data-header] {
     transform: translateY(0);
-  }
-
-  @media (max-width: 768px) {
-    .blur-layer {
-      --header-height: 3rem;
-    }
   }
 </style>
 

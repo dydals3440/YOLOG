@@ -100,7 +100,7 @@
   margin-bottom: 0.875rem;
   font-weight: 600;
   color: var(--heading);
-  scroll-margin-top: 96px;
+  scroll-margin-top: 24px;
 }
 
 :is(.mdx, .mdx .mdx-content, .mdx details) > :where(h2) + :where(h3, h4) {
