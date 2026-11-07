@@ -827,17 +827,21 @@ html.dark pre.astro-code .diff span {
 /* mermaid */
 .mdx pre.mermaid {
   display: flex;
-  justify-content: center;
+  /* 다이어그램이 넘칠 때 왼쪽이 잘리지 않도록 safe를 쓴다 */
+  justify-content: safe center;
   margin: 1.5rem 0;
   padding: 0;
+  overflow-x: auto;
   background: none;
   border: none;
 }
 /* mermaid가 그리기 전(원본 소스 상태)에는 숨겨 깜빡임을 막는다 */
+.mdx pre:has(> code.language-mermaid),
 .mdx pre.mermaid:not([data-processed]) {
   visibility: hidden;
 }
 .mdx pre.mermaid svg {
+  flex-shrink: 0;
   max-width: 100%;
   height: auto;
 }
