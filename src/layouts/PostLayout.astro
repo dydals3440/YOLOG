@@ -16,7 +16,7 @@ import RelatedPosts from '@/components/post/RelatedPosts.astro'
 import SocialShare from '@/components/post/SocialShare'
 import TableOfContent from '@/components/post/TableOfContent'
 import LeftSidebar from '@/layouts/partials/LeftSidebar.astro'
-import { BLOG_CATEGORIES, type BlogCategory, WEBSITE_CONFIG } from '@/consts'
+import { BLOG_CATEGORIES, WEBSITE_CONFIG } from '@/consts'
 import { formatDate } from '@/lib/blog-utils'
 import { RELATED_POSTS, getSiteUrl } from '@/lib/config'
 import { generateDescription, getPostCollection } from '@/lib/mdx'
@@ -48,7 +48,7 @@ const breadcrumbSchema = buildBreadcrumbSchema({ post, siteUrl: getSiteUrl(Astro
 const allPosts = await getPostCollection()
 const relatedPosts = getRelatedPosts({ currentPost: post, allPosts, maxPosts: RELATED_POSTS.MAX_COUNT })
 
-const articleSection = category ? BLOG_CATEGORIES[category as BlogCategory] : undefined
+const articleSection = category ? BLOG_CATEGORIES[category] : undefined
 ---
 
 <BaseLayout
@@ -84,11 +84,11 @@ const articleSection = category ? BLOG_CATEGORIES[category as BlogCategory] : un
         className="text-sm"
         data-animate
         toc={toc}
-        client:only="react"
+        client:idle
       />
     </div>
     <div class="mt-auto pt-6 lg:mt-0 lg:pt-0">
-      <PageActions client:only="react" />
+      <PageActions client:visible />
     </div>
   </LeftSidebar>
   <section>
@@ -119,7 +119,7 @@ const articleSection = category ? BLOG_CATEGORIES[category as BlogCategory] : un
     <footer class="px-0">
       <hr class="my-8 border-border" />
       <PostNavigation {prevPost} {nextPost} />
-      <GiscusComment className="mx-auto my-half-page" client:only="react" />
+      <GiscusComment className="mx-auto my-half-page" client:visible />
     </footer>
   </section>
   <MediumZoomScript />

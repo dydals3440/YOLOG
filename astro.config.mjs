@@ -14,7 +14,7 @@ import {
 import tailwindcss from "@tailwindcss/vite";
 
 import { unified } from "@astrojs/markdown-remark";
-import { defineConfig } from "astro/config";
+import { defineConfig, envField } from "astro/config";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeExternalLinks from "rehype-external-links";
 import rehypeSlug from "rehype-slug";
@@ -28,6 +28,9 @@ import { customCallout, remarkMermaid } from "./src/lib/directives";
 
 const outDir = new URL("./dist/", import.meta.url);
 
+// 값이 없는 빌드도 허용한다. Preview와 로컬에서는 분석과 댓글이 꺼진다.
+const publicEnv = () => envField.string({ context: "client", access: "public", optional: true });
+
 export default defineConfig({
   output: "static",
   trailingSlash: "never",
@@ -35,6 +38,15 @@ export default defineConfig({
   // 기존 v6 동작(true)을 유지하기 위해 명시적으로 고정한다.
   compressHTML: true,
   site: SITE_URL,
+  env: {
+    schema: {
+      PUBLIC_GA_ID: publicEnv(),
+      PUBLIC_GISCUS_REPO: publicEnv(),
+      PUBLIC_GISCUS_REPO_ID: publicEnv(),
+      PUBLIC_GISCUS_CATEGORY: publicEnv(),
+      PUBLIC_GISCUS_CATEGORY_ID: publicEnv(),
+    },
+  },
   prefetch: {
     prefetchAll: true,
     defaultStrategy: "viewport",

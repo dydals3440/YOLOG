@@ -1,6 +1,6 @@
 import type { CollectionEntry } from "astro:content";
 
-import { BLOG_CATEGORIES, type BlogCategory, WEBSITE_CONFIG } from "@/consts";
+import { BLOG_CATEGORIES, WEBSITE_CONFIG } from "@/consts";
 
 interface BuildBlogPostingSchemaArgs {
   post: CollectionEntry<"post">;
@@ -26,8 +26,8 @@ export function buildBlogPostingSchema({
     image: image
       ? new URL(image, site).toString()
       : new URL(WEBSITE_CONFIG.OG_IMAGE, site).toString(),
-    datePublished: new Date(date).toISOString(),
-    dateModified: new Date(updatedDate || date).toISOString(),
+    datePublished: date.toISOString(),
+    dateModified: (updatedDate ?? date).toISOString(),
     author: {
       "@type": "Person",
       name: WEBSITE_CONFIG.AUTHOR,
@@ -57,7 +57,7 @@ interface BuildBreadcrumbSchemaArgs {
 
 export function buildBreadcrumbSchema({ post, siteUrl }: BuildBreadcrumbSchemaArgs) {
   const { title, category } = post.data;
-  const categoryLabel = category ? BLOG_CATEGORIES[category as BlogCategory] : null;
+  const categoryLabel = category ? BLOG_CATEGORIES[category] : null;
 
   return {
     "@context": "https://schema.org",

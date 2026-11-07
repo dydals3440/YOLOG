@@ -1,9 +1,9 @@
-<script is:inline type="module">
+<script>
   const codeBlockList = document.querySelectorAll('.mdx [data-code-fragment]')
 
   codeBlockList.forEach((codeBlock) => {
     const codeElement = codeBlock.querySelector('pre > code')
-    const copyButton = codeBlock.querySelector('.copy')
+    const copyButton = codeBlock.querySelector<HTMLElement>('.copy')
     if (!codeElement || !copyButton) return
 
     const lines = Array.from(codeElement.querySelectorAll(':scope > .line'))
@@ -14,19 +14,15 @@
           .join('\n')
       : codeElement.textContent ?? ''
 
-    let timeoutId = null
-    let blurTimeoutId = null
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+    let blurTimeoutId: ReturnType<typeof setTimeout> | undefined
 
     copyButton.addEventListener('click', async () => {
       await navigator.clipboard.writeText(code)
       copyButton.classList.add('copied')
 
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
-      if (blurTimeoutId) {
-        clearTimeout(blurTimeoutId)
-      }
+      clearTimeout(timeoutId)
+      clearTimeout(blurTimeoutId)
 
       blurTimeoutId = setTimeout(() => {
         if (document.activeElement === copyButton) {

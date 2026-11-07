@@ -43,7 +43,7 @@ function calculateRelevance(
 
   const recentDate = new Date();
   recentDate.setMonth(recentDate.getMonth() - RELATED_POSTS.RECENCY_MONTHS);
-  if (new Date(post.data.date) > recentDate) {
+  if (post.data.date > recentDate) {
     score += RELATED_POSTS.SCORES.RECENCY_BONUS;
   }
 
