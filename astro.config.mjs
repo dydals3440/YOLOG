@@ -25,7 +25,7 @@ import { SITE_URL } from "./src/lib/config/app";
 
 import { remarkPrioritizeFirstImage } from "./plugins/remark-prioritize-first-image";
 import { transformerFragment } from "./plugins/transformer-fragment";
-import { customCallout, remarkMermaid } from "./src/lib/directives";
+import { customCallout } from "./src/lib/directives";
 
 const outDir = new URL("./dist/", import.meta.url);
 
@@ -77,7 +77,7 @@ export default defineConfig({
     defaultStrategy: "hover",
   },
   markdown: {
-    syntaxHighlight: "shiki",
+    syntaxHighlight: { type: "shiki", excludeLangs: ["mermaid"] },
     shikiConfig: {
       themes: {
         light: "catppuccin-latte",
@@ -97,13 +97,7 @@ export default defineConfig({
       ],
     },
     processor: unified({
-      remarkPlugins: [
-        remarkBreaks,
-        remarkDirective,
-        customCallout,
-        remarkMermaid,
-        remarkPrioritizeFirstImage,
-      ],
+      remarkPlugins: [remarkBreaks, remarkDirective, customCallout, remarkPrioritizeFirstImage],
       rehypePlugins: [
         rehypeSlug,
         [

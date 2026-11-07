@@ -1,17 +1,39 @@
 <script>
-  const nodes = Array.from(document.querySelectorAll<HTMLElement>('pre.mermaid'))
+  // 이보다 작게 줄이면 글자를 읽을 수 없으므로, 넘치는 만큼은 가로 스크롤로 보여 준다.
+  const MIN_DIAGRAM_SCALE = 0.6
 
-  if (nodes.length) {
-    // mermaid가 처리하면 원본 소스를 SVG로 덮어쓰므로, 재렌더링용으로 원본을 미리 캐싱한다.
-    const sources = nodes.map((el) => el.textContent ?? '')
+  const blocks = Array.from(
+    document.querySelectorAll<HTMLElement>('pre:has(> code.language-mermaid)'),
+  )
+
+  if (blocks.length) {
+    // mermaid가 원본 소스를 SVG로 덮어쓰므로, 테마를 바꿀 때 다시 그리려면 원본이 필요하다.
+    const sources = blocks.map((block) => block.textContent ?? '')
     const isDark = () => document.documentElement.classList.contains('dark')
+
+    const keepDiagramsReadable = () => {
+      for (const block of blocks) {
+        const diagram = block.querySelector('svg')
+        if (!diagram) continue
+
+        const minWidth = diagram.viewBox.baseVal.width * MIN_DIAGRAM_SCALE
+        diagram.style.minWidth = `${Math.round(minWidth)}px`
+      }
+    }
+
+    blocks.forEach((block) => {
+      block.classList.add('mermaid')
+      block.setAttribute('role', 'region')
+      block.setAttribute('aria-label', '다이어그램')
+      block.tabIndex = 0
+    })
 
     // 다이어그램이 있는 페이지에서만 무거운 mermaid 번들을 동적으로 불러온다.
     import('mermaid').then(async ({ default: mermaid }) => {
       const renderAll = async () => {
-        nodes.forEach((el, i) => {
-          el.removeAttribute('data-processed')
-          el.textContent = sources[i]
+        blocks.forEach((block, index) => {
+          block.removeAttribute('data-processed')
+          block.textContent = sources[index]
         })
         // Mermaid 12의 기본 배치와 스타일 변경 대신 기존 다이어그램 모양을 유지한다.
         mermaid.initialize({
@@ -20,12 +42,12 @@
           look: 'classic',
           theme: isDark() ? 'dark' : 'default',
         })
-        await mermaid.run({ nodes })
+        await mermaid.run({ nodes: blocks })
+        keepDiagramsReadable()
       }
 
       await renderAll()
 
-      // 테마 토글(html.dark 변경) 시 원본 소스로 복원 후 새 테마로 다시 그린다.
       let dark = isDark()
       new MutationObserver(() => {
         if (isDark() === dark) return
