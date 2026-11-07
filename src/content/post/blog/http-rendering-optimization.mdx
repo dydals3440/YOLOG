@@ -558,7 +558,7 @@ head 태그에 다음과 같이 추가한다.
 
 브라우저는 이 태그를 만나면 파싱을 멈추지 않고 리소스를 동시에 다운로드한다.
 
-![미리 이미지를 preload 함](/images/http-rendering-optimization/12.gif)
+![미리 이미지를 preload 함](/images/http-rendering-optimization/12.webp)
 
 버튼 클릭 전에 이미지가 미리 다운로드되어, 클릭하면 즉시 표시된다.
 
@@ -633,7 +633,7 @@ if (filename === 'goguma.html') {
 
 브라우저는 유휴 시간에 `prefetch`로 설정한 파일을 다운로드한다.
 
-![이제 다음 페이지의 자원을 미리 다운로드 함](/images/http-rendering-optimization/15.gif)
+![이제 다음 페이지의 자원을 미리 다운로드 함](/images/http-rendering-optimization/15.webp)
 
 이제 3초 지연 없이 즉시 페이지가 표시된다. 브라우저가 유휴 시간에 미리 다운로드했기 때문입니다.
 
@@ -724,7 +724,7 @@ const handler = () => {
 
 `lazy`로 변경하면 뷰포트에 들어올 때만 이미지를 다운로드한다.
 
-![뷰포트 안에 들어올 때 HTTP 요청을 만듬](/images/http-rendering-optimization/18.gif)
+![뷰포트 안에 들어올 때 HTTP 요청을 만듬](/images/http-rendering-optimization/18.webp)
 
 첫 번째 이미지만 로드되고, 두 번째 이미지는 스크롤해서 뷰포트에 가까워질 때 로드된다.
 
