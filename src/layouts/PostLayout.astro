@@ -3,7 +3,6 @@ import '@/styles/mdx.css'
 
 import { type CollectionEntry, render } from 'astro:content'
 
-import GoogleAdsense from '@/components/GoogleAdsense.astro'
 import PostNavigation from '@/components/common/PostNavigation.astro'
 import CopyCodeScript from '@/components/post/CopyCodeScript.astro'
 import GiscusComment from '@/components/post/GiscusComment'
@@ -20,7 +19,7 @@ import LeftSidebar from '@/layouts/partials/LeftSidebar.astro'
 import { BLOG_CATEGORIES, type BlogCategory, WEBSITE_CONFIG } from '@/consts'
 import { formatDate } from '@/lib/blog-utils'
 import { RELATED_POSTS, getSiteUrl } from '@/lib/config'
-import { generateDescription, getPostCollection, parseToc } from '@/lib/mdx'
+import { generateDescription, getPostCollection } from '@/lib/mdx'
 import { buildBlogPostingSchema, buildBreadcrumbSchema } from '@/lib/post-schema'
 import { serializeJsonLd } from '@/lib/structured-data'
 import { getRelatedPosts } from '@/lib/related-posts'
@@ -38,8 +37,10 @@ const { title, date, updatedDate, image, tags, category } = post.data
 const body = post.body ?? ''
 const description = post.data.description || generateDescription(body)
 const formattedDate = formatDate(date)
-const toc = parseToc(body)
-const { Content } = await render(post)
+const { Content, headings } = await render(post)
+const toc = headings
+  .filter(({ depth }) => depth === 2)
+  .map(({ slug, text }) => ({ slug, text }))
 
 const blogPostingSchema = buildBlogPostingSchema({ post, description, site: Astro.site, url: Astro.url })
 const breadcrumbSchema = buildBreadcrumbSchema({ post, siteUrl: getSiteUrl(Astro.site) })
@@ -110,10 +111,6 @@ const articleSection = category ? BLOG_CATEGORIES[category as BlogCategory] : un
     <article data-post-id={post.id} data-animate data-animate-speed="fast" class="mdx">
       <Content components={{ img: PostImage, table: PostTable }} />
     </article>
-    <GoogleAdsense
-      slot="1234567890"
-      className="my-8"
-    />
     {relatedPosts.length > 0 && (
       <div class="mt-16 pt-8 border-t border-border">
         <RelatedPosts posts={relatedPosts} />

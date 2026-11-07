@@ -243,6 +243,28 @@ describe("배포된 페이지의 SEO", () => {
     assert.deepEqual(new Set(links), new Set(expected), "RSS와 발행 글 목록이 다릅니다");
   });
 
+  it("목차는 본문의 모든 H2로 정확히 이동한다", () => {
+    for (const { file, $ } of articles) {
+      // Given
+      const islandProps = $('astro-island[component-url*="TableOfContent"]').attr("props") ?? "";
+
+      // When
+      const tocSlugs = [...islandProps.matchAll(/"slug":\[0,"([^"]+)"\]/g)].map(([, slug]) => slug);
+      const headingIds = $(".mdx h2")
+        .toArray()
+        .map((heading) => $(heading).attr("id"));
+
+      // Then
+      assert.deepEqual(tocSlugs, headingIds, `${file}: 목차와 본문 제목이 다릅니다`);
+    }
+  });
+
+  it("플레이스홀더 광고 슬롯을 내보내지 않는다", () => {
+    for (const { file, $ } of pages) {
+      assert.equal($("ins.adsbygoogle").length, 0, `${file}: 수동 광고 슬롯이 남아 있습니다`);
+    }
+  });
+
   it("기존 sitemap.xml 주소는 공식 인덱스로 영구 리디렉션한다", async () => {
     // Given
     const configFile = new URL("../../vercel.json", import.meta.url);
