@@ -4,10 +4,13 @@ import { MoonIcon, SunIcon } from "@/components/ui/Icons";
 import { THEME_MAP, type ThemeKey, themeStore } from "@/lib/stores/theme";
 
 const ThemeToggle = () => {
-  const theme = useStore(themeStore);
+  // 구독자가 있어야 themeStore의 onMount가 실행되어 테마가 화면에 적용된다.
+  useStore(themeStore);
 
+  // 저장값이 없으면 OS 설정을 따르므로, 화면에 실제 적용된 테마를 기준으로 뒤집는다.
   const toggleTheme = () => {
-    const themeKey: ThemeKey = theme === "dark" ? "light" : "dark";
+    const isDark = document.documentElement.classList.contains("dark");
+    const themeKey: ThemeKey = isDark ? "light" : "dark";
     themeStore.set(THEME_MAP[themeKey]);
   };
 
