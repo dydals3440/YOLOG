@@ -32,7 +32,7 @@
    Use `inline` so external CSS variables resolve at usage time
    (no circular references for --font-sans / --font-serif / --font-mono). */
 @theme inline {
-  /* font families (external CSS vars injected by FontLoader.astro) */
+  /* font families (--font-sans, --font-mono are injected by Astro <Font />) */
   --font-sans: var(--font-sans), sans;
   --font-serif: var(--font-serif), sans-serif;
   --font-mono: var(--font-mono), monospace;
@@ -130,6 +130,7 @@
 /* colors */
 @layer base {
   :root {
+    --font-serif: "Noto Serif KR", Georgia, "Times New Roman", serif;
     --gray-50: #fafaf9;
     --gray-75: #f5f5f4;
     --gray-100: #f4f4f5;
