@@ -248,6 +248,14 @@ HTTP 관련 용어, 헤더, 상태 코드 등에 MDN 문서 링크를 추가한�
 요청 헤더의 `If-Modified-Since`에 이전에 받았던 수정 시간이 담겨 있어요.
 ```
 
+### 이미지 용량 최적화
+
+새 이미지를 `public/images/`에 추가한 뒤 아래 명령을 실행한다. 폭 1400px를 넘는 webp를 줄이고, 1MB를 넘는 GIF를 animated webp로 바꾼다. GIF가 변환되면 본문의 이미지 경로도 함께 바꾼다.
+
+```bash
+node scripts/optimize-images.mjs public/images/포스트-이름
+```
+
 ### Mermaid 다이어그램
 
 Mermaid는 여러 단계의 흐름이나 주체 간 관계를 글보다 빠르게 이해할 수 있을 때만 사용한다. 다이어그램을 넣는 것보다 **실제 본문 너비에서 글자가 읽히는지**가 우선이다.

@@ -1,7 +1,9 @@
 ---
-import fs from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { Image } from 'astro:assets'
-import { getPlaiceholder } from 'plaiceholder'
+import sharp from 'sharp'
+
+import { getPlaceholderColor } from '@/lib/image-placeholder'
 
 type Props = {
   src: string
@@ -14,40 +16,18 @@ const { src, alt, priority } = Astro.props
 
 const isValidCaption = alt && Number.isInteger(+alt[0]) === false
 
-const getImageBuffer = async (src: string) => {
-  const isExternalImage = src.startsWith('https')
-
-  if (isExternalImage) {
-    const res = await fetch(src)
-    return Buffer.from(await res.arrayBuffer())
-  }
-
-  if (src.startsWith('/')) {
-    src = src.slice(1)
-  }
-
-  const localSrc = `public/${src}`
-  const file = await fs.readFile(localSrc)
-  return Buffer.from(file)
-}
-
-const imageBuffer = await getImageBuffer(src)
-const {
-  metadata: { width, height },
-  css,
-} = await getPlaiceholder(imageBuffer)
+const image = await readFile(`public${src}`)
+const { width, height } = await sharp(image).metadata()
+const backgroundColor = await getPlaceholderColor(image)
 ---
 
 <figure>
-  <div class="relative block overflow-hidden">
-    <div style={css} class="absolute inset-0 -z-10 blur-2xl filter"></div>
+  <div class="block overflow-hidden" style={{ backgroundColor }}>
     <Image
       src={src}
       alt={alt}
       width={width}
       height={height}
-      format="webp"
-      quality={80}
       priority={priority !== undefined}
     />
   </div>
