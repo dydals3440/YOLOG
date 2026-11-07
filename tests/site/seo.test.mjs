@@ -245,15 +245,13 @@ describe("배포된 페이지의 SEO", () => {
 
   it("기존 sitemap.xml 주소는 공식 인덱스로 영구 리디렉션한다", async () => {
     // Given
-    const configFile = new URL("../../.vercel/output/config.json", import.meta.url);
+    const configFile = new URL("../../vercel.json", import.meta.url);
 
     // When
-    const deployment = JSON.parse(await readFile(configFile, "utf8"));
-    const redirect = deployment.routes.find(
-      (route) =>
-        route.headers?.Location === "/sitemap-index.xml" &&
-        [301, 308].includes(route.status) &&
-        new RegExp(route.src).test("/sitemap.xml"),
+    const { redirects } = JSON.parse(await readFile(configFile, "utf8"));
+    const redirect = redirects.find(
+      ({ source, destination, statusCode }) =>
+        source === "/sitemap.xml" && destination === "/sitemap-index.xml" && statusCode === 301,
     );
 
     // Then

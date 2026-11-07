@@ -4,8 +4,8 @@ import { load } from "cheerio";
 
 export { SITE_URL } from "../../src/lib/config/app.ts";
 
-// Vercel에 실제 업로드되는 결과를 검사한다.
-const staticDir = new URL("../../.vercel/output/static/", import.meta.url);
+// Vercel에 실제 배포되는 결과를 검사한다.
+const staticDir = new URL("../../dist/", import.meta.url);
 
 export function readArtifact(file) {
   return readFile(new URL(file, staticDir), "utf8");
