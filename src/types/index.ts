@@ -7,7 +7,6 @@ export type {
   BaseLayoutProps,
   BlogCardProps,
   CategoryListProps,
-  GoogleAdsenseProps,
   PaginationProps,
   PostImageProps,
   PostLayoutProps,

@@ -61,9 +61,3 @@ export interface PostImageProps {
   height?: number;
   loading?: "lazy" | "eager";
 }
-
-// GoogleAdsense Props
-export interface GoogleAdsenseProps {
-  slot: string;
-  className?: string;
-}
