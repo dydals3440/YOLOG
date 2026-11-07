@@ -1,10 +1,12 @@
 ---
+import { PUBLIC_GA_ID } from 'astro:env/client'
+
 import { isLiveBuild } from '@/lib/analytics-config'
 import { SITE_URL } from '@/lib/config'
 
 interface Props { contentGroup?: string }
 const { contentGroup = '사이트' } = Astro.props
-const gaId = import.meta.env.PUBLIC_GA_ID?.trim()
+const gaId = PUBLIC_GA_ID?.trim()
 const enabled = isLiveBuild && /^G-[A-Z0-9]+$/.test(gaId ?? '') && gaId !== 'G-XXXXXXXXXX'
 const hostname = new URL(SITE_URL).hostname
 ---

@@ -48,7 +48,6 @@ export async function buildBlogListingPaths() {
           categories: createCategoryList(allPosts),
           category,
           categoryLabel: BLOG_CATEGORIES[key],
-          totalPostsInCategory: sorted.length,
         },
       });
     }

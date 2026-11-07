@@ -1,19 +1,21 @@
+import {
+  PUBLIC_GISCUS_CATEGORY,
+  PUBLIC_GISCUS_CATEGORY_ID,
+  PUBLIC_GISCUS_REPO,
+  PUBLIC_GISCUS_REPO_ID,
+} from "astro:env/client";
 import { useEffect } from "react";
 
 import { type GiscusTheme, giscusThemes } from "@/lib/utils/giscus";
 
-// 환경 변수에서 Giscus 설정 가져오기
-const GISCUS_CONFIG = {
-  repo: import.meta.env.PUBLIC_GISCUS_REPO,
-  repoId: import.meta.env.PUBLIC_GISCUS_REPO_ID,
-  category: import.meta.env.PUBLIC_GISCUS_CATEGORY,
-  categoryId: import.meta.env.PUBLIC_GISCUS_CATEGORY_ID,
-} as const;
-
 const GiscusComment = (props: React.HTMLAttributes<HTMLElement>) => {
   useEffect(() => {
-    // Giscus 설정 검증
-    if (!GISCUS_CONFIG.repo || !GISCUS_CONFIG.repoId) {
+    if (
+      !PUBLIC_GISCUS_REPO ||
+      !PUBLIC_GISCUS_REPO_ID ||
+      !PUBLIC_GISCUS_CATEGORY ||
+      !PUBLIC_GISCUS_CATEGORY_ID
+    ) {
       console.error("Giscus configuration is missing. Please check environment variables.");
       return;
     }
@@ -24,10 +26,10 @@ const GiscusComment = (props: React.HTMLAttributes<HTMLElement>) => {
 
     const giscusAttributes = {
       src: "https://giscus.app/client.js",
-      "data-repo": GISCUS_CONFIG.repo,
-      "data-repo-id": GISCUS_CONFIG.repoId,
-      "data-category": GISCUS_CONFIG.category,
-      "data-category-id": GISCUS_CONFIG.categoryId,
+      "data-repo": PUBLIC_GISCUS_REPO,
+      "data-repo-id": PUBLIC_GISCUS_REPO_ID,
+      "data-category": PUBLIC_GISCUS_CATEGORY,
+      "data-category-id": PUBLIC_GISCUS_CATEGORY_ID,
       "data-mapping": "pathname",
       "data-strict": "0",
       "data-reactions-enabled": "1",

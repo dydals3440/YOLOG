@@ -1,6 +1,6 @@
 import rss from "@astrojs/rss";
 import type { APIContext } from "astro";
-import { BLOG_CATEGORIES, type BlogCategory, WEBSITE_CONFIG } from "@/consts";
+import { BLOG_CATEGORIES, WEBSITE_CONFIG } from "@/consts";
 import { generateDescription, getPostCollection, resolveSlug } from "@/lib/mdx";
 
 export async function GET(context: APIContext) {
@@ -18,13 +18,11 @@ export async function GET(context: APIContext) {
       dc: "http://purl.org/dc/elements/1.1/",
     },
     items: posts.map((post) => {
-      const categoryLabel = post.data.category
-        ? BLOG_CATEGORIES[post.data.category as BlogCategory]
-        : undefined;
+      const categoryLabel = post.data.category ? BLOG_CATEGORIES[post.data.category] : undefined;
       return {
         title: post.data.title,
         link: `/post/${resolveSlug(post.id)}`,
-        pubDate: new Date(post.data.date),
+        pubDate: post.data.date,
         description: post.data.description || generateDescription(post.body ?? ""),
         categories: [...(categoryLabel ? [categoryLabel] : []), ...(post.data.tags ?? [])],
         customData: `<dc:creator>${WEBSITE_CONFIG.AUTHOR}</dc:creator>`,

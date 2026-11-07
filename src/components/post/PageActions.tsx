@@ -10,7 +10,7 @@ const PageActions = () => {
       </li>
       <li>
         <ActionButton
-          onClick={() => document.querySelector(".giscus")?.scrollIntoView({ behavior: "smooth" })}
+          onClick={() => document.querySelector("#giscus")?.scrollIntoView({ behavior: "smooth" })}
         >
           <MessageCircle size={18} strokeWidth={1.75} />
           <span className="sr-only">댓글으로 이동</span>
