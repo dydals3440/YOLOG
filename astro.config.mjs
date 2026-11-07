@@ -14,7 +14,7 @@ import {
 import tailwindcss from "@tailwindcss/vite";
 
 import { unified } from "@astrojs/markdown-remark";
-import { defineConfig, envField } from "astro/config";
+import { defineConfig, envField, fontProviders } from "astro/config";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeExternalLinks from "rehype-external-links";
 import rehypeSlug from "rehype-slug";
@@ -47,6 +47,30 @@ export default defineConfig({
       PUBLIC_GISCUS_CATEGORY_ID: publicEnv(),
     },
   },
+  fonts: [
+    {
+      name: "Pretendard Variable",
+      cssVariable: "--font-sans",
+      // 2MB 전체 파일 대신 페이지에 필요한 한글 조각만 받는다.
+      provider: fontProviders.npm(),
+      options: {
+        package: "pretendard",
+        version: "1.3.9",
+        file: "dist/web/variable/pretendardvariable-dynamic-subset.css",
+      },
+      weights: ["45 920"],
+      fallbacks: ["-apple-system", "BlinkMacSystemFont", "Apple SD Gothic Neo", "sans-serif"],
+    },
+    {
+      name: "Source Code Pro",
+      cssVariable: "--font-mono",
+      provider: fontProviders.fontsource(),
+      weights: [400, 500, 600, 700],
+      styles: ["normal"],
+      subsets: ["latin"],
+      fallbacks: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+    },
+  ],
   prefetch: {
     prefetchAll: true,
     defaultStrategy: "viewport",
