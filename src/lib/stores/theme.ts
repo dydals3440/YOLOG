@@ -1,8 +1,6 @@
 import { persistentAtom } from "@nanostores/persistent";
 import { onMount } from "nanostores";
 
-import { changeGiscusTheme } from "@/lib/utils/giscus";
-
 export const THEME_MAP = {
   light: "light",
   dark: "dark",
@@ -19,10 +17,8 @@ export const themeStore = persistentAtom<ThemeValue>(STORAGE_THEME_KEY, THEME_MA
 const initThemeStoreSubscribe = () => {
   const applyTheme = (theme: ThemeValue) => {
     if (theme === THEME_MAP.dark) {
-      changeGiscusTheme("dark");
       document.documentElement.classList.add("dark");
     } else if (theme === THEME_MAP.light) {
-      changeGiscusTheme("light");
       document.documentElement.classList.remove("dark");
     }
   };

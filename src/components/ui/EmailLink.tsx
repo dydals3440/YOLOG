@@ -1,10 +1,9 @@
 import { type MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import { Check, Copy, Mail, Send } from "lucide-react";
+import { toast } from "sonner";
 import IconLink from "@/components/ui/IconLink";
-import { EmailIcon } from "@/components/ui/Icons";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
-import { useToast } from "@/hooks/use-toast";
 import { CONTACT, TOAST } from "@/lib/config";
 import { copyToClipboard } from "@/lib/utils/share";
 
@@ -22,7 +21,6 @@ const EmailLink = () => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const firstItemRef = useRef<HTMLAnchorElement>(null);
-  const { toast } = useToast();
   const { isCopied, setIsCopied } = useCopyFeedback();
 
   useEffect(() => {
@@ -57,11 +55,11 @@ const EmailLink = () => {
     try {
       await copyToClipboard(CONTACT.EMAIL);
       setIsCopied(true);
-      toast({ title: TOAST.MESSAGES.EMAIL_COPIED, description: CONTACT.EMAIL });
+      toast(TOAST.MESSAGES.EMAIL_COPIED, { description: CONTACT.EMAIL });
     } catch {
-      toast({ title: TOAST.MESSAGES.EMAIL_COPY_FAILED, variant: "destructive" });
+      toast.error(TOAST.MESSAGES.EMAIL_COPY_FAILED);
     }
-  }, [toast, setIsCopied]);
+  }, [setIsCopied]);
 
   return (
     <div ref={containerRef} className="relative flex items-center">
@@ -73,7 +71,7 @@ const EmailLink = () => {
         aria-expanded={isOpen}
         onClick={handleTriggerClick}
       >
-        <EmailIcon width="1rem" height="1rem" />
+        <Mail size="1rem" strokeWidth={1.75} />
       </IconLink>
 
       {isOpen && (

@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "tw-animate-css";
 
 /* v3 darkMode: ["class"] equivalent */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -37,11 +36,6 @@
   --font-serif: var(--font-serif), sans-serif;
   --font-mono: var(--font-mono), monospace;
 
-  /* Keep Tailwind v4's default oklch palette (red/blue/green/yellow/...) —
-     our gray-* below overrides the built-in grays.
-     This lights up previously-dead chromatic classes (Toast destructive,
-     Pagination active, home links, ShareButton success tick, etc.). */
-
   /* gray palette (50–950) */
   --color-gray-50: var(--gray-50);
   --color-gray-75: var(--gray-75);
@@ -62,23 +56,8 @@
 
   /* shadcn-style HSL tokens */
   --color-border: var(--border);
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
   --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
   --color-primary: var(--heading);
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
 
   /* text colors (text-heading / text-body / text-second / text-third / text-disabled) */
   --color-heading: var(--heading);
@@ -95,11 +74,6 @@
   /* widths (w-page / w-content / max-w-page / max-w-content) */
   --spacing-page: var(--page-top);
   --spacing-half-page: var(--page-half-top);
-
-  /* border radius */
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
 }
 
 /* width/max-w tokens that should not be inlined (no external var refs at use site) */
@@ -107,25 +81,6 @@
   --container-page: 1024px;
   --container-content: 680px;
 
-  --animate-accordion-down: accordion-down 0.2s ease-out;
-  --animate-accordion-up: accordion-up 0.2s ease-out;
-
-  @keyframes accordion-down {
-    from {
-      height: 0;
-    }
-    to {
-      height: var(--radix-accordion-content-height);
-    }
-  }
-  @keyframes accordion-up {
-    from {
-      height: var(--radix-accordion-content-height);
-    }
-    to {
-      height: 0;
-    }
-  }
 }
 
 /* colors */
@@ -159,7 +114,6 @@
     --text-disabled: var(--gray-500);
 
     --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
 
     --code-highlighted: var(--selection);
     --progress-bar-color: oklch(0.7 0.15 250);
@@ -194,7 +148,6 @@
     --text-disabled: var(--gray-500);
 
     --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
 
     --code-highlighted: hsla(240, 5%, 84%, 0.06);
     --progress-bar-color: oklch(0.75 0.14 250);

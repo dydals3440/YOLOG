@@ -1,15 +1,14 @@
 import { useCallback } from "react";
+import { toast } from "sonner";
 import { trackShare } from "@/lib/analytics";
 
 import { Check, Link2 } from "lucide-react";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
-import { useToast } from "@/hooks/use-toast";
 import { DELAYS } from "@/lib/config";
 import { copyToClipboard } from "@/lib/utils/share";
 import ActionButton from "./ActionButton";
 
 const CopyLinkButton = () => {
-  const { toast } = useToast();
   const { isCopied, setIsCopied } = useCopyFeedback({
     delayMs: DELAYS.COPY_LINK_ICON_RESTORE_MS,
   });
@@ -20,18 +19,11 @@ const CopyLinkButton = () => {
       await copyToClipboard(canonical ?? window.location.href);
       trackShare("copy_link");
       setIsCopied(true);
-      toast({
-        title: "링크가 복사되었습니다",
-        description: "클립보드에 저장되었습니다",
-      });
+      toast("링크가 복사되었습니다", { description: "클립보드에 저장되었습니다" });
     } catch {
-      toast({
-        title: "복사 실패",
-        description: "링크 복사에 실패했습니다",
-        variant: "destructive",
-      });
+      toast.error("복사 실패", { description: "링크 복사에 실패했습니다" });
     }
-  }, [toast, setIsCopied]);
+  }, [setIsCopied]);
 
   return (
     <ActionButton onClick={handleCopyLink}>

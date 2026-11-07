@@ -45,19 +45,3 @@ export interface PostNavigationProps {
   prevPost?: CollectionEntry<"post">;
   nextPost?: CollectionEntry<"post">;
 }
-
-// PostLayout Props
-export interface PostLayoutProps {
-  post: CollectionEntry<"post">;
-  prevPost?: CollectionEntry<"post">;
-  nextPost?: CollectionEntry<"post">;
-}
-
-// PostImage Props
-export interface PostImageProps {
-  src: string;
-  alt: string;
-  width?: number;
-  height?: number;
-  loading?: "lazy" | "eager";
-}

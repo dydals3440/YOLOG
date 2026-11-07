@@ -18,7 +18,12 @@
     let blurTimeoutId: ReturnType<typeof setTimeout> | undefined
 
     copyButton.addEventListener('click', async () => {
-      await navigator.clipboard.writeText(code)
+      try {
+        await navigator.clipboard.writeText(code)
+      } catch {
+        // 권한이 거부되면 복사 완료 표시를 하지 않는다.
+        return
+      }
       copyButton.classList.add('copied')
 
       clearTimeout(timeoutId)

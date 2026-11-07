@@ -1,5 +1,4 @@
 import { type CollectionEntry, getCollection } from "astro:content";
-import type { PostInfoModel } from "@/types";
 import { sortPostsByDate } from "./blog-utils";
 
 export const isBlogPost = (post: { id: string }) => {
@@ -14,21 +13,6 @@ export const getPostCollection = async (): Promise<CollectionEntry<"post">[]> =>
 export const resolveSlug = (slug: string) => {
   const [_type, ...slugList] = slug.split("/");
   return slugList.join("/");
-};
-
-export const getPostInfoList = async (): Promise<PostInfoModel[]> => {
-  const posts = await getPostCollection();
-
-  return posts
-    .filter((post) => isBlogPost(post))
-    .map<PostInfoModel>((post) => ({
-      title: post.data.title,
-      description: post.data.description,
-      href: `/post/${resolveSlug(post.id)}`,
-      date: post.data.date,
-      updatedDate: post.data.updatedDate,
-      category: post.data.category,
-    }));
 };
 
 export const generateDescription = (content: string) => {
