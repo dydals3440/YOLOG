@@ -1,30 +1,12 @@
-import {
-  Toast,
-  ToastClose,
-  ToastDescription,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
-} from "@/components/ui/Toast";
-import { useToast } from "@/hooks/use-toast";
+import { Toaster as Sonner } from "sonner";
+
+import { useIsDark } from "@/hooks/use-is-dark";
 import { TOAST } from "@/lib/config";
 
 export function Toaster() {
-  const { toasts } = useToast();
+  const isDark = useIsDark();
 
   return (
-    <ToastProvider duration={TOAST.DURATION_MS}>
-      {toasts.map(({ id, title, description, action, ...props }) => (
-        <Toast key={id} {...props}>
-          <div className="grid gap-1">
-            {title && <ToastTitle>{title}</ToastTitle>}
-            {description && <ToastDescription>{description}</ToastDescription>}
-          </div>
-          {action}
-          <ToastClose />
-        </Toast>
-      ))}
-      <ToastViewport />
-    </ToastProvider>
+    <Sonner position="top-center" theme={isDark ? "dark" : "light"} duration={TOAST.DURATION_MS} />
   );
 }

@@ -13,11 +13,10 @@ import {
 } from "@shikijs/transformers";
 import tailwindcss from "@tailwindcss/vite";
 
-import { unified } from "@astrojs/markdown-remark";
+import { rehypeHeadingIds, unified } from "@astrojs/markdown-remark";
 import { defineConfig, envField, fontProviders } from "astro/config";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeExternalLinks from "rehype-external-links";
-import rehypeSlug from "rehype-slug";
 import remarkBreaks from "remark-breaks";
 import remarkDirective from "remark-directive";
 
@@ -99,7 +98,7 @@ export default defineConfig({
     processor: unified({
       remarkPlugins: [remarkBreaks, remarkDirective, customCallout, remarkPrioritizeFirstImage],
       rehypePlugins: [
-        rehypeSlug,
+        rehypeHeadingIds,
         [
           rehypeAutolinkHeadings,
           {

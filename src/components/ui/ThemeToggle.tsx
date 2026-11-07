@@ -1,6 +1,5 @@
 import { useStore } from "@nanostores/react";
-import { Button } from "@/components/ui/Button";
-import { MoonIcon, SunIcon } from "@/components/ui/Icons";
+import { Moon, Sun } from "lucide-react";
 import { THEME_MAP, type ThemeKey, themeStore } from "@/lib/stores/theme";
 
 const ThemeToggle = () => {
@@ -15,11 +14,21 @@ const ThemeToggle = () => {
   };
 
   return (
-    <Button onClick={toggleTheme} variant="ghost" size="icon">
-      <SunIcon className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-      <MoonIcon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+    <button
+      type="button"
+      onClick={toggleTheme}
+      className="inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-selection hover:text-heading focus-visible:ring-1 focus-visible:ring-gray-200 focus-visible:outline-none"
+    >
+      <Sun
+        strokeWidth={1.75}
+        className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0"
+      />
+      <Moon
+        strokeWidth={1.75}
+        className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100"
+      />
       <span className="sr-only">테마 변경</span>
-    </Button>
+    </button>
   );
 };
 

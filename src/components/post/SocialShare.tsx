@@ -1,15 +1,9 @@
+import { CopyCheck, Link, Share } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { trackShare } from "@/lib/analytics";
-import {
-  CopyCheckIcon,
-  FacebookIcon,
-  LinkedinIcon,
-  LinkIcon,
-  ShareIcon,
-  TwitterXIcon,
-} from "@/components/ui/Icons";
+import { FacebookIcon, LinkedinIcon, TwitterXIcon } from "@/components/ui/Icons";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
-import { useToast } from "@/hooks/use-toast";
 import {
   copyToClipboard,
   createShareUrls,
@@ -50,7 +44,6 @@ const SHARE_OPTIONS: ShareOption[] = [
 ];
 
 const SocialShare = ({ title, url }: SocialShareProps) => {
-  const { toast } = useToast();
   const [isSharing, setIsSharing] = useState(false);
   const { isCopied, setIsCopied } = useCopyFeedback();
 
@@ -62,16 +55,9 @@ const SocialShare = ({ title, url }: SocialShareProps) => {
       await copyToClipboard(url);
       setIsCopied(true);
       trackShare("copy_link");
-      toast({
-        title: "링크가 복사되었습니다",
-        description: "클립보드에 저장되었습니다",
-      });
+      toast("링크가 복사되었습니다", { description: "클립보드에 저장되었습니다" });
     } catch {
-      toast({
-        title: "복사 실패",
-        description: "링크 복사에 실패했습니다",
-        variant: "destructive",
-      });
+      toast.error("복사 실패", { description: "링크 복사에 실패했습니다" });
     } finally {
       setIsSharing(false);
     }
@@ -89,7 +75,7 @@ const SocialShare = ({ title, url }: SocialShareProps) => {
             title="공유하기"
             ariaLabel="네이티브 공유"
           >
-            <ShareIcon />
+            <Share size="1em" strokeWidth={1.75} />
           </ShareButton>
           <ShareDivider />
         </>
@@ -122,7 +108,11 @@ const SocialShare = ({ title, url }: SocialShareProps) => {
         title={isCopied ? "복사됨!" : "링크 복사"}
         ariaLabel={isCopied ? "복사됨" : "링크 복사"}
       >
-        {isCopied ? <CopyCheckIcon /> : <LinkIcon />}
+        {isCopied ? (
+          <CopyCheck size="1em" strokeWidth={1.75} />
+        ) : (
+          <Link size="1em" strokeWidth={1.75} />
+        )}
       </ShareButton>
     </ShareContainer>
   );
