@@ -6,9 +6,11 @@ import { getPlaiceholder } from 'plaiceholder'
 type Props = {
   src: string
   alt: string
+  // MDX는 불린 속성을 빈 문자열로 넘기므로 값이 아니라 존재 여부로 판단한다.
+  priority?: string
 }
 
-const { src, alt } = Astro.props
+const { src, alt, priority } = Astro.props
 
 const isValidCaption = alt && Number.isInteger(+alt[0]) === false
 
@@ -46,6 +48,7 @@ const {
       height={height}
       format="webp"
       quality={80}
+      priority={priority !== undefined}
     />
   </div>
   {isValidCaption && <figcaption class="w-full text-center">{alt}</figcaption>}

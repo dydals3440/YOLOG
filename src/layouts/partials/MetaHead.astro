@@ -78,9 +78,6 @@ const webSiteSchema = {
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=1" />
 <meta name="generator" content={Astro.generator} />
 
-<!-- Sitemap -->
-<link rel="sitemap" href="/sitemap-index.xml" />
-
 <!-- RSS Auto-Discovery -->
 <link rel="alternate" type="application/rss+xml" title="YOLOG RSS Feed" href="/rss.xml" />
 
@@ -94,9 +91,7 @@ const webSiteSchema = {
 <!-- Primary Meta Tags -->
 <meta name="robots" content={noindex ? 'noindex, follow' : 'index, follow, max-image-preview:large'} />
 <title>{formattedTitle}</title>
-<meta name="title" content={formattedTitle} />
 <meta name="description" content={description} />
-{keywords && keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
 
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content={ogType} />

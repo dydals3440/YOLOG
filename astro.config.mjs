@@ -23,6 +23,7 @@ import remarkDirective from "remark-directive";
 
 import { SITE_URL } from "./src/lib/config/app";
 
+import { remarkPrioritizeFirstImage } from "./plugins/remark-prioritize-first-image";
 import { transformerFragment } from "./plugins/transformer-fragment";
 import { customCallout, remarkMermaid } from "./src/lib/directives";
 
@@ -73,7 +74,7 @@ export default defineConfig({
   ],
   prefetch: {
     prefetchAll: true,
-    defaultStrategy: "viewport",
+    defaultStrategy: "hover",
   },
   markdown: {
     syntaxHighlight: "shiki",
@@ -96,7 +97,13 @@ export default defineConfig({
       ],
     },
     processor: unified({
-      remarkPlugins: [remarkBreaks, remarkDirective, customCallout, remarkMermaid],
+      remarkPlugins: [
+        remarkBreaks,
+        remarkDirective,
+        customCallout,
+        remarkMermaid,
+        remarkPrioritizeFirstImage,
+      ],
       rehypePlugins: [
         rehypeSlug,
         [

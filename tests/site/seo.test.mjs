@@ -259,6 +259,24 @@ describe("배포된 페이지의 SEO", () => {
     }
   });
 
+  it("글의 앞부분 이미지만 우선 로드한다", () => {
+    const prioritizedCounts = articles.map(({ file, $ }) => {
+      // When
+      const prioritized = $('.mdx img[fetchpriority="high"]');
+
+      // Then
+      assert(prioritized.length <= 1, `${file}: 우선 로드 이미지는 한 장이어야 합니다`);
+      assert.equal(
+        prioritized.attr("loading") ?? "eager",
+        "eager",
+        `${file}: lazy와 함께 쓸 수 없습니다`,
+      );
+      return prioritized.length;
+    });
+
+    assert(prioritizedCounts.includes(1), "우선 로드 이미지가 있는 글이 없습니다");
+  });
+
   it("플레이스홀더 광고 슬롯을 내보내지 않는다", () => {
     for (const { file, $ } of pages) {
       assert.equal($("ins.adsbygoogle").length, 0, `${file}: 수동 광고 슬롯이 남아 있습니다`);
