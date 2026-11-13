@@ -85,7 +85,9 @@ Vercel Git 연동으로 `main`은 운영, PR은 미리보기로 배포해요. �
 ## CI
 
 `.github/workflows/ci.yml`이 PR과 `main`에서 `bun ci` → `bun audit` → `check` → `test` → `build` → `test:site`
-→ (PR) Lighthouse를 실행해요. 액션은 모두 커밋 SHA로 고정하고, Dependabot이 주 1회 배포된 지 7일 지난 버전으로 올려요.
+→ (PR) Lighthouse를 실행해요. 스택 PR은 아래층 변경이 모두 들어 있는 **맨 위 PR에서만** 검증하고,
+Vercel 미리보기도 `vercel.json`의 `ignoreCommand`로 맨 위 브랜치만 빌드해요.
+액션은 모두 커밋 SHA로 고정하고, Dependabot이 주 1회 배포된 지 7일 지난 버전으로 올려요.
 `.github` 변경은 zizmor로 워크플로 보안을 검사해요. 저장소 설정에서
 "Require actions to be pinned to a full-length commit SHA"를 켜 두면 고정을 강제할 수 있어요.
 
