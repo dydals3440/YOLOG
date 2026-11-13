@@ -12,7 +12,7 @@ import ThemeToggle from "./ThemeToggle.astro";
 >
   <div class="container mx-auto flex h-full max-w-content items-center justify-between">
     <nav class="h-full min-w-0" aria-label="사이트">
-      <ul class="flex h-full items-center gap-8 whitespace-nowrap sm:gap-3">
+      <ul class="flex h-full items-center gap-8 whitespace-nowrap max-sm:gap-3">
         <li>
           <NavLink href="/" class="text-base font-semibold tracking-tight">
             yolog
@@ -40,13 +40,6 @@ import ThemeToggle from "./ThemeToggle.astro";
 </header>
 
 <style>
-  @reference "@/styles/global.css";
-
-  .blur-layer {
-    @apply pointer-events-none fixed inset-0 z-10 h-(--header-height) bg-background/70 backdrop-blur-(--blur-size);
-    --blur-size: 10px;
-  }
-
   :global(.scrolled-down) [data-site-header] {
     transform: translateY(calc(var(--header-height) * -1));
   }

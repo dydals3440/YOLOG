@@ -8,16 +8,21 @@ interface Props {
   priority?: string | boolean | undefined;
 }
 
-// 본문 최대 폭(--container-content)이다. 이보다 넓게 보여 주지 않으므로 srcset·sizes의 기준으로 쓴다.
+// 본문 최대 폭(--container-content)과, 세로로 긴 캡처가 한 화면 안에 들어오는 최대 높이
 const CONTENT_MAX_WIDTH = 680;
+const MAX_DISPLAY_HEIGHT = 720;
 
 const { src, alt, priority } = Astro.props;
-const width = Math.min(src.width, CONTENT_MAX_WIDTH);
+const width = Math.min(
+  src.width,
+  CONTENT_MAX_WIDTH,
+  Math.round((MAX_DISPLAY_HEIGHT * src.width) / src.height),
+);
 const isPriority = priority !== undefined && priority !== false;
 const hasCaption = alt !== "" && !/^\d/.test(alt);
 ---
 
-<figure>
+<figure class="post-image">
   <div class="block overflow-hidden">
     <Image src={src} alt={alt} width={width} priority={isPriority} />
   </div>

@@ -198,7 +198,7 @@
     margin-inline: auto;
   }
 }
-@media (max-width: 600px) {
+@media (width <= 37.5rem) {
   .ma-demo {
     padding: 16px 10px;
   }

@@ -56,6 +56,9 @@ export default defineConfig({
       },
       weights: ["45 920"],
       fallbacks: ["-apple-system", "BlinkMacSystemFont", "Apple SD Gothic Neo", "sans-serif"],
+      // 분할 글꼴의 첫 조각(전각 기호)으로 계산한 보정값(size-adjust 224%)이 영문을 키워
+      // 글꼴이 바뀔 때 본문이 크게 밀렸다. 보정 없이 시스템 한글 글꼴로 대체한다.
+      optimizedFallbacks: false,
     },
     {
       name: "Source Code Pro",

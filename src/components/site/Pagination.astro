@@ -53,11 +53,11 @@ const toPageUrl = (pageNumber: number) =>
     width: 1.75rem;
     height: 2.5rem;
     font-size: 0.875rem;
-    color: var(--text-disabled);
+    color: var(--text-third);
     user-select: none;
   }
 
-  @media (max-width: 640px) {
+  @media (width <= 40rem) {
     .page-ellipsis {
       width: 1.25rem;
       height: 2.25rem;

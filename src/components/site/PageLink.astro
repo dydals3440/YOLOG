@@ -60,12 +60,12 @@ const { href, label, current = false, class: className, ...props } = Astro.props
   }
 
   .page-link.is-disabled {
-    color: var(--text-disabled);
+    color: var(--text-third);
     cursor: not-allowed;
     opacity: 0.4;
   }
 
-  @media (max-width: 640px) {
+  @media (width <= 40rem) {
     .page-link {
       min-width: 2.25rem;
       height: 2.25rem;
