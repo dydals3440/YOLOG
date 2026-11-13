@@ -1,0 +1,23 @@
+name: IndexNow
+
+# Vercel 운영 배포가 끝나면 사이트맵에서 오늘 바뀐 글을 IndexNow(Bing·Naver 등)에 알린다.
+on:
+  deployment_status:
+
+permissions: {}
+
+jobs:
+  submit:
+    name: Submit updated URLs
+    if: github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: bojieyang/indexnow-action@38ddfbd93579a8a44c0dee662121bf9d51098f71 # v3.0.0
+        with:
+          sitemap-location: https://www.yolog.co.kr/sitemap-index.xml
+          endpoint: api.indexnow.org
+          # IndexNow 키는 사이트 루트(/<key>.txt)에 공개되는 소유 확인 값이라 비밀이 아니다.
+          key: b2ad79a9b95543c38152e6c679b61bfc
+          since: 1
+          since-unit: day

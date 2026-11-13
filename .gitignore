@@ -44,3 +44,6 @@ docs/
 
 # local agent workflow state
 .superpowers/
+
+# lighthouse ci
+.lighthouseci/
