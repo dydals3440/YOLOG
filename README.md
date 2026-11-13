@@ -6,7 +6,7 @@
 
 ```sh
 bun ci                    # bun.lock 그대로 설치
-cp .env.example .env      # 새 환경에서만 실행해요. 기존 .env를 덮어쓰지 않아요.
+[ -f .env ] || cp .env.example .env   # 이미 있는 .env는 덮어쓰지 않아요.
 bun run dev
 ```
 
