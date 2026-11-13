@@ -31,7 +31,7 @@
 .mdx figure.moyeo-demo {
   box-shadow: none;
 }
-.dark .moyeo-demo {
+[data-theme="dark"] .moyeo-demo {
   --mr-text: #e2e8f0;
   --mr-muted: #aab7c7;
   --mr-border: #404c5b;

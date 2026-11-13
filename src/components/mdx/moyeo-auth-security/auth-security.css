@@ -23,7 +23,7 @@
   line-height: 1.65;
   font-family: system-ui, -apple-system, sans-serif;
 }
-.dark .ma-demo {
+[data-theme="dark"] .ma-demo {
   --mr-text: #e2e8f0;
   --mr-muted: #aab7c7;
   --mr-border: #404c5b;
@@ -218,7 +218,7 @@
   margin: 1.75rem 0 2.25rem;
   overflow: hidden;
 }
-.dark .mdx details.ma-detail {
+[data-theme="dark"] .mdx details.ma-detail {
   border-color: #404c5b;
 }
 .mdx details.ma-detail > summary {

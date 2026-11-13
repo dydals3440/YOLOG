@@ -10,7 +10,7 @@ body:has(.mf-code-example) h1 {
   overflow-wrap: break-word;
   text-wrap: pretty;
 }
-.dark .mf-code-example {
+[data-theme="dark"] .mf-code-example {
   --code-highlighted: rgb(96 165 250 / 18%);
 }
 .mf-code-example pre.astro-code span.highlighted.error {
@@ -19,7 +19,7 @@ body:has(.mf-code-example) h1 {
 .mf-code-example pre.astro-code span.highlighted.warning {
   background-color: var(--vp-code-line-warning-color) !important;
 }
-html.dark .mf-code-example pre.astro-code span.highlighted span {
+[data-theme="dark"] .mf-code-example pre.astro-code span.highlighted span {
   background-color: transparent !important;
 }
 
@@ -48,7 +48,7 @@ html.dark .mf-code-example pre.astro-code span.highlighted span {
   line-height: 1.65;
   font-family: system-ui, -apple-system, sans-serif;
 }
-.dark .mf-demo {
+[data-theme="dark"] .mf-demo {
   --mr-text: #e2e8f0;
   --mr-muted: #aab7c7;
   --mr-border: #404c5b;

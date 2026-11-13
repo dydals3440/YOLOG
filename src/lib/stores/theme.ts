@@ -9,47 +9,40 @@ export const THEME_MAP = {
 
 export type ThemeKey = keyof typeof THEME_MAP;
 export type ThemeValue = (typeof THEME_MAP)[ThemeKey];
+export type ResolvedTheme = Exclude<ThemeValue, undefined>;
 
-export const STORAGE_THEME_KEY = "theme" as const;
+export const STORAGE_THEME_KEY = "theme";
 
 export const themeStore = persistentAtom<ThemeValue>(STORAGE_THEME_KEY, THEME_MAP.system);
 
-const applyTheme = (theme: ThemeValue) => {
-  if (theme === THEME_MAP.dark) {
-    document.documentElement.classList.add("dark");
-  } else if (theme === THEME_MAP.light) {
-    document.documentElement.classList.remove("dark");
-  }
+const SYSTEM_DARK_QUERY = "(prefers-color-scheme: dark)";
+
+const applyTheme = (theme: ResolvedTheme) => {
+  document.documentElement.dataset.theme = theme;
 };
 
-const initThemeStoreSubscribe = () => {
-  let mediaQuery: MediaQueryList | null = null;
-  let mediaQueryHandler: ((event: MediaQueryListEvent | MediaQueryList) => void) | null = null;
+const resolveSystemTheme = (query: MediaQueryList | MediaQueryListEvent): ResolvedTheme =>
+  query.matches ? THEME_MAP.dark : THEME_MAP.light;
 
-  themeStore.subscribe((theme) => {
-    // 이전 리스너 정리
-    if (mediaQuery && mediaQueryHandler) {
-      mediaQuery.removeEventListener("change", mediaQueryHandler);
-      mediaQueryHandler = null;
+const subscribeTheme = () => {
+  const systemQuery = window.matchMedia(SYSTEM_DARK_QUERY);
+  const followSystemTheme = (event: MediaQueryListEvent) => {
+    if (themeStore.get() === THEME_MAP.system) {
+      applyTheme(resolveSystemTheme(event));
     }
+  };
 
-    if (theme !== THEME_MAP.system) {
-      applyTheme(theme);
-      mediaQuery = null;
-      return;
-    }
-
-    // 시스템 테마 모드
-    mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    mediaQueryHandler = (event: MediaQueryListEvent | MediaQueryList) => {
-      applyTheme(event.matches ? THEME_MAP.dark : THEME_MAP.light);
-    };
-
-    mediaQuery.addEventListener("change", mediaQueryHandler);
-    mediaQueryHandler(mediaQuery);
+  systemQuery.addEventListener("change", followSystemTheme);
+  const unsubscribe = themeStore.subscribe((theme) => {
+    applyTheme(theme ?? resolveSystemTheme(systemQuery));
   });
+
+  return () => {
+    systemQuery.removeEventListener("change", followSystemTheme);
+    unsubscribe();
+  };
 };
 
 if (typeof window !== "undefined") {
-  onMount(themeStore, initThemeStoreSubscribe);
+  onMount(themeStore, subscribeTheme);
 }

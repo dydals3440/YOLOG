@@ -29,7 +29,7 @@
   --vp-c-red-soft: rgba(244, 63, 94, 0.14);
 }
 
-.dark {
+[data-theme="dark"] {
   --vp-c-gray-1: #515c67;
   --vp-c-gray-2: #414853;
   --vp-c-gray-3: #32363f;
@@ -64,7 +64,7 @@
   color: var(--text-second);
 }
 
-.dark .mdx {
+[data-theme="dark"] .mdx {
   font-weight: 380;
 }
 
@@ -183,7 +183,7 @@
   border-radius: 0 8px 8px 0;
 }
 
-.dark .mdx blockquote {
+[data-theme="dark"] .mdx blockquote {
   background: color-mix(in oklch, var(--gray-100) 55%, transparent);
   border-left-color: var(--gray-500);
 }
@@ -339,7 +339,7 @@
     0 4px 12px color-mix(in oklch, black 4%, transparent);
 }
 
-.dark .mdx figure {
+[data-theme="dark"] .mdx figure {
   box-shadow:
     0 1px 2px color-mix(in oklch, black 40%, transparent),
     0 8px 24px color-mix(in oklch, black 25%, transparent);
@@ -393,7 +393,7 @@
   --astro-code-token-link: #171717;
 }
 
-.dark {
+[data-theme="dark"] {
   --astro-code-token-constant: #ededed;
   --astro-code-token-string: #a0a0a0;
   --astro-code-token-comment: #707070;
@@ -450,7 +450,7 @@
   --highlight-opacity: 40%;
 }
 
-.dark .mdx {
+[data-theme="dark"] .mdx {
   --highlight-opacity: 55%;
 }
 
@@ -515,7 +515,7 @@ pre.astro-code {
     0 4px 12px color-mix(in oklch, black 4%, transparent);
 }
 
-.dark pre.astro-code {
+[data-theme="dark"] pre.astro-code {
   border-color: color-mix(in oklch, white 8%, transparent);
   box-shadow:
     0 1px 2px color-mix(in oklch, black 40%, transparent),
@@ -526,14 +526,14 @@ pre.astro-code code {
   position: relative;
 }
 
-html.dark pre.astro-code,
-html.dark pre.astro-code span {
+[data-theme="dark"] pre.astro-code,
+[data-theme="dark"] pre.astro-code span {
   color: var(--shiki-dark) !important;
   background-color: var(--shiki-dark-bg) !important;
 }
 
-html.dark pre.astro-code span.highlighted,
-html.dark pre.astro-code span.highlighted span {
+[data-theme="dark"] pre.astro-code span.highlighted,
+[data-theme="dark"] pre.astro-code span.highlighted span {
   background-color: var(--code-highlighted) !important;
 }
 
@@ -576,15 +576,15 @@ html.dark pre.astro-code span.highlighted span {
   content: "+";
 }
 
-html.dark pre.astro-code .diff.add {
+[data-theme="dark"] pre.astro-code .diff.add {
   background-color: var(--vp-code-line-diff-add-color) !important;
 }
 
-html.dark pre.astro-code .diff.remove {
+[data-theme="dark"] pre.astro-code .diff.remove {
   background-color: var(--vp-code-line-diff-remove-color) !important;
 }
 
-html.dark pre.astro-code .diff span {
+[data-theme="dark"] pre.astro-code .diff span {
   background-color: transparent !important;
 }
 
@@ -659,7 +659,7 @@ html.dark pre.astro-code .diff span {
   --copied-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1em' height='1em' viewBox='0 0 24 24'%3E%3Cpath fill='%238f8f8f' d='m9.55 15.15l8.475-8.475q.3-.3.7-.3t.7.3t.3.713t-.3.712l-9.175 9.2q-.3.3-.7.3t-.7-.3L4.55 13q-.3-.3-.288-.712t.313-.713t.713-.3t.712.3z'/%3E%3C/svg%3E");
 }
 
-.dark {
+[data-theme="dark"] {
   --copy-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1em' height='1em' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%23707070' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' color='%23888888'%3E%3Cpath d='M9 15c0-2.828 0-4.243.879-5.121C10.757 9 12.172 9 15 9h1c2.828 0 4.243 0 5.121.879C22 10.757 22 12.172 22 15v1c0 2.828 0 4.243-.879 5.121C20.243 22 18.828 22 16 22h-1c-2.828 0-4.243 0-5.121-.879C9 20.243 9 18.828 9 16z'/%3E%3Cpath d='M17 9c-.003-2.957-.047-4.489-.908-5.538a4 4 0 0 0-.554-.554C14.43 2 12.788 2 9.5 2c-3.287 0-4.931 0-6.038.908a4 4 0 0 0-.554.554C2 4.57 2 6.212 2 9.5c0 3.287 0 4.931.908 6.038a4 4 0 0 0 .554.554c1.05.86 2.58.906 5.538.908'/%3E%3C/g%3E%3C/svg%3E");
   --copied-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1em' height='1em' viewBox='0 0 24 24'%3E%3Cpath fill='%23707070' d='m9.55 15.15l8.475-8.475q.3-.3.7-.3t.7.3t.3.713t-.3.712l-9.175 9.2q-.3.3-.7.3t-.7-.3L4.55 13q-.3-.3-.288-.712t.313-.713t.713-.3t.712.3z'/%3E%3C/svg%3E");
 }
@@ -804,7 +804,7 @@ html.dark pre.astro-code .diff span {
 .mdx .callout.info {
   --callout-rgb: 8, 109, 221;
 }
-.dark .mdx .callout.info {
+[data-theme="dark"] .mdx .callout.info {
   --callout-rgb: 24, 150, 251;
 }
 .mdx .callout.warning {
