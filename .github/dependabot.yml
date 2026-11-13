@@ -1,0 +1,32 @@
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Asia/Seoul
+    # 배포 직후 회수되는 악성·결함 릴리스를 피하려고 7일 지난 버전만 올린다(zizmor dependabot-cooldown).
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
+
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Asia/Seoul
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+    groups:
+      dependencies:
+        patterns: ["*"]
+    commit-message:
+      prefix: chore

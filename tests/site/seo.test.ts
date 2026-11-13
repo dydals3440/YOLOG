@@ -312,7 +312,7 @@ describe("배포된 페이지의 SEO", () => {
 });
 
 describe("배포 설정", () => {
-  it("기존 sitemap.xml 주소는 공식 인덱스로 영구 리디렉션한다", async () => {
+  it("기존 주소는 새 주소로 영구 리디렉션한다", async () => {
     // Given
     const VercelConfigSchema = z.object({
       redirects: z.array(
@@ -326,11 +326,17 @@ describe("배포 설정", () => {
     );
 
     // Then
-    expect(redirects).toContainEqual({
-      source: "/sitemap.xml",
-      destination: "/sitemap-index.xml",
-      statusCode: 301,
-    });
+    expect(redirects).toEqual(
+      expect.arrayContaining([
+        { source: "/sitemap.xml", destination: "/sitemap-index.xml", statusCode: 301 },
+        { source: "/blogs/page/:page", destination: "/blogs/:page", statusCode: 301 },
+        {
+          source: "/blogs/:category/page/:page",
+          destination: "/blogs/:category/:page",
+          statusCode: 301,
+        },
+      ]),
+    );
   });
 });
 
