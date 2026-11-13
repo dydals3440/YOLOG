@@ -321,6 +321,31 @@ describe("배포된 페이지의 SEO", () => {
 });
 
 describe("배포 설정", () => {
+  it("LLM용 마크다운 사본은 검색 색인에서 빼 HTML 글과 중복되지 않게 한다", async () => {
+    // Given
+    const VercelHeadersSchema = z.object({
+      headers: z.array(
+        z.object({
+          source: z.string(),
+          headers: z.array(z.object({ key: z.string(), value: z.string() })),
+        }),
+      ),
+    });
+
+    // When
+    const { headers } = VercelHeadersSchema.parse(
+      await Bun.file(new URL("../../vercel.json", import.meta.url)).json(),
+    );
+    const noindexSources = headers
+      .filter((rule) =>
+        rule.headers.some(({ key, value }) => key === "X-Robots-Tag" && value === "noindex"),
+      )
+      .map(({ source }) => source);
+
+    // Then
+    expect(noindexSources).toEqual(expect.arrayContaining(["/post/(.*)\\.md", "/llms-full.txt"]));
+  });
+
   it("기존 주소는 새 주소로 영구 리디렉션한다", async () => {
     // Given
     const VercelConfigSchema = z.object({
