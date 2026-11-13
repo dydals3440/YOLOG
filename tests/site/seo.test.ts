@@ -243,6 +243,15 @@ describe("배포된 페이지의 SEO", () => {
     expect(prioritizedCounts, "우선 로드 이미지가 있는 글이 없습니다").toContain(1);
   });
 
+  it("글 페이지의 h1은 글 제목 하나뿐이다", () => {
+    for (const { file, html } of articlePages) {
+      // Then
+      expect(queryAll(html, "h1").length, `${file}: 본문에 # 제목이 있습니다. ## 부터 쓰세요`).toBe(
+        1,
+      );
+    }
+  });
+
   it("목차는 본문의 모든 H2로 정확히 이동한다", () => {
     for (const { file, html } of articlePages) {
       // When
