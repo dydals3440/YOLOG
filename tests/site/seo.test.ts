@@ -9,6 +9,7 @@ import {
   readCanonical,
   readJsonLd,
   listArtifacts,
+  readArtifact,
   readMeta,
   readXmlArtifact,
   SITE_URL,
