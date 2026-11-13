@@ -1,0 +1,1316 @@
+---
+title: useContext는 상태관리를 위한 도구가 아닙니다.
+date: 2026-01-07
+updatedDate: 2026-01-07
+tags: [리액트, React, useContext, Hooks, 상태관리, State, Reducer]
+category: DEVELOPMENT
+image: "./thumbnail.webp"
+---
+
+# useContext는 상태관리를 위한 도구가 아닙니다.
+
+`React Context`를 사용하는 이유에서 대부분의 강의는 `Props Drilling` 문제를 해결하기 위한 방법 또는 **상태 관리**를 하는 도구로 많이 쓰인다.
+
+이번 글은, React Context는 단순히 Props Drilling과 같은 상태 관리를 해결하기 위한 도구로 쓰이는 것이 아니라는 것을 설명하며, **의존성 주입을 위한 도구**라는 점을 좀 더 강조하고 싶은 글이다.
+
+> 실제로 Props Drilling은 컴포넌트의 위계관계를 조정하거나, 컴포넌트를 합성하여 대부분의 케이스는 해결할 수 있다.
+
+---
+
+## Context는 Props Drilling을 해결하기 위한 도구가 아니다
+
+React에서 전역 상태, 상태 관리, Context 이야기를 하다 보면 항상 이런 질문을 마주치게 된다.
+
+> "Context로 다 해결하면 되지 않나요?"
+
+이 질문에 제대로 답하려면, **우리가 말하는 '상태'와 '상태 관리'가 무엇인지**부터 명확히 해야 한다.
+
+### 상태(State)란 무엇인가?
+
+먼저, 상태에 대한 가장 단순하면서도 중요한 정의에 대해 짚고 넘어가겠다.
+
+> 상태(State): Application의 동작을 설명하는 데이터
+
+보통 Application을 만들 때 아래 같은 내용들을 우리는 상태로 관리한다.
+
+1. 로그인 여부
+2. 폼 입력값
+3. 다크 모드
+4. 서버에서 받아온 데이터 등.
+
+하지만 여기서 중요한 점은, "상태가 있다"와 "상태를 관리한다"는 것은 다르다는 것이다.
+
+### 상태 관리(State Management)란 무엇인가?
+
+상태 관리란 단순히 값을 들고 있는 것이 아니다.
+
+> `상태 관리(State Management)`: 애플리케이션의 생명주기 동안 상태가 어떻게 생성되고, 변경되고, 전파되는지를 다루는 방식
+
+이를 조금 더 기술적으로 정리하면, 상태 관리 도구가 갖춰야 할 최소 요구사항은 다음 4가지다.
+
+```tsx
+// 1. 초기 값을 저장한다
+const [count, setCount] = useState(0);
+
+// 2. 현재 값을 읽을 수 있다
+console.log(count);
+
+// 3. 값을 변경할 수 있다
+setCount(1);
+
+// 4. 값이 변경되었음을 구독자에게 알린다 → 컴포넌트 리렌더링
+```
+
+### Redux, Tanstack Query 와 같은 전역 상태 / 서버 상태 관리 도구는 왜 "상태 관리 라이브러리" 일까?
+
+Zustand, Redux, Recoil, Tanstack Query, Apollo와 같은 라이브러리들은 위의 **4가지 요구사항을 모두 충족**한다.
+
+예를 들어 Redux를 예시로 한 번 들어보겠다.
+
+```tsx
+// 1. 초기 상태 정의 가능
+const store = createStore(reducer, { count: 0 });
+
+// 2. 어디서든 상태 조회 가능
+const count = useSelector((state) => state.count);
+
+// 3. 명시적인 업데이트 메커니즘 제공
+dispatch({ type: "INCREMENT" });
+
+// 4. 필요한 컴포넌트만 선택적으로 리렌더링
+// useSelector가 구독한 값만 변경 시 리렌더링
+```
+
+그래서 우리는 이들을 "상태 관리 라이브러리"라고 부른다.
+
+### 그럼 React Context는 상태 관리 도구일까?
+
+결론부터 말하면, **React Context 자체는 상태 관리 도구가 아니며**, 업데이트 메커니즘을 제공하지 않는다.
+
+Context API는 본질적으로 다음 역할만 수행한다.
+
+1. 값을 트리 아래로 전달한다.
+2. 값을 읽을 수 있게 한다.
+3. 값이 바뀌면 구독 중인 컴포넌트를 리렌더링 한다.
+
+```tsx
+const ThemeContext = createContext<"light" | "dark">("light");
+```
+
+Context는 `값의 저장소(storage)`가 아니라 **렌더 트리를 따라 값을 전달하는 통로**에 가깝다.
+
+### Context 사용할 때 값 업데이트 하지 않나?
+
+맞다. 실제로 우리는 이런 코드를 아주 많이 쓴다.
+
+```tsx
+const ThemeContext = createContext<{
+  theme: "light" | "dark";
+  toggleTheme: () => void;
+} | null>(null);
+
+function ThemeProvider({ children }: PropsWithChildren) {
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  const toggleTheme = () =>
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+```
+
+이 코드를 보면 자연스럽게 "Context도 업데이트 기능이 있는 거 아닌가?" 라는 생각이 든다.
+하지만 여기서 중요한 사실이 하나 있다.
+
+위 코드에서 **상태를 업데이트하는 주체는 Context가 아니다.**
+
+```tsx
+const [theme, setTheme] = useState<"light" | "dark">("light");
+```
+
+- [`useState`](/post/react-hooks-usestate) → **상태 생성 + 업데이트 메커니즘**
+- `Context` → **그 결과를 전달하는 수단**
+
+즉 구조적으로 보면 아래와 같다.
+
+```text
+[React State(useState / useReducer)]
+          ↓
+     Context Provider
+          ↓
+       Consumers
+```
+
+Context는 **업데이트 가능한 값을 "전달"할 뿐**,
+**업데이트 로직을 직접 제공하지 않는다.**
+
+### Context에 저장된 값은 어떻게 바뀌는가?
+
+Context에 저장된 값을 변경하는 **유일한 방법은 하나뿐이다.** Provider에 새로운 value prop을 전달하는 것이다.
+
+```tsx
+<ThemeContext.Provider value={newValue}>
+```
+
+그렇다면, value props에 값은 어디로부터 오는 걸까?
+
+```tsx
+// 1. useState
+const [theme, setTheme] = useState("light");
+
+// 2. useReducer
+const [state, dispatch] = useReducer(reducer, initialState);
+
+// 3. class 컴포넌트의 this.state
+this.state = { theme: "light" };
+
+// 4. 외부 상태 관리 라이브러리
+const theme = useSelector((state) => state.theme);
+
+// 5. 영속성 (쿼리 파라미터, 로컬스토리지 값 등)
+const theme = localStorage.getItem("theme");
+
+// 6. 외부 시스템 (서버 응답)
+const { data: theme } = useQuery({ queryKey: ["theme"], queryFn: fetchTheme });
+```
+
+즉, **Context 자체에서 만들어지는 값은 아니다.**
+
+---
+
+## Context의 구조적 한계
+
+Context는 **선택적 구독을 지원하지 않는다.**
+
+값이 객체일 때 일부 속성만 바뀌어도 해당 Context를 구독하는 모든 컴포넌트가 리렌더링된다.
+
+```tsx
+const value = { theme, user, locale };
+```
+
+이 중 하나라도 바뀌면, 해당 Context를 쓰는 **모든 컴포넌트가 리렌더링**된다. 이 특성 때문에 빈번하게 변경되는 상태에는 적합하지 않다.
+
+### Context는 어떤 용도에 적합한가?
+
+React 코어 팀도 Context의 용도를 명확히 한다:
+
+- 업데이트 빈도가 낮은 값 (theme, locale)
+- 전역적으로 읽히는 값
+- 구조적으로 안정적인 값
+
+Flux 스타일의 상태 관리를 대체하는 용도로는 설계되지 않았다.
+
+Props Drilling이 Context의 용도가 아니라면, Context의 용도는 무엇일까?
+
+---
+
+## Context의 진짜 용도: 의존성 주입(Dependency Injection)
+
+> [의존성 주입(Dependency Injection)](/post/dependency-injection)은 객체가 필요로 하는 의존성을 **직접 생성하지 않고 외부에서 받는** 패턴이다.
+
+흔히, 무엇인가에 의존한다는 것은 위험을 나타낸다. 많은 개발 서적을 보더라도 "결합도(Coupling)를 낮추고 응집도(Cohesion)를 높이자" 라는 말을 쉽게 볼 수 있다.
+
+단, 어느 정도 결합과 의존성은 필요하다, 보통 이런 결합도를 낮추기위해 추상화를 사용한다.
+하지만, 서비스를 추상화 만으로 구축하는 것은 불가능하다.
+
+### 의존성 주입(DI)를 적용하지 않은 경우
+
+```ts {2}
+class PostRepository {
+  private httpClient = new HttpClient(); // 직접 생성 - 강결합
+
+  async getPosts() {
+    return this.httpClient.get("/posts");
+  }
+}
+```
+
+위의 코드는 문제점이 있다.
+
+1. 테스트 코드가 외부 환경(네트워크)에 강하게 의존한다.
+
+`HttpClient`를 직접 사용하면 테스트가 실제 서버에 요청을 보내게 된다. 이렇게 되면 테스트 결과가 외부 환경에 따라 달라진다.
+
+```ts
+describe("PostRepository", () => {
+  it("게시글을 가져온다", async () => {
+    const postRepository = new PostRepository();
+    const posts = await postRepository.getPosts();
+
+    // ❌ 서버가 장애 나면? → 테스트 실패
+    // ❌ 서버 응답이 느리면? → 테스트 타임아웃
+    // ❌ 서버 데이터가 달라지면? → 테스트 실패
+    expect(posts).toHaveLength(1);
+  });
+});
+```
+
+테스트는 언제 실행해도 같은 결과가 나와야 하는데, 외부 환경에 의존하면 시시각각 성공 여부가 달라진다.
+
+2. 이를 해결하려면 모듈 mock이 필요하지만 설정이 까다롭다.
+
+외부 환경 의존성을 끊기 위해 `vi.mock`으로 모듈 자체를 mock해야 한다.
+
+```ts
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const mockGet = vi.fn();
+
+vi.mock("../HttpClient", () => ({
+  HttpClient: vi.fn(() => ({ get: mockGet })),
+}));
+
+beforeEach(() => vi.clearAllMocks());
+
+describe("PostRepository", () => {
+  it("게시글을 가져온다", async () => {
+    mockGet.mockResolvedValueOnce([{ id: 1, title: "테스트" }]);
+    const postRepository = new PostRepository();
+    const posts = await postRepository.getPosts();
+    expect(posts).toHaveLength(1);
+  });
+});
+```
+
+모듈 mock 설정이 복잡하고, `beforeEach`로 mock을 리셋해야 테스트 간 영향을 방지할 수 있다.
+
+2. `HttpClient` 구현체가 변경되면, `PostRepository`도 변경되어야 한다.
+
+```ts
+// ❌ 구현체 변경 시 클래스 내부를 직접 수정해야 함
+class PostRepository {
+  // fetch → axios로 바꾸려면 이 줄을 수정해야 한다
+  private httpClient = new FetchHttpClient();
+  // private httpClient = new AxiosHttpClient();
+}
+```
+
+`PostRepository`가 구체적인 `HttpClient` 구현체에 의존하기에, 구현체를 바꿀 때마다 `PostRepository` 코드를 수정해야 한다. 여러 곳에서 `HttpClient`를 직접 생성하면 모든 곳을 수정해야 한다.
+
+### 의존성 주입(DI)를 적용한 경우
+
+이러한 문제를 의존성 주입(DI)을 통해 해결할 수 있다. 의존성 주입의 가장 큰 장점은 테스트가 간단해진다는 것이다. import mock 없이 가짜 객체를 직접 주입할 수 있다.
+
+```ts {5,13}
+// ✅ DI 적용 - 간단한 가짜 객체 주입
+import { describe, it, expect, vi } from "vitest";
+
+interface HttpClient {
+  get<T>(url: string): Promise<T>;
+}
+
+class PostRepository {
+  constructor(private httpClient: HttpClient) {}
+
+  async getPosts() {
+    return this.httpClient.get("/posts");
+  }
+}
+
+describe("PostRepository (DI 적용)", () => {
+  it("게시글을 가져온다", async () => {
+    const mockHttp: HttpClient = {
+      get: vi.fn().mockResolvedValueOnce([{ id: 1, title: "테스트" }]),
+    };
+
+    const postRepository = new PostRepository(mockHttp);
+    const posts = await postRepository.getPosts();
+
+    expect(posts).toHaveLength(1);
+    expect(mockHttp.get).toHaveBeenCalledWith("/posts");
+  });
+});
+```
+
+`Repository`가 자신의 역할인 "데이터를 가져오는 것"에만 집중함으로서, 코드 자체가 더 명확해진다.
+그리고, `Repository`가 특정 `HttpClient` 구현체에 의존하지 않기에, 구현체 변경 시에도 `Repository` 코드를 수정할 필요가 없다.
+
+그래서 우리는 손쉽게 네트워크가 필요할 떄, 네트워크에 의존할 수 있고, 또 테스트 환경일때는 Stub이나 Mock에 의존할 수 있다.
+
+한번, `HttpClient`를 예시로 보자, 실제로 쿠키 기반으로 인증을 구현한 경우 웹 환경에서는 보안상의 이유로 `HTTPClient`가 단순히 credentials 옵션을 켜주는 것으로만 끝나지 않는다.
+
+대표적인 예시가 [CSRF(Cross-Site Request Forgery)](/post/security-csrf) 대응이다.
+
+브라우저 기반 Application에서 쿠키 기반 인증을 사용하는 경우, 브라우저는 요청 시 쿠키를 자동으로 포함한다. 이 특성 때문에 서버는 "이 요청이 정말 우리 애플리케이션에서 의도적으로 발생한 것인지"를 추가로 검증해야한다. 이 때 흔히 사용하는 방식이 CSRF 토큰을 커스텀 HTTP 헤더로 전달하는 것이다.
+
+이런 경우에도 Repository 레이어가 직접 CSRF를 다루기보다는, HTTPClient를 인스턴스화하는 시점에 보안 컨텍스트를 구성하는 것이 더 자연스럽다.
+
+```ts
+const client = new HttpClient();
+
+client.setDefaultHeaders({
+  "X-CSRF-Token": csrfToken,
+});
+
+const postRepository = new PostRepository(client);
+```
+
+이렇게 구성하면, PostRepository는
+
+1. CSRF 토큰이 필요한지 여부를 알 필요가 없고,
+2. 쿠키 기반 인증인지 토큰 기반 인증인지도 모르며,
+3. 단지 "보호된 HttpClient"를 통해 요청을 보낼 뿐이다.
+
+또한 이런 구조는 `A/B 테스트(또는 점진적 롤아웃)`를 수행할 때도 효율적일 수 있다.
+A/B 테스트의 핵심은 “도메인 로직을 건드리지 않고” 특정 사용자 그룹에게만 새로운 구현을 적용해 보고, 문제가 있으면 빠르게 되돌릴 수 있어야 한다는 점이다.
+
+예를 들어, 베타 사용자에게만 신규 API 경로를 적용하거나, 추천 알고리즘/캐시 정책/새 엔드포인트를 적용해야 하는 상황이 있을 수 있다. 이때도 `Repository`나 `Service` 코드에 `if (isBetaUser) ...` 같은 조건 분기를 흩뿌리는 대신, 동일한 인터페이스를 구현한 `Repository` 구현체를 갈아끼우는 방식이 훨씬 자연스럽다.
+
+```ts
+interface PostRepository {
+  getPosts(): Promise<Post[]>;
+}
+
+class PostRepositoryImpl implements PostRepository {
+  // 기존 구현
+}
+
+class BetaPostRepositoryImpl implements PostRepository {
+  // 베타 사용자용 신규 구현
+}
+```
+
+그리고 어떤 Repository를 쓸지는 조립(Composition) 단계에서 결정한다.
+
+```ts
+const client = new HttpClient();
+client.setDefaultHeaders({
+  "X-CSRF-Token": csrfToken,
+});
+
+const postRepository: PostRepository = checkIsBetaUser()
+  ? new BetaPostRepositoryImpl(client)
+  : new PostRepositoryImpl(client);
+```
+
+이렇게 하면 Repository는
+
+1. 자신이 A군인지 B군인지 알 필요가 없고,
+2. 실험 분기 로직이 비즈니스 코드에 침투하지 않으며
+3. 실패 시에도 조립 지점에서 구현체만 되돌리면 롤백이 가능하다.
+
+결국 핵심은, `CSRF`나 `A/B 테스트` 같은 `횡단 관심사(cross-cutting-concerns)`를 Repository가 책임지지 않도록 설계를 잡는 것이다.
+
+Repository는 "데이터를 어떻게 가져오는가"에만 집중하고, 인증/보안/실험/관측 같은 맥락은 HttpClient 구성 혹은 조립 단계에서 결정되도록 분리하는 편이 유지보수와 확장에 유리하다.
+
+---
+
+## Repository와 Service, 각자의 역할
+
+앞서 Repository가 데이터를 가져오는 역할에 집중한다고 했다. 그런데 실제 애플리케이션에서는 데이터를 가져오는 것만으로 끝나지 않는다. 가져온 데이터를 가공하거나, 여러 데이터를 조합하거나, 비즈니스 규칙을 적용해야 할 때가 있다.
+
+이때 Service 레이어가 등장한다.
+
+### Repository: 데이터 접근 계층
+
+Repository는 "어디서 데이터를 가져오는가"에 집중한다.
+
+창고 관리인을 떠올려 보자. 창고 관리인은 물건이 어디 있는지 알고, 요청받은 물건을 꺼내오는 역할만 한다. 물건을 어떻게 사용할지, 누구에게 전달할지는 관심 밖이다.
+
+```ts
+// Repository: 데이터 접근만 담당
+class PostRepository {
+  constructor(private httpClient: HttpClient) {}
+
+  async getAll(): Promise<Post[]> {
+    return this.httpClient.get("/posts");
+  }
+
+  async getById(id: number): Promise<Post> {
+    return this.httpClient.get(`/posts/${id}`);
+  }
+}
+```
+
+Repository는 API 호출, DB 쿼리, 로컬스토리지 접근 등 **순수한 데이터 입출력**만 담당한다.
+
+### Service: 비즈니스 로직 계층
+
+Service는 "데이터로 무엇을 하는가"에 집중한다.
+
+매장 직원을 떠올려 보자. 매장 직원은 창고에서 물건을 받아 고객에게 전달하기 전에 상품 상태를 검수하거나, 규격에 맞는지 확인한다.
+
+물건이 창고 어디에 있는지는 모르지만, 고객에게 전달해도 되는지 판단하는 방법은 안다.
+
+```ts
+// Service: 비즈니스 로직 담당
+class PostService {
+  constructor(private postRepository: PostRepository) {}
+
+  async createPost(input: CreatePostInput): Promise<Post> {
+    // 비즈니스 로직: 유효성 검증
+    this._validateTitle(input.title);
+    this._validateContent(input.content);
+
+    // 검증 통과 후 Repository 호출
+    return this.postRepository.create(input);
+  }
+
+  private _validateTitle(title: string): void {
+    if (title.length < 2) {
+      throw new ValidationError("제목은 2자 이상이어야 한다");
+    }
+  }
+
+  private _validateContent(content: string): void {
+    if (content.length < 4) {
+      throw new ValidationError("내용은 4자 이상이어야 한다");
+    }
+  }
+}
+```
+
+Service는 유효성 검증처럼 **클라이언트에서 처리해야 할 비즈니스 로직**을 담당한다. 검증을 통과해야만 Repository를 호출한다.
+
+### 왜 굳이 나눌까?
+
+단순한 CRUD 애플리케이션이라면 Repository 하나로 충분할 수 있다. 하지만 비즈니스 로직이 복잡해지면 이야기가 달라진다.
+
+```ts
+// ❌ Repository에 비즈니스 로직이 섞인 경우
+class PostRepository {
+  async createPost(input: CreatePostInput, user: User): Promise<Post> {
+    // 유효성 검증
+    if (input.title.length < 2) {
+      throw new ValidationError("제목은 2자 이상이어야 한다");
+    }
+    if (input.content.length < 4) {
+      throw new ValidationError("내용은 4자 이상이어야 한다");
+    }
+
+    // 권한 검사
+    if (user.role === "guest") {
+      throw new AuthError("게스트는 포스트를 작성할 수 없다");
+    }
+    if (user.postsToday >= 10) {
+      throw new LimitError("하루 최대 10개까지만 작성할 수 있다");
+    }
+
+    // 콘텐츠 정책 검사
+    if (this._containsBannedWords(input.content)) {
+      throw new PolicyError("금지된 단어가 포함되어 있다");
+    }
+
+    // 슬러그 생성
+    const slug = this._generateSlug(input.title);
+
+    return this.httpClient.post("/posts", { ...input, slug });
+  }
+
+  // Repository에 비즈니스 헬퍼 메서드가 계속 늘어난다...
+  private _containsBannedWords(content: string): boolean {
+    /* ... */
+  }
+  private _generateSlug(title: string): string {
+    /* ... */
+  }
+}
+```
+
+Repository가 데이터 접근, 유효성 검증, 권한 검사, 콘텐츠 정책까지 모두 담당하게 된다. 테스트도 어려워지고, 로직 하나를 수정하면 Repository 전체를 다시 테스트해야 한다.
+
+```ts
+// ✅ 역할 분리
+class PostRepository {
+  async create(input: CreatePostInput): Promise<Post> {
+    return this.httpClient.post("/posts", input);
+  }
+}
+
+class PostService {
+  async createPost(input: CreatePostInput): Promise<Post> {
+    // 비즈니스 로직: 유효성 검증
+    this._validateTitle(input.title);
+    this._validateContent(input.content);
+
+    return this.postRepository.create(input);
+  }
+
+  private _validateTitle(title: string): void {
+    if (title.length < 2) {
+      throw new ValidationError("제목은 2자 이상이어야 한다");
+    }
+  }
+
+  private _validateContent(content: string): void {
+    if (content.length < 4) {
+      throw new ValidationError("내용은 4자 이상이어야 한다");
+    }
+  }
+}
+```
+
+Repository는 단순하게 유지되고, 비즈니스 로직(유효성 검증)은 Service에서 담당한다.
+
+---
+
+## React Context를 통한 의존성 주입
+
+이제 Repository와 Service의 역할을 이해했으니, React에서 이 구조를 어떻게 활용할 수 있을지 살펴보자.
+
+### DI 없이 컴포넌트에서 직접 fetch 호출하기
+
+먼저, 일반적으로 많이 작성하는 방식부터 살펴보자.
+
+```tsx
+function Posts() {
+  const {
+    data: posts,
+    isPending,
+    isError,
+  } = useQuery({
+    queryKey: ["posts"],
+    queryFn: () => fetch("/api/posts").then((res) => res.json()),
+  });
+
+  if (isPending) return <LoadingSpinner />;
+  if (isError) return <ErrorPage />;
+
+  return (
+    <ul>
+      {posts.map((post) => (
+        <li key={post.id}>
+          {post.title} - {post.author}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+이 컴포넌트를 테스트하려면 어떻게 해야 할까? 네트워크 레이어를 mock해야 한다.
+
+```tsx
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+
+const server = setupServer(
+  http.get("/api/posts", () => {
+    return HttpResponse.json([
+      { id: 1, title: "매튜의 React 입문서", author: "매튜" },
+    ]);
+  }),
+);
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+test("포스트를 로드하고 표시한다", async () => {
+  render(<Posts />);
+  // ...
+});
+```
+
+테스트마다 이런 설정이 필요하다. 그리고 컴포넌트 설계의 몇 가지 문제를 생각해 보자.
+
+**API 엔드포인트가 변경되면?**
+
+```tsx
+// ❌ 엔드포인트가 /api/posts에서 /api/v2/posts로 변경되면
+// 이 URL을 사용하는 모든 컴포넌트를 찾아 수정해야 한다
+
+// Posts.tsx
+queryFn: () => fetch("/api/v2/posts").then((res) => res.json()),
+
+// PostDetail.tsx
+queryFn: () => fetch(`/api/v2/posts/${id}`).then((res) => res.json()),
+
+// CreatePost.tsx
+mutationFn: (data) => fetch("/api/v2/posts", { method: "POST", body: JSON.stringify(data) }),
+
+// 테스트 파일들도 전부 수정...
+```
+
+**네트워크 오류 처리가 컴포넌트마다 중복된다**
+
+```tsx
+// ❌ 모든 컴포넌트에서 동일한 오류 처리를 반복한다
+function Posts() {
+  const { data, error } = useQuery({
+    queryFn: async () => {
+      const res = await fetch("/api/posts");
+      if (!res.ok) {
+        if (res.status === 401) throw new Error("로그인이 필요하다");
+        if (res.status === 403) throw new Error("권한이 없다");
+        if (res.status === 500) throw new Error("서버 오류가 발생했다");
+        throw new Error("알 수 없는 오류");
+      }
+      return res.json();
+    },
+  });
+}
+
+// PostDetail.tsx에서도 같은 오류 처리...
+// CreatePost.tsx에서도 같은 오류 처리...
+```
+
+**왜 뷰 컴포넌트가 네트워크에 대해 알아야 할까?**
+
+```tsx
+// ✅ 컴포넌트는 네트워크를 모른다
+function Posts() {
+  const { postService } = usePostClient();
+  const { data } = useQuery({
+    queryFn: () => postService.getPosts(), // URL? 오류 처리? 몰라도 된다
+  });
+}
+
+// 엔드포인트 변경? Repository만 수정하면 된다
+// 오류 처리? HttpClient나 Repository에서 일괄 처리한다
+```
+
+### Context로 Service 주입하기
+
+앞서 배운 Repository와 Service 패턴을 React Context와 결합해 보자.
+
+먼저, Repository와 Service를 정의한다.
+
+```ts
+// repositories/PostRepository.ts
+interface PostRepository {
+  create(input: CreatePostInput): Promise<Post>;
+}
+
+class PostRepositoryImpl implements PostRepository {
+  constructor(private httpClient: HttpClient) {}
+
+  async create(input: CreatePostInput): Promise<Post> {
+    return this.httpClient.post("/posts", input);
+  }
+}
+
+// services/PostService.ts
+class PostService {
+  constructor(private postRepository: PostRepository) {}
+
+  async createPost(input: CreatePostInput): Promise<Post> {
+    this._validateTitle(input.title);
+    this._validateContent(input.content);
+    return this.postRepository.create(input);
+  }
+
+  private _validateTitle(title: string): void {
+    if (title.length < 2) {
+      throw new ValidationError("제목은 2자 이상이어야 한다");
+    }
+  }
+
+  private _validateContent(content: string): void {
+    if (content.length < 4) {
+      throw new ValidationError("내용은 4자 이상이어야 한다");
+    }
+  }
+}
+```
+
+이제 Context Provider를 만든다.
+
+```tsx
+// contexts/PostContext.tsx
+import { createContext, use, useState, type PropsWithChildren } from "react";
+
+interface PostClient {
+  postService: PostService;
+}
+
+const PostContext = createContext<PostClient | null>(null);
+
+export function PostContextProvider({
+  children,
+  client,
+}: PropsWithChildren<{ client?: PostClient }>) {
+  const httpClient = useHttpClient(); // 위에서 설명한 HttpClient
+
+  // Lazy initialization: 서비스 그래프 한 번만 생성
+  const [postClient] = useState<PostClient>(() => {
+    if (client) return client; // 테스트용 오버라이드
+
+    // 의존성 해결: HttpClient → Repository → Service
+    const postRepository = new PostRepositoryImpl(httpClient);
+    const postService = new PostService(postRepository);
+    return { postService };
+  });
+
+  return <PostContext value={postClient}>{children}</PostContext>;
+}
+
+export function usePostClient(): PostClient {
+  const context = use(PostContext);
+  if (!context) {
+    throw new Error(
+      "usePostClient는 PostContextProvider 내부에서 사용해야 한다",
+    );
+  }
+  return context;
+}
+```
+
+여기서 핵심은 `useState`의 lazy initialization이다. 컴포넌트가 처음 렌더링될 때 한 번만 서비스 그래프를 생성하고, 이후 리렌더링에서는 기존 인스턴스를 재사용한다.
+
+그리고 `client` prop을 통해 테스트 시 mock을 주입할 수 있다.
+
+### 컴포넌트에서 사용하기
+
+```tsx
+function CreatePostForm() {
+  const { postService } = usePostClient();
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: () => postService.createPost({ title, content }),
+    onError: (err) => {
+      const message =
+        err instanceof Error ? err.message : "알 수 없는 오류가 발생했다";
+      setError(message);
+    },
+  });
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        mutation.mutate();
+      }}
+    >
+      <input value={title} onChange={(e) => setTitle(e.target.value)} />
+      <textarea value={content} onChange={(e) => setContent(e.target.value)} />
+      {error && <p>{error}</p>}
+      <button type="submit">작성</button>
+    </form>
+  );
+}
+```
+
+컴포넌트는 더 이상 유효성 검증 로직을 알지 못한다. 단지 `postService`에게 "포스트를 생성해달라"고 요청할 뿐이다. 제목이 2자 미만이거나 내용이 4자 미만이면 Service에서 `ValidationError`를 던진다.
+
+### 테스트가 얼마나 단순해지는가?
+
+```tsx
+const mockPostService = {
+  createPost: vi.fn().mockResolvedValue({
+    id: 1,
+    title: "매튜의 React 입문서",
+    content: "React는 UI 라이브러리다",
+    author: "매튜",
+  }),
+};
+
+test("포스트 생성 성공 시 폼을 제출한다", async () => {
+  render(
+    <PostContextProvider client={{ postService: mockPostService }}>
+      <CreatePostForm />
+    </PostContextProvider>,
+  );
+
+  await userEvent.type(
+    screen.getByRole("textbox", { name: /title/i }),
+    "테스트 제목",
+  );
+  await userEvent.type(
+    screen.getByRole("textbox", { name: /content/i }),
+    "테스트 내용입니다",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "작성" }));
+
+  expect(mockPostService.createPost).toHaveBeenCalledWith({
+    title: "테스트 제목",
+    content: "테스트 내용입니다",
+  });
+});
+
+test("유효성 검증 실패 시 에러 메시지를 표시한다", async () => {
+  mockPostService.createPost.mockRejectedValue(
+    new ValidationError("제목은 2자 이상이어야 한다"),
+  );
+
+  render(
+    <PostContextProvider client={{ postService: mockPostService }}>
+      <CreatePostForm />
+    </PostContextProvider>,
+  );
+
+  await userEvent.type(screen.getByRole("textbox", { name: /title/i }), "a");
+  await userEvent.click(screen.getByRole("button", { name: "작성" }));
+
+  await waitFor(() => {
+    expect(screen.getByText("제목은 2자 이상이어야 한다")).toBeInTheDocument();
+  });
+});
+```
+
+훨씬 간단하다.
+
+- Mock Service Worker 설정 없음
+- `beforeAll` / `afterEach` / `afterAll` 없음
+- import 모킹 없음
+
+`client` prop에 mock 객체를 넣기만 하면 된다. 유효성 검증 에러도 쉽게 테스트할 수 있다.
+
+```tsx
+// 내용 길이 검증 실패
+mockPostService.createPost.mockRejectedValue(
+  new ValidationError("내용은 4자 이상이어야 한다"),
+);
+
+// 권한 검증 실패
+mockPostService.createPost.mockRejectedValue(
+  new AuthError("게스트는 포스트를 작성할 수 없다"),
+);
+```
+
+`mockRejectedValue`로 원하는 에러를 던지게 하면 끝이다.
+
+### 의존성 주입이 가져다 주는 재사용성
+
+이 패턴의 진짜 힘은 구현체를 쉽게 교체할 수 있다는 점이다.
+
+실무 예시를 들어보자. 서비스의 주 사용자층이 30~60대다. 작은 폰트와 화려한 애니메이션이 세련되어 보이지만, 오히려 불편해하는 사용자도 많았다.
+
+우리 회사는 두 가지 테마를 A/B 테스트하고 싶다.
+
+- **A안**: 모던 테마 (작은 폰트, 화려한 애니메이션)
+- **B안**: 클래식 테마 (큰 폰트, 직관적인 UI)
+
+```tsx
+// 모던 테마: 작은 폰트, 애니메이션
+class ModernThemeService {
+  getConfig(): ThemeConfig {
+    return {
+      fontSize: { base: 14, heading: 18 },
+      animation: { enabled: true, duration: 300 },
+    };
+  }
+}
+
+// 클래식 테마: 큰 폰트, 직관적
+class ClassicThemeService {
+  getConfig(): ThemeConfig {
+    return {
+      fontSize: { base: 18, heading: 24 },
+      animation: { enabled: false },
+    };
+  }
+}
+```
+
+Provider에서 A/B 테스트 그룹에 따라 Service를 교체한다.
+
+```tsx
+function ThemeContextProvider({ children }: PropsWithChildren) {
+  const { variant } = useABTest("theme-preference");
+
+  const [themeClient] = useState<ThemeClient>(() => {
+    const themeService =
+      variant === "classic"
+        ? new ClassicThemeService()
+        : new ModernThemeService();
+
+    return { themeService };
+  });
+
+  return <ThemeContext value={themeClient}>{children}</ThemeContext>;
+}
+```
+
+`<Dashboard />` 컴포넌트는 **단 한 줄도 변경하지 않았다**. 50대 이상 사용자에게 B안을 노출하고, 체류 시간과 이탈률을 비교한 뒤 연령대별 기본 테마를 결정하면 된다.
+
+### Fixtures로 테스트와 스토리북 데이터 공유하기
+
+앞서 테스트에서 mock 객체를 주입하는 방법을 살펴봤다. 그런데 테스트 케이스가 늘어날수록 비슷한 mock 데이터를 반복해서 작성하게 된다. 스토리북에서도 마찬가지다. 포스트 목록 스토리를 만들려면 또 mock 데이터를 작성해야 한다.
+
+이 데이터들을 한 곳에서 관리하면 어떨까?
+
+**Fixtures 폴더 구조**
+
+서버 응답을 흉내낸 데이터를 `__fixtures__` 폴더에 모아두고, 테스트와 스토리북에서 **동일한 데이터를 재사용**할 수 있다.
+
+```text
+src/
+├── __fixtures__/
+│   ├── factories.ts       # 테스트 데이터 생성 함수
+│   ├── stubs.ts           # Service Stub 구현
+│   ├── presets.ts         # 시나리오별 Preset
+│   └── index.ts           # 통합 export
+├── components/
+│   └── PostList/
+│       ├── PostList.tsx
+│       ├── PostList.test.tsx     # fixtures 사용
+│       └── PostList.stories.tsx  # 동일한 fixtures 사용
+└── contexts/
+    └── PostContext.tsx
+```
+
+**Factory: 테스트 데이터 생성**
+
+테스트 데이터를 생성하는 함수를 별도 파일로 분리한다. `satisfies` 반복을 없애고, 필요한 필드만 오버라이드할 수 있다.
+
+```ts
+// __fixtures__/factories.ts
+import type { Post } from "@/types";
+
+let idCounter = 0;
+
+export function createPost(overrides: Partial<Post> = {}): Post {
+  idCounter += 1;
+  return {
+    id: overrides.id ?? idCounter,
+    title: overrides.title ?? `테스트 포스트 ${idCounter}`,
+    content: overrides.content ?? "테스트 내용이다.",
+    author: overrides.author ?? "매튜",
+  };
+}
+
+export function createPosts(count: number): Post[] {
+  return Array.from({ length: count }, () => createPost());
+}
+```
+
+`createPost()`를 호출할 때마다 고유한 ID가 부여된다. 특정 필드만 바꾸고 싶으면 `createPost({ title: "원하는 제목" })`처럼 오버라이드하면 된다.
+
+**Stub: vi.fn() 없이 Service 구현**
+
+`vi.fn()`에 의존하지 않는 Stub을 만들면 **스토리북에서도 테스트 프레임워크 없이** 동작한다.
+
+```ts
+// __fixtures__/stubs.ts
+import type { Post, CreatePostInput, PostService } from "@/types";
+import { createPost } from "./factories";
+
+interface PostServiceStubOptions {
+  posts?: Post[];
+  createPostResult?: Post | Error;
+}
+
+export function createPostServiceStub(
+  options: PostServiceStubOptions = {},
+): PostService {
+  const { posts = [], createPostResult } = options;
+
+  return {
+    async getPosts() {
+      return posts;
+    },
+    async createPost(input: CreatePostInput) {
+      if (createPostResult instanceof Error) {
+        throw createPostResult;
+      }
+      return createPostResult ?? createPost(input);
+    },
+  };
+}
+```
+
+Stub은 실제 `PostService` 인터페이스를 구현하되, 내부 로직을 단순화한 것이다. 네트워크 요청 없이 미리 정의한 데이터를 반환한다.
+
+**Presets: 자주 쓰는 시나리오 미리 정의**
+
+반복적으로 사용하는 시나리오를 Preset으로 묶어두면 테스트 코드가 훨씬 간결해진다.
+
+```ts
+// __fixtures__/presets.ts
+import { createPost, createPosts } from "./factories";
+import { createPostServiceStub } from "./stubs";
+
+export const postPresets = {
+  // 기본: 포스트 3개
+  withPosts: () => createPostServiceStub({ posts: createPosts(3) }),
+
+  // 빈 목록
+  empty: () => createPostServiceStub({ posts: [] }),
+
+  // 단일 포스트
+  single: () => createPostServiceStub({ posts: [createPost()] }),
+
+  // 생성 실패 시나리오
+  createFails: (message = "제목은 2자 이상이어야 한다") =>
+    createPostServiceStub({ createPostResult: new Error(message) }),
+};
+```
+
+`postPresets.withPosts()`를 호출하면 포스트 3개가 담긴 Stub Service가 생성된다. 테스트마다 mock 데이터를 복붙할 필요가 없다.
+
+**스토리북에서 활용하기**
+
+```tsx
+// PostList.stories.tsx
+import type { Meta, StoryObj } from "@storybook/react";
+import { PostContextProvider } from "@/contexts/PostContext";
+import { postPresets } from "@/__fixtures__";
+import { PostList } from "./PostList";
+
+const meta: Meta<typeof PostList> = {
+  component: PostList,
+};
+export default meta;
+
+type Story = StoryObj<typeof PostList>;
+
+export const Default: Story = {
+  decorators: [
+    (Story) => (
+      <PostContextProvider client={{ postService: postPresets.withPosts() }}>
+        <Story />
+      </PostContextProvider>
+    ),
+  ],
+};
+
+export const Empty: Story = {
+  decorators: [
+    (Story) => (
+      <PostContextProvider client={{ postService: postPresets.empty() }}>
+        <Story />
+      </PostContextProvider>
+    ),
+  ],
+};
+```
+
+`vi.fn()`을 사용하지 않으므로 스토리북에서 Vitest 없이도 정상 동작한다. Context의 `client` prop을 통해 Stub을 주입하면 실제 서버 없이도 다양한 상태를 시각적으로 확인할 수 있다.
+
+**테스트에서 동일하게 활용하기**
+
+```tsx
+// PostList.test.tsx
+import { postPresets } from "@/__fixtures__";
+
+test("포스트 목록을 표시한다", async () => {
+  render(
+    <PostContextProvider client={{ postService: postPresets.withPosts() }}>
+      <PostList />
+    </PostContextProvider>,
+  );
+
+  expect(await screen.findByText("테스트 포스트 1")).toBeInTheDocument();
+});
+
+test("포스트가 없으면 빈 상태를 표시한다", async () => {
+  render(
+    <PostContextProvider client={{ postService: postPresets.empty() }}>
+      <PostList />
+    </PostContextProvider>,
+  );
+
+  expect(await screen.findByText("포스트가 없다")).toBeInTheDocument();
+});
+```
+
+스토리북과 **완전히 동일한 패턴**이다. 같은 Preset을 사용하므로 스토리북에서 보이는 UI와 테스트에서 검증하는 UI가 일치한다.
+
+이 패턴의 장점은 명확하다.
+
+1. **Factory**: 데이터 구조가 바뀌면 `createPost()` 하나만 수정하면 된다
+2. **Stub**: `vi.fn()` 없이 동작하므로 스토리북에서도 바로 사용할 수 있다
+3. **Presets**: 자주 쓰는 시나리오를 한 줄로 표현할 수 있다
+
+한 곳에서 관리하고, 여러 곳에서 재사용한다. 이것이 의존성 주입이 가져다주는 **진짜 재사용성**이다.
+
+---
+
+## DI 패턴의 한계와 극복
+
+### 한계 1: 내부 의존성 교체가 어렵다
+
+현재 패턴에서는 `client` prop으로 Service 전체를 교체할 수 있다.
+
+```tsx
+<PostContextProvider client={{ postService: mockPostService }}>
+```
+
+하지만 `postService`는 그대로 두고 내부의 `postRepository`만 교체하고 싶다면? 현재 구조에서는 불가능하다.
+
+```tsx
+// ❌ 이런 건 안 된다
+<PostContextProvider
+  client={{
+    postRepository: mockPostRepository, // Service 내부의 Repository만 교체 불가
+  }}
+>
+```
+
+Provider 내부에서 의존성 그래프가 한 번에 생성되기 때문이다. Spring이나 NestJS 같은 DI 컨테이너는 이런 세밀한 교체가 가능하지만, 우리의 Context 패턴은 **최상위 Service 단위로만 교체 가능**하다.
+
+**극복: DI 컨테이너 라이브러리 도입**
+
+이 문제가 자주 발생한다면 [TSyringe](https://github.com/microsoft/tsyringe)나 [InversifyJS](https://inversify.io/) 같은 DI 컨테이너를 고려할 수 있다.
+
+```tsx
+import { container, injectable, inject } from "tsyringe";
+
+@injectable()
+class PostService {
+  constructor(
+    // "PostRepository"라는 토큰으로 등록된 의존성을 주입받는다
+    @inject("PostRepository") private postRepository: PostRepository,
+  ) {}
+}
+
+// 프로덕션: 실제 구현체 등록
+container.register("PostRepository", { useClass: PostRepositoryImpl });
+const postService = container.resolve(PostService);
+// → PostService 내부에 PostRepositoryImpl이 자동 주입된다
+
+// 테스트: Repository만 mock으로 교체
+container.register("PostRepository", { useValue: mockPostRepository });
+const postService = container.resolve(PostService);
+// → 같은 PostService지만 내부 Repository만 mock으로 바뀐다
+```
+
+DI 컨테이너를 사용하면 **의존성 그래프의 어느 지점이든 교체 가능**하다. Service는 그대로 두고 Repository만 mock으로 바꾸거나, 특정 유틸리티만 교체하는 세밀한 제어가 가능해진다.
+
+다만, 데코레이터 문법과 DI 컨테이너 개념에 익숙하지 않은 팀원이 있다면 러닝 커브가 될 수 있다. **팀과 충분히 상의한 후 도입을 결정**하자.
+
+### 한계 2: Provider Hell
+
+피처마다 Context를 만들면 Provider가 계속 중첩된다.
+
+```tsx
+// 😱 Provider Hell
+function App() {
+  return (
+    <AuthContextProvider>
+      <ThemeContextProvider>
+        <PostContextProvider>
+          <CommentContextProvider>
+            <NotificationContextProvider>
+              <AnalyticsContextProvider>
+                <Dashboard />
+              </AnalyticsContextProvider>
+            </NotificationContextProvider>
+          </CommentContextProvider>
+        </PostContextProvider>
+      </ThemeContextProvider>
+    </AuthContextProvider>
+  );
+}
+```
+
+앞서 설명했듯이, Context 값이 변하지 않으면 리렌더링은 발생하지 않는다. 그리고 `useState`의 lazy initialization으로 Service 인스턴스가 한 번만 생성되므로, Provider가 아무리 많아도 메모리 누수나 중복 인스턴스 문제는 없다.
+
+**성능 문제는 아니다.**
+
+하지만 가독성이 떨어지고, 새로운 피처를 추가할 때마다 Provider를 감싸야 하는 번거로움이 있다.
+
+**극복 1: Provider 합성 유틸리티**
+
+```tsx
+import { FC, PropsWithChildren } from "react";
+
+function composeProviders(...providers: FC<PropsWithChildren>[]) {
+  return ({ children }: PropsWithChildren) =>
+    providers.reduceRight(
+      (acc, Provider) => <Provider>{acc}</Provider>,
+      children,
+    );
+}
+
+const AppProviders = composeProviders(
+  AuthContextProvider,
+  ThemeContextProvider,
+  PostContextProvider,
+);
+
+function App() {
+  return (
+    <AppProviders>
+      <Dashboard />
+    </AppProviders>
+  );
+}
+```
+
+**극복 2: MultiProvider 컴포넌트**
+
+[React Context Hell](https://dev.to/alfredosalzillo/the-react-context-hell-7p4) 문서에서 소개하는 패턴이다. Provider를 배열로 전달하면 자동으로 중첩해준다.
+
+```tsx
+import {
+  cloneElement,
+  isValidElement,
+  PropsWithChildren,
+  ReactNode,
+} from "react";
+
+function MultiProvider({
+  children,
+  providers,
+}: PropsWithChildren<{ providers: ReactNode[] }>) {
+  return (
+    <>
+      {providers.reduceRight(
+        (acc, provider) =>
+          isValidElement(provider) ? cloneElement(provider, {}, acc) : acc,
+        children,
+      )}
+    </>
+  );
+}
+
+function App() {
+  return (
+    <MultiProvider
+      providers={[
+        <AuthContextProvider />,
+        <ThemeContextProvider />,
+        <PostContextProvider />,
+      ]}
+    >
+      <Dashboard />
+    </MultiProvider>
+  );
+}
+```
+
+**극복 3: 관련 Service들을 하나의 Context로 묶기**
+
+```tsx
+interface AppClient {
+  postService: PostService;
+  commentService: CommentService;
+}
+
+function AppContextProvider({ children }: PropsWithChildren) {
+  const httpClient = useHttpClient();
+
+  const [appClient] = useState<AppClient>(() => {
+    const postRepository = new PostRepositoryImpl(httpClient);
+    const commentRepository = new CommentRepositoryImpl(httpClient);
+
+    return {
+      postService: new PostService(postRepository),
+      commentService: new CommentService(commentRepository),
+    };
+  });
+
+  return <AppContext value={appClient}>{children}</AppContext>;
+}
+```
+
+---
+
+## 마무리
+
+AI가 발전하면서 개발자에게 요구되는 역량의 무게중심이 이동하고 있다. 코드를 빠르게 작성하는 능력은 AI가 대신하지만, 그 코드가 올바른 방향인지 판단하고 유지보수 가능한 구조로 확장하는 일은 여전히 사람의 몫이다. 이전에 [클린 아키텍처 글](/post/react-clean-architecture)을 정리하면서도 느꼈지만, 이번에 Context와 의존성 주입을 다시 들여다보며 그 생각이 더 확고해졌다.
+
+칼이라는 도구도 처음엔 동물의 가죽을 벗기고 고기를 자르기 위해 만들어졌을 것이다. 하지만 쓰는 사람에 따라 누군가를 해치는 무기가 되기도 한다. 도구는 그 자체로 좋거나 나쁜 게 아니다. 만든 사람의 의도를 이해하고, 어떤 맥락에서 어떻게 쓰느냐에 따라 결과가 완전히 달라진다.
+
+Context도 마찬가지다. 본질을 이해하고 나니, 언제 써야 하고 언제 쓰지 말아야 하는지가 명확해졌다. 이런 판단력이야말로 AI 시대에도 대체되지 않는 개발자의 핵심 역량이 아닐까 싶다.
+
+---
+
+## 참고 자료
+
+- [React Context for Dependency Injection Not State Management](https://testdouble.com/insights/react-context-for-dependency-injection-not-state-management)
+- [The React Context Hell](https://dev.to/alfredosalzillo/the-react-context-hell-7p4)
+- [React에서의 의존성 주입(Dependency Injection)](/post/dependency-injection)
+- [useState 스냅샷, 배칭, 불변성 한 번에 정리](/post/react-hooks-usestate)
+- [useReducer로 복잡한 상태 관리 깔끔하게 정리하기](/post/react-hooks-usereducer)
+- [React 전역 상태 관리 완벽 가이드](/post/global-state)
+- [리액트 클린 아키텍처 - 3개 핵심 레이어로 설계하는 유지보수성](/post/react-clean-architecture)

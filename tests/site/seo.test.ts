@@ -289,6 +289,17 @@ describe("배포된 페이지의 SEO", () => {
     expect(brokenLinks).toEqual([]);
   });
 
+  it("본문 이미지는 크기와 반응형 후보를 미리 알려 레이아웃 이동이 없다", () => {
+    for (const { file, html } of articlePages) {
+      for (const { attributes } of queryAll(html, ".mdx figure img")) {
+        // Then
+        expect(attributes.get("width"), `${file}: 이미지 width가 없습니다`).toBeTruthy();
+        expect(attributes.get("height"), `${file}: 이미지 height가 없습니다`).toBeTruthy();
+        expect(attributes.get("srcset"), `${file}: 이미지 srcset이 없습니다`).toBeTruthy();
+      }
+    }
+  });
+
   it("플레이스홀더 광고 슬롯을 내보내지 않는다", () => {
     for (const { file, html } of pages) {
       expect(

@@ -237,24 +237,26 @@ HTTP 관련 용어, 헤더, 상태 코드 등에 MDN 문서 링크를 추가한�
 
 실제로 어떻게 동작하는지 확인해볼게요. 먼저 캐시를 비활성화하고 요청을 보내면:
 
-![캐시를 사용하지 않고 요청을 하면 응답 헤더에 Last-Modified가 있음](/images/http-cache/3.webp)
+![캐시를 사용하지 않고 요청을 하면 응답 헤더에 Last-Modified가 있음](./3.webp)
 
 응답 헤더에 `Last-Modified`가 포함되어 있어요. 브라우저는 이 값을 캐시와 함께 저장해요.
 
 이제 다시 새로고침해보면:
 
-![캐시를 사용하고 요청을 바로 보내면, If-Modified-Since에 날짜가 있음](/images/http-cache/4.webp)
+![캐시를 사용하고 요청을 바로 보내면, If-Modified-Since에 날짜가 있음](./4.webp)
 
 요청 헤더의 `If-Modified-Since`에 이전에 받았던 수정 시간이 담겨 있어요.
 ```
 
-### 이미지 용량 최적화
+### 이미지 위치와 최적화
 
-새 이미지를 `public/images/`에 추가한 뒤 아래 명령을 실행한다. 폭 1400px를 넘는 webp를 줄이고, 1MB를 넘는 GIF를 animated webp로 바꾼다. GIF가 변환되면 본문의 이미지 경로도 함께 바꾼다.
+글은 `src/content/posts/<slug>/index.mdx`에 쓰고, 이미지는 같은 폴더에 두고 상대 경로로 참조한다. 커버는 frontmatter `image: ./thumbnail.webp`로 지정한다.
 
-```bash
-node scripts/optimize-images.mjs public/images/포스트-이름
+```markdown
+![캐시를 사용하지 않고 요청한 결과](./3.webp)
 ```
+
+Astro가 빌드할 때 이미지 크기를 읽어 `width`·`height`·`srcset`을 만든다. 따로 압축하거나 크기를 적을 필요가 없다. 원본은 폭 1400px 안팎의 webp를 권장한다. JSX로 크기를 제한해야 할 때만 `import`한 이미지를 `<Image src={…} />`로 쓴다.
 
 ### Mermaid 다이어그램
 

@@ -67,6 +67,10 @@ export default defineConfig({
       fallbacks: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
     },
   ],
+  image: {
+    layout: "constrained",
+    responsiveStyles: true,
+  },
   prefetch: {
     prefetchAll: true,
     defaultStrategy: "hover",

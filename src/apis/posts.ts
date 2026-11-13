@@ -10,19 +10,18 @@ import {
 } from "@/domains/post.model";
 
 // 지금은 Content Layer의 로컬 MDX를 읽는다. 서버로 옮기면 이 파일의 조회부만 바꾼다.
-const COLLECTION = "post";
-const ENTRY_ID_PREFIX = "blog/";
+const COLLECTION = "posts";
 
 type PostEntry = CollectionEntry<typeof COLLECTION>;
 
 const toPost = memoize(
   (entry: PostEntry): Post =>
     PostSchema.parse({
-      id: entry.id.replace(ENTRY_ID_PREFIX, ""),
+      id: entry.id,
       title: entry.data.title,
       description: entry.data.description,
       category: entry.data.category,
-      tags: entry.data.tags ?? [],
+      tags: entry.data.tags,
       publishedAt: entry.data.date,
       updatedAt: entry.data.updatedDate ?? entry.data.date,
       cover: entry.data.image,
@@ -49,12 +48,12 @@ export async function getPosts({
 }
 
 export async function getPost(id: string): Promise<Post | null> {
-  const entry = await getEntry(COLLECTION, `${ENTRY_ID_PREFIX}${id}`);
+  const entry = await getEntry(COLLECTION, id);
   return entry ? toPost(entry) : null;
 }
 
 export async function renderPost(id: string) {
-  const entry = await getEntry(COLLECTION, `${ENTRY_ID_PREFIX}${id}`);
+  const entry = await getEntry(COLLECTION, id);
   if (!entry) {
     throw new Error(`글을 찾을 수 없어요: ${id}`);
   }
