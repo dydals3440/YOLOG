@@ -12,8 +12,10 @@ interface Props {
 
 const { page } = Astro.props;
 const items = getPaginationRange({ currentPage: page.currentPage, lastPage: page.lastPage });
+// 첫 페이지에서는 page.url.first가 비어 있으므로 현재 주소가 곧 첫 페이지 주소다.
+const firstPageUrl = page.url.first ?? page.url.current;
 const toPageUrl = (pageNumber: number) =>
-  pageNumber === 1 ? page.url.first : `${page.url.first}/${pageNumber}`;
+  pageNumber === 1 ? firstPageUrl : `${firstPageUrl}/${pageNumber}`;
 ---
 
 <nav class="flex items-center justify-center gap-1" aria-label="페이지네이션">
@@ -31,7 +33,6 @@ const toPageUrl = (pageNumber: number) =>
           <PageLink
             href={item.page === page.currentPage ? undefined : toPageUrl(item.page)}
             current={item.page === page.currentPage}
-            label={`${item.page}페이지로 이동`}
           >
             {item.page}
           </PageLink>

@@ -8,6 +8,7 @@ import {
   queryAll,
   readCanonical,
   readJsonLd,
+  readArtifact,
   readMeta,
   readXmlArtifact,
   SITE_URL,
@@ -31,6 +32,12 @@ const BlogPostingSchema = z.object({
   dateModified: z.string(),
   mainEntityOfPage: z.object({ "@id": z.string() }),
 });
+
+function toArtifactPath(pathname: string) {
+  const path = decodeURIComponent(pathname).replace(/^\//, "");
+  if (path === "") return "index.html";
+  return /\.[a-z]+$/.test(path) ? path : `${path}/index.html`;
+}
 
 function findSchema(page: BuiltPage, type: string) {
   return readJsonLd(page.html).find((schema) => schema["@type"] === type);
@@ -259,6 +266,32 @@ describe("배포된 페이지의 SEO", () => {
       // Then
       expect(islands.length, `${file}: 불필요한 React 섬이 있습니다`).toBe(0);
     }
+  });
+
+  it("내부 링크는 모두 빌드된 페이지나 파일을 가리킨다", async () => {
+    // Given
+    const internalLinks = new Set(
+      pages.flatMap(({ html }) =>
+        queryAll(html, "a[href^='/']")
+          .map(({ attributes }) => attributes.get("href") ?? "")
+          .filter((href) => !href.startsWith("//"))
+          .map((href) => new URL(href, SITE_URL).pathname),
+      ),
+    );
+
+    // When
+    const results = await Promise.all(
+      [...internalLinks].map(async (pathname) => ({
+        pathname,
+        exists: await readArtifact(toArtifactPath(pathname)).then(
+          () => true,
+          () => false,
+        ),
+      })),
+    );
+
+    // Then
+    expect(results.filter(({ exists }) => !exists).map(({ pathname }) => pathname)).toEqual([]);
   });
 
   it("플레이스홀더 광고 슬롯을 내보내지 않는다", () => {
