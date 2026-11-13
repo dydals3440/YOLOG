@@ -39,6 +39,8 @@
 
 @theme {
   --container-content: 680px;
+  /* 글 화면 사이드바(12.5rem + 간격 1.5rem)가 본문 왼쪽에 다 들어가는 최소 폭 */
+  --breakpoint-sidebar: 74rem;
 }
 
 @layer base {
