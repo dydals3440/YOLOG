@@ -1,0 +1,27 @@
+name: 글 내용 수정
+description: 오탈자, 사실과 다른 설명, 동작하지 않는 예제 코드를 알려 주세요.
+title: "docs: "
+labels: [documentation]
+body:
+  - type: input
+    id: url
+    attributes:
+      label: 글 주소
+      placeholder: https://www.yolog.co.kr/post/http-cors
+    validations:
+      required: true
+  - type: textarea
+    id: quote
+    attributes:
+      label: 고쳐야 할 부분
+      description: 문장이나 코드를 그대로 붙여 주세요.
+      render: markdown
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: 제안하는 수정
+      description: 어떻게 바꾸면 좋을지와 근거(공식 문서, RFC, MDN 링크)를 함께 적어 주세요.
+    validations:
+      required: true

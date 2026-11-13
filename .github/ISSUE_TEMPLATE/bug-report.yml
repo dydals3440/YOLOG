@@ -1,0 +1,49 @@
+name: 버그 제보
+description: 화면이 깨지거나 기능이 기대와 다르게 동작해요.
+title: "fix: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        재현할 수 있는 정보가 많을수록 빠르게 고칠 수 있어요. 제목은 `fix: 무엇이 어떻게 잘못되는지`로 적어 주세요.
+  - type: input
+    id: url
+    attributes:
+      label: 문제가 생긴 페이지
+      placeholder: https://www.yolog.co.kr/post/http-cache
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 어떤 문제가 있나요?
+      description: 실제로 본 화면이나 동작을 적어 주세요. 스크린샷을 붙이면 더 좋아요.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 방법
+      placeholder: |
+        1. 다크 모드로 바꾼다
+        2. 390px 너비에서 표가 있는 글을 연다
+        3. 표를 가로로 스크롤한다
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대한 동작
+    validations:
+      required: true
+  - type: dropdown
+    id: theme
+    attributes:
+      label: 테마
+      options: [라이트, 다크, 둘 다]
+  - type: input
+    id: environment
+    attributes:
+      label: 브라우저와 기기
+      placeholder: iOS 18 Safari, iPhone 15 (390px)

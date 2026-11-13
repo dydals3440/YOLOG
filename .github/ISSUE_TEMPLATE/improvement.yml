@@ -1,0 +1,43 @@
+name: 개선 제안
+description: 구조, 성능, SEO, 개발 환경을 개선하는 작업을 제안해요.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        제목은 커밋과 같은 `<type>: <무엇을 하는지>` 형식으로 적어 주세요.
+        type: `feat` `fix` `refactor` `perf` `style` `test` `docs` `ci` `chore`
+  - type: textarea
+    id: why
+    attributes:
+      label: 왜 필요한가요?
+      description: 지금 어떤 문제가 있고, 누구에게 어떤 영향을 주는지 적어 주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: 무엇을 바꾸나요?
+      description: 바꿀 대상과 방향을 적어 주세요. 표로 정리하면 읽기 좋아요.
+      value: |
+        | 대상 | 지금 | 바꾼 뒤 |
+        | --- | --- | --- |
+        |  |  |  |
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: 예시 코드
+      description: 바뀌는 사용법을 Before/After로 보여 주세요.
+      render: diff
+  - type: textarea
+    id: done
+    attributes:
+      label: 완료 기준
+      description: 확인할 수 있는 기준을 체크리스트로 적어 주세요.
+      value: |
+        - [ ] `bun run validate` 통과
+        - [ ]
+    validations:
+      required: true
