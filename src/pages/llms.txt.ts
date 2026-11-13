@@ -1,36 +1,29 @@
-import type { APIContext } from "astro";
+import type { APIRoute } from "astro";
 
-import { BLOG_CATEGORIES, WEBSITE_CONFIG } from "@/consts";
-import { getSiteUrl } from "@/lib/config";
-import { generateDescription, getPostCollection, resolveSlug } from "@/lib/mdx";
+import { getPosts } from "@/apis/posts";
+import { SITE } from "@/constants/site";
+import { CATEGORIES, CATEGORY_LABEL } from "@/domains/category.model";
+import { filterByCategory, type Post, PostPolicy } from "@/domains/post.model";
+import { getPostPath } from "@/utils/routes";
 
-export async function GET(context: APIContext) {
-  const siteUrl = getSiteUrl(context.site);
-  const posts = await getPostCollection();
+const toLink = (post: Post) =>
+  `- [${post.title}](${new URL(getPostPath(post.id), SITE.url).href}): ${PostPolicy.summary(post)}`;
 
-  const sections = Object.entries(BLOG_CATEGORIES)
-    .filter(([key]) => key !== "ALL")
-    .map(([key, label]) => {
-      const categoryPosts = posts.filter((post) => post.data.category === key);
-      if (categoryPosts.length === 0) {
-        return null;
-      }
-      const items = categoryPosts.map((post) => {
-        const description = post.data.description || generateDescription(post.body ?? "");
-        return `- [${post.data.title}](${siteUrl}/post/${resolveSlug(post.id)}): ${description}`;
-      });
-      return `## ${label}\n\n${items.join("\n")}`;
-    })
-    .filter(Boolean);
+export const GET = (async () => {
+  const posts = await getPosts();
+  const sections = CATEGORIES.map((category) => {
+    const categoryPosts = posts.filter((post) => filterByCategory(post, category));
+    return categoryPosts.length > 0
+      ? `## ${CATEGORY_LABEL[category]}\n\n${categoryPosts.map(toLink).join("\n")}`
+      : null;
+  }).filter((section) => section !== null);
 
   const body = [
-    `# ${WEBSITE_CONFIG.TITLE} (YOLOG)`,
-    `> ${WEBSITE_CONFIG.DESCRIPTION}`,
+    `# ${SITE.title} (${SITE.name})`,
+    `> ${SITE.description}`,
     ...sections,
-    `## 피드\n\n- [RSS](${siteUrl}/rss.xml): 전체 포스트 피드\n- [사이트맵](${siteUrl}/sitemap-index.xml): 전체 페이지 목록`,
+    `## 피드\n\n- [RSS](${SITE.url}/rss.xml): 전체 포스트 피드\n- [사이트맵](${SITE.url}/sitemap-index.xml): 전체 페이지 목록`,
   ].join("\n\n");
 
-  return new Response(`${body}\n`, {
-    headers: { "Content-Type": "text/plain; charset=utf-8" },
-  });
-}
+  return new Response(`${body}\n`, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+}) satisfies APIRoute;

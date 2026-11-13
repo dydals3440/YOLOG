@@ -1,10 +1,10 @@
 import { fileURLToPath } from "node:url";
 
-import { SITE_URL } from "../../src/lib/config/app";
+import { SITE } from "../../src/constants/site";
 
 const DIST_DIRECTORY = new URL("../../dist/", import.meta.url);
 
-export { SITE_URL };
+export const SITE_URL = SITE.url;
 
 export interface ElementSnapshot {
   attributes: Map<string, string>;
