@@ -6,6 +6,14 @@
   font-weight: 350;
   line-height: 1.75;
   color: var(--text-second);
+  /* 한글은 어절 단위로 줄을 바꾸고, 긴 영문·URL만 필요할 때 끊는다. */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.mdx p,
+.mdx li {
+  text-wrap: pretty;
 }
 
 [data-theme="dark"] .mdx {
@@ -41,6 +49,7 @@
 }
 
 :is(.mdx, .mdx .mdx-content, .mdx details) > :where(h2, h3, h4) {
+  text-wrap: balance;
   margin-bottom: 0.875rem;
   font-weight: 600;
   color: var(--heading);
@@ -220,7 +229,7 @@
   display: inline-block;
   margin: -1rem 0 0;
   font-size: 1.5rem;
-  color: var(--text-disabled);
+  color: var(--text-third);
   content: "* * *";
 }
 
@@ -275,7 +284,7 @@
   word-break: keep-all;
 }
 
-.mdx figure {
+.mdx .post-image {
   overflow: hidden;
   border-radius: 10px;
   box-shadow:
@@ -283,24 +292,25 @@
     0 4px 12px color-mix(in oklch, black 4%, transparent);
 }
 
-[data-theme="dark"] .mdx figure {
+[data-theme="dark"] .mdx .post-image {
   box-shadow:
     0 1px 2px color-mix(in oklch, black 40%, transparent),
     0 8px 24px color-mix(in oklch, black 25%, transparent);
 }
 
-.mdx figure > div {
+.mdx .post-image > div {
   border-radius: 10px;
   border: 1px solid var(--border);
 }
 
-.mdx figure > div:has(img.loaded) {
-  background-color: var(--gray-75);
+.mdx .post-image img {
+  display: block;
+  margin-inline: auto;
 }
 
 .mdx img + em,
 .mdx img + em p,
-.mdx figcaption {
+.mdx .post-image figcaption {
   display: inline-block;
   margin-top: 4px;
   font-family: var(--font-sans);
@@ -488,9 +498,10 @@
 }
 
 /* image grid */
+/* 이미지 수와 화면 폭에 맞춰 열 수를 정한다(휴대폰 2열, 데스크톱 최대 4열). */
 .mdx .image-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
   gap: 12px;
 }
 
