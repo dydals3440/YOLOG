@@ -1,3 +1,5 @@
+import { mapValues } from "es-toolkit";
+
 export type Ink =
   | "text"
   | "muted"
@@ -25,10 +27,17 @@ export type Mark =
       height: number;
       radius: number;
       fill: Ink;
-      stroke?: Ink;
+      stroke?: Ink | undefined;
       dash?: boolean;
     }
-  | { kind: "line"; points: Point[]; stroke?: Ink; fill?: Ink; width?: number; dash?: boolean }
+  | {
+      kind: "line";
+      points: Point[];
+      stroke?: Ink;
+      fill?: Ink | undefined;
+      width?: number;
+      dash?: boolean;
+    }
   | { kind: "circle"; x: number; y: number; radius: number; fill: Ink; stroke?: Ink }
   | {
       kind: "text";
@@ -86,6 +95,12 @@ export const palettes: Record<"light" | "dark", Palette> = {
 
 const token = (ink: Ink) => `var(--mr-${ink})`;
 
+// 캔버스는 CSS 변수를 직접 읽지 못하므로 현재 테마의 색을 값으로 꺼낸다.
+export function readPalette(element: Element): Palette {
+  const style = getComputedStyle(element);
+  return mapValues(palettes.light, (_, ink) => style.getPropertyValue(`--mr-${ink}`).trim());
+}
+
 export function FrameSvg({ frame, className }: { frame: Frame; className?: string }) {
   return (
     <svg
@@ -95,7 +110,7 @@ export function FrameSvg({ frame, className }: { frame: Frame; className?: strin
       xmlns="http://www.w3.org/2000/svg"
     >
       {frame.marks.map((mark, index) => {
-        // Order is stable within a frame; these stateless primitives have no item identity.
+        // 한 프레임 안에서 순서가 고정이고, 상태 없는 도형이라 고유한 식별자가 없다.
         const key = `${mark.kind}-${index}`;
         if (mark.kind === "rect")
           return (

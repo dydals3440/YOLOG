@@ -97,7 +97,7 @@ export interface DemoSession {
   lastSeenAt: number;
   revoked: boolean;
 }
-// Minute-based timestamps and illustrative IDs; these never call the product API.
+// 시각은 분 단위, ID는 설명용이다. 실제 제품 API를 호출하지 않는다.
 export function addSession(
   sessions: readonly DemoSession[],
   id: string,
@@ -281,11 +281,12 @@ const deviceNames: Record<string, string> = {
   E: "회사 PC Edge",
   F: "새 PC Chrome",
 };
+const deviceName = (id: string) => deviceNames[id] ?? id;
 function deviceCards(sessions: readonly DemoSession[], pending = false): Card[] {
   const cards = sessions.map((session) =>
     card(
       session.id,
-      deviceNames[session.id],
+      deviceName(session.id),
       [
         session.revoked ? "로그인 종료" : "로그인 유지",
         `최근 사용 12:${String(session.lastSeenAt).padStart(2, "0")}`,
@@ -293,7 +294,7 @@ function deviceCards(sessions: readonly DemoSession[], pending = false): Card[] 
       session.revoked ? "red" : "blue",
     ),
   );
-  if (pending) cards.push(card("F", deviceNames.F, ["새 로그인 요청", "아직 생성 전"], "orange"));
+  if (pending) cards.push(card("F", deviceName("F"), ["새 로그인 요청", "아직 생성 전"], "orange"));
   return cards;
 }
 function devicesStory(): StoryStep[] {
@@ -450,6 +451,12 @@ function hashStory(): StoryStep[] {
       { layout: "hash", count, note: "도착한 요청 수가 아니라 실제로 동시에 실행하는 해시 수" },
     ),
   );
+}
+// 재생 위치가 장면을 벗어나면 빈 화면 대신 오류로 바로 드러나게 한다.
+export function stepAt(story: readonly StoryStep[], index: number): StoryStep {
+  const found = story.at(index);
+  if (!found) throw new RangeError(`${index}번째 단계가 없습니다`);
+  return found;
 }
 export function getStory(scene: SceneName): StoryStep[] {
   switch (scene) {

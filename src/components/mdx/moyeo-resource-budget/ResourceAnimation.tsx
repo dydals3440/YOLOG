@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { FrameSvg, paintFrame, palettes, type Palette } from "./graphics";
+
+import { FrameSvg, paintFrame, palettes, readPalette } from "./graphics";
 import { buildScene, scenes, type SceneName } from "./scenes";
 
 export default function ResourceAnimation({ scene }: { scene: SceneName }) {
@@ -28,15 +29,6 @@ export default function ResourceAnimation({ scene }: { scene: SceneName }) {
     let firstFramePainted = false;
     let palette = palettes.light;
 
-    const readPalette = () => {
-      const style = getComputedStyle(figure);
-      palette = Object.fromEntries(
-        Object.keys(palettes.light).map((name) => [
-          name,
-          style.getPropertyValue(`--mr-${name}`).trim(),
-        ]),
-      ) as Palette;
-    };
     const draw = () => {
       if (!width) return;
       const progress = motion.matches
@@ -77,6 +69,7 @@ export default function ResourceAnimation({ scene }: { scene: SceneName }) {
     };
     const viewport = new IntersectionObserver(
       ([entry]) => {
+        if (!entry) return;
         visible = entry.isIntersecting;
         previous = 0;
         if (!visible && frameId) {
@@ -88,13 +81,13 @@ export default function ResourceAnimation({ scene }: { scene: SceneName }) {
       { threshold: 0.05 },
     );
     const resize = new ResizeObserver(([entry]) => {
-      if (width !== entry.contentRect.width) {
+      if (entry && width !== entry.contentRect.width) {
         width = entry.contentRect.width;
         wake();
       }
     });
     const onTheme = () => {
-      readPalette();
+      palette = readPalette(figure);
       wake();
     };
     const theme = new MutationObserver(onTheme);
@@ -107,7 +100,11 @@ export default function ResourceAnimation({ scene }: { scene: SceneName }) {
       previous = 0;
       wake();
     };
-    readPalette();
+    const wakeAfterFonts = async () => {
+      await document.fonts.ready;
+      if (!disposed) wake();
+    };
+    palette = readPalette(figure);
     viewport.observe(graphic);
     resize.observe(graphic);
     theme.observe(document.documentElement, {
@@ -117,9 +114,7 @@ export default function ResourceAnimation({ scene }: { scene: SceneName }) {
     motion.addEventListener("change", onMotion);
     document.addEventListener("visibilitychange", onVisibility);
     figure.addEventListener("moyeo-playback", wake);
-    void document.fonts.ready.then(() => {
-      if (!disposed) wake();
-    });
+    void wakeAfterFonts();
     setReduced(motion.matches);
     return () => {
       disposed = true;

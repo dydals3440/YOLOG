@@ -1,3 +1,5 @@
+import { zip } from "es-toolkit";
+
 import type { Frame, Ink, Mark, Point } from "../moyeo-resource-budget/graphics";
 import type { Card, StoryStep, Tone } from "./story";
 
@@ -141,8 +143,9 @@ function caption(
 }
 function arrow(marks: Mark[], points: Point[], color: Ink, progress: number, active: boolean) {
   marks.push(line(points, color, active ? 2.5 : 1.5, !active));
-  const end = points[points.length - 1];
-  const tail = points[points.length - 2];
+  const end = points.at(-1);
+  const tail = points.at(-2);
+  if (!end || !tail) return;
   const angle = Math.atan2(end[1] - tail[1], end[0] - tail[0]);
   marks.push(
     line(
@@ -156,25 +159,27 @@ function arrow(marks: Mark[], points: Point[], color: Ink, progress: number, act
     ),
   );
   if (!active) return;
-  const lengths = points
-    .slice(1)
-    .map((point, index) => Math.hypot(point[0] - points[index][0], point[1] - points[index][1]));
+  const segments = zip(points.slice(0, -1), points.slice(1)).map(([origin, target]) => ({
+    origin,
+    target,
+    length: Math.hypot(target[0] - origin[0], target[1] - origin[1]),
+  }));
   let distance =
-    Math.max(0, Math.min(1, progress)) * lengths.reduce((sum, value) => sum + value, 0);
-  for (let index = 0; index < lengths.length; index++) {
-    if (distance <= lengths[index] || index === lengths.length - 1) {
-      const fraction = lengths[index] ? distance / lengths[index] : 0;
+    Math.max(0, Math.min(1, progress)) * segments.reduce((sum, { length }) => sum + length, 0);
+  for (const [index, { origin, target, length }] of segments.entries()) {
+    if (distance <= length || index === segments.length - 1) {
+      const fraction = length ? distance / length : 0;
       marks.push({
         kind: "circle",
-        x: points[index][0] + (points[index + 1][0] - points[index][0]) * fraction,
-        y: points[index][1] + (points[index + 1][1] - points[index][1]) * fraction,
+        x: origin[0] + (target[0] - origin[0]) * fraction,
+        y: origin[1] + (target[1] - origin[1]) * fraction,
         radius: 6,
         fill: color,
         stroke: "background",
       });
       break;
     }
-    distance -= lengths[index];
+    distance -= length;
   }
 }
 function connect(
@@ -279,9 +284,9 @@ export function buildFrame(step: StoryStep, width: number, progress = 1): Frame 
   };
   const connections =
     step.connections ??
-    step.cards.slice(1).map((card, index) => ({
-      from: step.cards[index].id,
-      to: card.id,
+    zip(step.cards.slice(0, -1), step.cards.slice(1)).map(([from, to]) => ({
+      from: from.id,
+      to: to.id,
       label: "",
     }));
   for (const connection of connections) route(connection, "border", false);

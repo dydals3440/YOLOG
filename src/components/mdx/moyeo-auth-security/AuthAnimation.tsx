@@ -1,7 +1,8 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { FrameSvg, paintFrame, palettes, type Palette } from "../moyeo-resource-budget/graphics";
+
+import { FrameSvg, paintFrame, palettes, readPalette } from "../moyeo-resource-budget/graphics";
 import { buildFrame } from "./graphics";
-import { getStory, scenes, type SceneName } from "./story";
+import { getStory, scenes, stepAt, type SceneName } from "./story";
 
 export default function AuthAnimation({ scene }: { scene: SceneName }) {
   const definition = scenes[scene];
@@ -17,8 +18,8 @@ export default function AuthAnimation({ scene }: { scene: SceneName }) {
   const titleId = useId();
   const story = useMemo(() => getStory(scene), [scene]);
   const autoStarted = useRef(false);
-  const current = story[index];
-  const snapshot = story[story.length - 1];
+  const current = stepAt(story, index);
+  const snapshot = stepAt(story, -1);
 
   useEffect(() => {
     const figure = figureRef.current;
@@ -41,15 +42,6 @@ export default function AuthAnimation({ scene }: { scene: SceneName }) {
     let finished = false;
     let painted = false;
     let palette = palettes.light;
-    const readPalette = () => {
-      const style = getComputedStyle(figure);
-      palette = Object.fromEntries(
-        Object.keys(palettes.light).map((name) => [
-          name,
-          style.getPropertyValue(`--mr-${name}`).trim(),
-        ]),
-      ) as Palette;
-    };
     const draw = (progress: number) => {
       if (!width) return;
       const frame = buildFrame(current, width, progress);
@@ -88,6 +80,7 @@ export default function AuthAnimation({ scene }: { scene: SceneName }) {
     };
     const viewport = new IntersectionObserver(
       ([entry]) => {
+        if (!entry) return;
         visible = entry.isIntersecting && entry.intersectionRatio >= 0.5;
         if (visible && !autoStarted.current && !motion.matches) {
           autoStarted.current = true;
@@ -103,11 +96,12 @@ export default function AuthAnimation({ scene }: { scene: SceneName }) {
       { threshold: [0, 0.5] },
     );
     const resize = new ResizeObserver(([entry]) => {
+      if (!entry) return;
       width = entry.contentRect.width;
       wake();
     });
     const theme = new MutationObserver(() => {
-      readPalette();
+      palette = readPalette(figure);
       wake();
     });
     const onMotion = () => {
@@ -120,7 +114,11 @@ export default function AuthAnimation({ scene }: { scene: SceneName }) {
       previous = 0;
       wake();
     };
-    readPalette();
+    const wakeAfterFonts = async () => {
+      await document.fonts.ready;
+      if (!disposed) wake();
+    };
+    palette = readPalette(figure);
     viewport.observe(graphic);
     resize.observe(graphic);
     theme.observe(document.documentElement, {
@@ -130,9 +128,7 @@ export default function AuthAnimation({ scene }: { scene: SceneName }) {
     motion.addEventListener("change", onMotion);
     document.addEventListener("visibilitychange", onVisibility);
     setReduced(motion.matches);
-    void document.fonts.ready.then(() => {
-      if (!disposed) wake();
-    });
+    void wakeAfterFonts();
     return () => {
       disposed = true;
       cancelAnimationFrame(frameId);

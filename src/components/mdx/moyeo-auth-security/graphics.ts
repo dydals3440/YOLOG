@@ -1,3 +1,5 @@
+import { zip } from "es-toolkit";
+
 import type { Frame, Ink, Mark, Point } from "../moyeo-resource-budget/graphics";
 import type { Card, StoryStep, Tone, Transfer } from "./story";
 
@@ -138,8 +140,9 @@ function connect(
     }
   }
   marks.push(line(points, color, active ? 2.5 : 1.5, !active));
-  const end = points[points.length - 1];
-  const tail = points[points.length - 2];
+  const end = points.at(-1);
+  const tail = points.at(-2);
+  if (!end || !tail) return;
   const angle = Math.atan2(end[1] - tail[1], end[0] - tail[0]);
   marks.push(
     line(
@@ -153,25 +156,27 @@ function connect(
     ),
   );
   if (!active) return;
-  const lengths = points
-    .slice(1)
-    .map((point, index) => Math.hypot(point[0] - points[index][0], point[1] - points[index][1]));
+  const segments = zip(points.slice(0, -1), points.slice(1)).map(([origin, target]) => ({
+    origin,
+    target,
+    length: Math.hypot(target[0] - origin[0], target[1] - origin[1]),
+  }));
   let distance =
-    Math.max(0, Math.min(1, progress)) * lengths.reduce((sum, value) => sum + value, 0);
-  for (let index = 0; index < lengths.length; index++) {
-    if (distance <= lengths[index] || index === lengths.length - 1) {
-      const fraction = lengths[index] ? distance / lengths[index] : 0;
+    Math.max(0, Math.min(1, progress)) * segments.reduce((sum, { length }) => sum + length, 0);
+  for (const [index, { origin, target, length }] of segments.entries()) {
+    if (distance <= length || index === segments.length - 1) {
+      const fraction = length ? distance / length : 0;
       marks.push({
         kind: "circle",
-        x: points[index][0] + (points[index + 1][0] - points[index][0]) * fraction,
-        y: points[index][1] + (points[index + 1][1] - points[index][1]) * fraction,
+        x: origin[0] + (target[0] - origin[0]) * fraction,
+        y: origin[1] + (target[1] - origin[1]) * fraction,
         radius: 6,
         fill: color,
         stroke: "background",
       });
       break;
     }
-    distance -= lengths[index];
+    distance -= length;
   }
 }
 export function buildFrame(step: StoryStep, width: number, progress = 1): Frame {
@@ -220,7 +225,8 @@ export function buildFrame(step: StoryStep, width: number, progress = 1): Frame 
         height: cardHeight,
       }),
     );
-    height = 48 + 3 * (cardHeight + gap); // Reserve the sixth slot, so login never shifts the page.
+    // 여섯 번째 자리를 미리 비워 두어 새 로그인이 추가돼도 본문이 밀리지 않게 한다.
+    height = 48 + 3 * (cardHeight + gap);
     if (!narrow) height = 48 + 2 * (cardHeight + gap);
     marks.push(text(width / 2, 25, `활성 세션 ${step.count ?? 5}개 / 최대 5개`, 15, "blue", true));
   } else if (step.layout === "comparison") {
@@ -295,9 +301,11 @@ export function buildFrame(step: StoryStep, width: number, progress = 1): Frame 
   const connections: Transfer[] =
     step.connections ??
     (step.layout === "flow" || !step.layout
-      ? step.cards
-          .slice(1)
-          .map((card, index) => ({ from: step.cards[index].id, to: card.id, label: "" }))
+      ? zip(step.cards.slice(0, -1), step.cards.slice(1)).map(([from, to]) => ({
+          from: from.id,
+          to: to.id,
+          label: "",
+        }))
       : []);
   for (const connection of connections) {
     const from = boxes.get(connection.from);

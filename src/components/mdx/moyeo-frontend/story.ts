@@ -140,6 +140,12 @@ const leaderStory: StoryStep[] = [
   },
 ];
 
+// 재생 위치가 장면을 벗어나면 빈 화면 대신 오류로 바로 드러나게 한다.
+export function stepAt(story: readonly StoryStep[], index: number): StoryStep {
+  const found = story.at(index);
+  if (!found) throw new RangeError(`${index}번째 단계가 없습니다`);
+  return found;
+}
 export function getStory(_scene: SceneName): StoryStep[] {
   return leaderStory;
 }

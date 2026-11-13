@@ -21,6 +21,6 @@ Canvas는 화면 밖·숨김·reduced motion에서 재생하지 않고 observer�
 
 ## 검사
 
-`tests/unit/moyeo-frontend.test.mjs`는 도식의 연결·좌표, 본문 TS/TSX 문법, 금액의 빈 값과 0, 폴링 경계값, 무한 목록 select의 페이지 순서·원본 보존, URL의 부분 변경과 검증·loader·화면 조회 조건의 일치, 분석 이벤트 검증·provider 교체·오류 격리, 편집 보호, 뉴욕 DST 시각을 검사한다. 함수 예제는 본문에서 추출해 실행한다.
+`moyeo-frontend.test.ts`는 도식의 연결·좌표, 본문 TS/TSX 문법, 금액의 빈 값과 0, 폴링 경계값, 무한 목록 select의 페이지 순서·원본 보존, URL의 부분 변경과 검증·loader·화면 조회 조건의 일치, 분석 이벤트 검증·provider 교체·오류 격리, 편집 보호, 뉴욕 DST 시각을 검사한다. 함수 예제는 본문에서 추출해 실행한다.
 
 저장소 검사: `bun run check`, `bun run typecheck`, `bun run test`, `bun run build`, `bun run verify:site`.
