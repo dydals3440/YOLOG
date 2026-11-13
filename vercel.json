@@ -11,6 +11,16 @@
       "source": "/sitemap.xml",
       "destination": "/sitemap-index.xml",
       "statusCode": 301
+    },
+    {
+      "source": "/blogs/page/:page",
+      "destination": "/blogs/:page",
+      "statusCode": 301
+    },
+    {
+      "source": "/blogs/:category/page/:page",
+      "destination": "/blogs/:category/:page",
+      "statusCode": 301
     }
   ],
   "headers": [
