@@ -152,6 +152,7 @@ Astro, Vercel, canonical, OG, JSON-LD, 공유 링크, RSS, 사이트맵이 같�
 - 목록 페이지네이션 주소는 `/blogs/2`, `/blogs/http/2` 형식입니다. 이전 `/blogs/page/2` 형식은 `vercel.json`에서 301로 연결합니다.
 - LLM·AI 검색용으로 [`/llms.txt`](https://www.yolog.co.kr/llms.txt), [`/llms-full.txt`](https://www.yolog.co.kr/llms-full.txt),
   글마다 `/post/<slug>.md` 마크다운 미러를 만듭니다. `robots.txt`는 주요 AI 크롤러를 허용합니다.
+  마크다운 미러와 `llms-full.txt`는 HTML 글과 내용이 같아 `vercel.json`에서 `X-Robots-Tag: noindex`를 붙여 검색 색인에서 뺍니다.
 - 운영 배포가 끝나면 `.github/workflows/indexnow.yml`이 오늘 바뀐 글을 IndexNow(Bing·Naver 등)에 알립니다.
 
 **발행할 때:** validate → PR 검증 → main 병합/배포 → 글 주소/이미지 확인.
@@ -173,6 +174,10 @@ canonical 대체 페이지와 정상 리디렉션은 반드시 오류인 것은 
 이미지 주소는 페이지를 다시 수집하면서 `/_astro/...`로 바뀝니다.
 404 보고서의 과거 `/post/mcp-dev-workflow/`처럼 삭제된 글은 정상적인 404이며, 같은 내용의 새 주소가 있을 때만
 그 주소로 리디렉션합니다. 관련 없는 글로 보내지 않습니다.
+
+네이버 서치어드바이저는 호스트마다 사이트를 따로 등록합니다. 대표 주소 `https://www.yolog.co.kr` 사이트(HTML 파일 확인)에
+`sitemap-index.xml`과 `rss.xml`을 제출했습니다. www 없는 사이트는 모든 주소가 www로 308 리디렉션되어 제출할 수 없습니다.
+GA4 향상된 측정은 페이지뷰(history 기반 제외)·스크롤·외부 링크·영상·파일 다운로드만 켭니다.
 
 광고 차단기(예: macOS Unicorn)가 켜진 기기에서는 GA 스크립트가 빈 파일로 바뀌어 GA4 실시간 보고서에 잡히지 않습니다.
 수집 확인은 차단기가 없는 기기(휴대폰 등)에서 합니다.
