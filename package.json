@@ -11,7 +11,8 @@
     "fix": "oxlint --fix && oxfmt",
     "test": "bun test src",
     "test:site": "bun test tests/site",
-    "validate": "bun run check && bun run test && bun run build && bun run test:site"
+    "validate": "bun run check && bun run test && bun run build && bun run test:site",
+    "lighthouse": "bunx @lhci/cli@0.16.1 autorun"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "7.3.8",
