@@ -1,0 +1,39 @@
+---
+import { Moon, Sun } from "@lucide/astro";
+import type { HTMLAttributes } from "astro/types";
+
+type Props = Omit<HTMLAttributes<"button">, "type">;
+
+const { class: className, ...props } = Astro.props;
+---
+
+<button
+  type="button"
+  class:list={[
+    "relative inline-flex size-9 items-center justify-center rounded-md transition-colors hover:bg-selection hover:text-heading",
+    className,
+  ]}
+  data-theme-toggle
+  {...props}
+>
+  <Sun
+    class="size-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90"
+    stroke-width={1.75}
+    aria-hidden="true"
+  />
+  <Moon
+    class="absolute size-5 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0"
+    stroke-width={1.75}
+    aria-hidden="true"
+  />
+  <span class="sr-only">테마 변경</span>
+</button>
+
+<script>
+  import { syncTheme, toggleTheme } from "@/stores/theme";
+
+  syncTheme();
+  for (const button of document.querySelectorAll("[data-theme-toggle]")) {
+    button.addEventListener("click", toggleTheme);
+  }
+</script>

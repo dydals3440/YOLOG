@@ -1,0 +1,11 @@
+---
+import { STORAGE_THEME_KEY, THEME_MAP } from "@/stores/theme";
+---
+
+<script is:inline define:vars={{ STORAGE_THEME_KEY, THEME_MAP }}>
+  const savedTheme = localStorage.getItem(STORAGE_THEME_KEY);
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDark = savedTheme === THEME_MAP.dark || (!savedTheme && prefersDark);
+
+  document.documentElement.dataset.theme = isDark ? THEME_MAP.dark : THEME_MAP.light;
+</script>

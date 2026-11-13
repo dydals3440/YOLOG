@@ -8,6 +8,7 @@ import {
   queryAll,
   readCanonical,
   readJsonLd,
+  listArtifacts,
   readMeta,
   readXmlArtifact,
   SITE_URL,
@@ -31,6 +32,12 @@ const BlogPostingSchema = z.object({
   dateModified: z.string(),
   mainEntityOfPage: z.object({ "@id": z.string() }),
 });
+
+function toArtifactPath(pathname: string) {
+  const path = decodeURIComponent(pathname).replace(/^\//, "");
+  if (path === "") return "index.html";
+  return /\.[a-z]+$/.test(path) ? path : `${path}/index.html`;
+}
 
 function findSchema(page: BuiltPage, type: string) {
   return readJsonLd(page.html).find((schema) => schema["@type"] === type);
@@ -193,10 +200,9 @@ describe("배포된 페이지의 SEO", () => {
 
         // Then
         expect(lastmod, `${file}: 사이트맵 수정일이 없습니다`).toBeDefined();
-        expect<string | undefined>(
-          new Date(lastmod ?? "").toISOString(),
-          `${file}: 사이트맵 수정일이 다릅니다`,
-        ).toBe(readMeta(html, "article:modified_time"));
+        expect(new Date(lastmod ?? "").valueOf(), `${file}: 사이트맵 수정일이 다릅니다`).toBe(
+          new Date(readMeta(html, "article:modified_time") ?? "").valueOf(),
+        );
       }
     });
   });
@@ -234,6 +240,53 @@ describe("배포된 페이지의 SEO", () => {
     });
 
     expect(prioritizedCounts, "우선 로드 이미지가 있는 글이 없습니다").toContain(1);
+  });
+
+  it("목차는 본문의 모든 H2로 정확히 이동한다", () => {
+    for (const { file, html } of articlePages) {
+      // When
+      const tocSlugs = queryAll(html, "[data-section-link]").map(({ attributes }) =>
+        attributes.get("data-section-link"),
+      );
+      const headingIds = queryAll(html, ".mdx h2").map(({ attributes }) => attributes.get("id"));
+
+      // Then
+      expect(tocSlugs, `${file}: 목차와 본문 제목이 다릅니다`).toStrictEqual(headingIds);
+    }
+  });
+
+  it("인터랙션 MDX가 없는 페이지는 React 섬을 싣지 않는다", () => {
+    // Given
+    const staticPages = pages.filter(({ html }) => !html.includes("client:"));
+
+    for (const { file, html } of staticPages) {
+      // When
+      const islands = queryAll(html, "astro-island");
+
+      // Then
+      expect(islands.length, `${file}: 불필요한 React 섬이 있습니다`).toBe(0);
+    }
+  });
+
+  it("내부 링크는 모두 빌드된 페이지나 파일을 가리킨다", async () => {
+    // Given
+    const artifacts = await listArtifacts();
+    const internalLinks = new Set(
+      pages.flatMap(({ html }) =>
+        queryAll(html, "a[href^='/']")
+          .map(({ attributes }) => attributes.get("href") ?? "")
+          .filter((href) => !href.startsWith("//"))
+          .map((href) => new URL(href, SITE_URL).pathname),
+      ),
+    );
+
+    // When
+    const brokenLinks = [...internalLinks].filter(
+      (pathname) => !artifacts.has(toArtifactPath(pathname)),
+    );
+
+    // Then
+    expect(brokenLinks).toEqual([]);
   });
 
   it("플레이스홀더 광고 슬롯을 내보내지 않는다", () => {

@@ -1,0 +1,77 @@
+---
+import { Check, Copy, Mail, Send } from "@lucide/astro";
+
+import { AUTHOR } from "@/constants/site";
+
+const MAILTO_URL = `mailto:${AUTHOR.email}`;
+const GMAIL_COMPOSE_URL = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(AUTHOR.email)}`;
+const MENU_ITEM_CLASS =
+  "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-second transition-colors hover:bg-selection hover:text-body";
+---
+
+<div class="email-menu relative flex items-center">
+  <button
+    type="button"
+    popovertarget="email-menu"
+    aria-label="이메일"
+    class="rounded p-1 transition-colors hover:bg-selection hover:text-body"
+  >
+    <Mail class="size-4" stroke-width={1.75} aria-hidden="true" />
+  </button>
+  <div
+    id="email-menu"
+    popover
+    class="email-menu-popover w-max rounded-md border border-gray-200 bg-gray-75 p-1 text-left shadow-lg"
+  >
+    <p class="px-2 py-1 text-xs text-third">{AUTHOR.email}</p>
+    <a href={GMAIL_COMPOSE_URL} target="_blank" rel="noopener noreferrer" class={MENU_ITEM_CLASS}>
+      <Send class="size-3.5" stroke-width={1.75} aria-hidden="true" />
+      Gmail로 보내기
+    </a>
+    <a href={MAILTO_URL} class={MENU_ITEM_CLASS}>
+      <Mail class="size-3.5" stroke-width={1.75} aria-hidden="true" />
+      메일 앱으로 보내기
+    </a>
+    <button
+      type="button"
+      class:list={["group", MENU_ITEM_CLASS]}
+      data-copy-button
+      data-copy-text={AUTHOR.email}
+    >
+      <Copy class="size-3.5 group-data-copied:hidden" stroke-width={1.75} aria-hidden="true" />
+      <Check
+        class="hidden size-3.5 group-data-copied:block"
+        stroke-width={1.75}
+        aria-hidden="true"
+      />
+      주소 복사
+    </button>
+  </div>
+</div>
+
+<style>
+  .email-menu {
+    anchor-name: --email-menu;
+  }
+
+  /* 버튼 위쪽 가운데에 붙인다. 앵커 위치를 지원하지 않는 브라우저는 화면 아래 가운데에 띄운다. */
+  .email-menu-popover {
+    inset: auto;
+    bottom: 4rem;
+    left: 50%;
+    translate: -50% 0;
+
+    @supports (position-anchor: --email-menu) {
+      position-anchor: --email-menu;
+      bottom: anchor(top);
+      left: anchor(center);
+      margin-bottom: 0.5rem;
+    }
+  }
+</style>
+
+<script>
+  import { setupCopyButtons } from "./copy-buttons";
+
+  setupCopyButtons();
+</script>

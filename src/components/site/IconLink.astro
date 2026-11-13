@@ -1,0 +1,21 @@
+---
+import type { HTMLAttributes } from "astro/types";
+
+interface Props extends HTMLAttributes<"a"> {
+  href: string;
+  label: string;
+}
+
+const { href, label, class: className, ...props } = Astro.props;
+---
+
+<a
+  href={href}
+  aria-label={label}
+  target="_blank"
+  rel="noopener noreferrer"
+  class:list={["rounded p-1 transition-colors hover:bg-selection hover:text-body", className]}
+  {...props}
+>
+  <slot />
+</a>

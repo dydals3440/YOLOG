@@ -1,0 +1,98 @@
+---
+import { SEO } from "astro-seo";
+import { Font } from "astro:assets";
+import type { Thing, WithContext } from "schema-dts";
+
+import { AUTHOR, SITE } from "@/constants/site";
+import { buildWebSiteSchema, serializeJsonLd } from "@/utils/structured-data";
+
+import ThemeScript from "./ThemeScript.astro";
+
+interface Article {
+  publishedTime: string;
+  modifiedTime: string;
+  section: string;
+  tags: string[];
+}
+
+export interface Props {
+  title?: string | undefined;
+  description?: string | undefined;
+  image?: string | undefined;
+  noindex?: boolean | undefined;
+  article?: Article | undefined;
+  prevUrl?: string | undefined;
+  nextUrl?: string | undefined;
+  alternateMarkdownUrl?: string | undefined;
+  schemas?: WithContext<Thing>[] | undefined;
+}
+
+const {
+  title,
+  description = SITE.description,
+  image = SITE.defaultOgImage,
+  noindex = false,
+  article,
+  prevUrl,
+  nextUrl,
+  alternateMarkdownUrl,
+  schemas = [],
+} = Astro.props;
+
+const pageTitle = title ? `${title} | ${SITE.title}` : SITE.title;
+const canonicalUrl = new URL(Astro.url.pathname.replace(/\/$/, "") || "/", SITE.url).href;
+const imageUrl = new URL(image, SITE.url).href;
+const isDefaultImage = image === SITE.defaultOgImage;
+const structuredData = [buildWebSiteSchema(), ...schemas];
+
+const links = [
+  { rel: "icon", href: "/favicon.ico" },
+  { rel: "alternate", type: "application/rss+xml", title: `${SITE.name} RSS`, href: "/rss.xml" },
+  ...(prevUrl ? [{ rel: "prev", href: prevUrl }] : []),
+  ...(nextUrl ? [{ rel: "next", href: nextUrl }] : []),
+  ...(alternateMarkdownUrl
+    ? [
+        { rel: "alternate", type: "text/markdown", href: alternateMarkdownUrl },
+        { rel: "describedby", href: "/llms.txt" },
+      ]
+    : []),
+];
+---
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<SEO
+  title={pageTitle}
+  description={description}
+  canonical={canonicalUrl}
+  noindex={noindex}
+  {...(noindex ? {} : { robotsExtras: "max-image-preview:large" })}
+  openGraph={{
+    basic: {
+      title: pageTitle,
+      type: article ? "article" : "website",
+      image: imageUrl,
+      url: canonicalUrl,
+    },
+    optional: { siteName: SITE.name, locale: "ko_KR", description },
+    image: {
+      alt: pageTitle,
+      ...(isDefaultImage ? { width: 1200, height: 630 } : {}),
+    },
+    ...(article ? { article: { ...article, authors: [AUTHOR.name] } } : {}),
+  }}
+  twitter={{ card: "summary_large_image", title: pageTitle, description, image: imageUrl }}
+  extend={{
+    link: links,
+    meta: [
+      { name: "generator", content: Astro.generator },
+      { name: "apple-itunes-app", content: "app-id=6757722325" },
+    ],
+  }}
+/>
+<Font cssVariable="--font-sans" />
+<Font cssVariable="--font-mono" />
+<ThemeScript />
+{structuredData.map((schema) => (
+  <script is:inline type="application/ld+json" set:html={serializeJsonLd(schema)} />
+))}

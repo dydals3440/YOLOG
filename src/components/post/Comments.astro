@@ -1,0 +1,87 @@
+---
+import {
+  PUBLIC_GISCUS_CATEGORY,
+  PUBLIC_GISCUS_CATEGORY_ID,
+  PUBLIC_GISCUS_REPO,
+  PUBLIC_GISCUS_REPO_ID,
+} from "astro:env/client";
+
+const giscusConfig =
+  PUBLIC_GISCUS_REPO && PUBLIC_GISCUS_REPO_ID && PUBLIC_GISCUS_CATEGORY && PUBLIC_GISCUS_CATEGORY_ID
+    ? {
+        repo: PUBLIC_GISCUS_REPO,
+        repoId: PUBLIC_GISCUS_REPO_ID,
+        category: PUBLIC_GISCUS_CATEGORY,
+        categoryId: PUBLIC_GISCUS_CATEGORY_ID,
+      }
+    : null;
+---
+
+<section id="comments" class="min-h-[372px]" aria-label="댓글">
+  {giscusConfig && (
+    <div
+      data-giscus
+      data-repo={giscusConfig.repo}
+      data-repo-id={giscusConfig.repoId}
+      data-category={giscusConfig.category}
+      data-category-id={giscusConfig.categoryId}
+    />
+  )}
+</section>
+
+<script>
+  // giscus 공식 임베드 스크립트를 댓글 영역에 가까워졌을 때 넣고, 사이트 테마 전환을 iframe에 전달한다.
+  const GISCUS_ORIGIN = "https://giscus.app";
+  const PRELOAD_MARGIN = "400px";
+  const THEME = { light: "light", dark: "transparent_dark" } as const;
+
+  const currentTheme = () =>
+    document.documentElement.dataset.theme === "dark" ? THEME.dark : THEME.light;
+
+  const container = document.querySelector<HTMLElement>("[data-giscus]");
+
+  if (container) {
+    const { repo = "", repoId = "", category = "", categoryId = "" } = container.dataset;
+
+    const loadGiscus = () => {
+      const script = document.createElement("script");
+      script.src = `${GISCUS_ORIGIN}/client.js`;
+      script.async = true;
+      script.crossOrigin = "anonymous";
+      Object.assign(script.dataset, {
+        repo,
+        repoId,
+        category,
+        categoryId,
+        mapping: "pathname",
+        strict: "0",
+        reactionsEnabled: "1",
+        emitMetadata: "0",
+        inputPosition: "bottom",
+        theme: currentTheme(),
+        lang: "ko",
+        loading: "lazy",
+      });
+      container.append(script);
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        observer.disconnect();
+        loadGiscus();
+      },
+      { rootMargin: PRELOAD_MARGIN },
+    );
+    observer.observe(container);
+
+    new MutationObserver(() => {
+      document
+        .querySelector<HTMLIFrameElement>("iframe.giscus-frame")
+        ?.contentWindow?.postMessage(
+          { giscus: { setConfig: { theme: currentTheme() } } },
+          GISCUS_ORIGIN,
+        );
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  }
+</script>

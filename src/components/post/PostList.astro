@@ -1,0 +1,66 @@
+---
+import { CalendarDays, ChevronRight, Clock } from "@lucide/astro";
+
+import { CATEGORY_LABEL } from "@/domains/category.model";
+import { type Post, PostPolicy } from "@/domains/post.model";
+import { formatKoreanDate, toIsoDate } from "@/utils/date";
+import { getPostPath } from "@/utils/routes";
+
+interface Props {
+  posts: Post[];
+}
+
+const { posts } = Astro.props;
+---
+
+{posts.length === 0 ? (
+  <slot name="empty">
+    <p class="py-16 text-center text-second">해당하는 게시글이 없어요.</p>
+  </slot>
+) : (
+  <ul class="divide-y divide-border">
+    {posts.map((post) => (
+      <li>
+        <a
+          href={getPostPath(post.id)}
+          class="group -mx-4 block rounded-lg px-4 py-6 transition-colors duration-200 hover:bg-hover sm:-mx-3 sm:px-3 sm:py-5"
+        >
+          <article>
+            <div class="mb-3 flex items-center gap-3">
+              <span class="inline-flex items-center rounded bg-hover px-2 py-0.5 text-xs font-medium text-third">
+                {CATEGORY_LABEL[post.category]}
+              </span>
+              <span class="inline-flex items-center text-xs text-third">
+                <Clock class="mr-1 size-3" stroke-width={1.75} aria-hidden="true" />
+                {PostPolicy.readingMinutes(post)}분 읽기
+              </span>
+            </div>
+            <h2 class="mb-2 line-clamp-2 text-lg leading-snug font-semibold text-primary sm:text-base">
+              {post.title}
+            </h2>
+            {post.description && (
+              <p class="mb-4 line-clamp-2 text-sm leading-relaxed text-second">
+                {post.description}
+              </p>
+            )}
+            <div class="flex items-center justify-between">
+              <time
+                datetime={toIsoDate(post.publishedAt)}
+                class="flex items-center text-xs font-medium text-third"
+              >
+                <CalendarDays class="mr-1.5 size-3.5" stroke-width={1.75} aria-hidden="true" />
+                {formatKoreanDate(post.publishedAt)}
+              </time>
+              <span class="flex items-center text-third transition-all duration-300 group-hover:translate-x-2 group-hover:text-heading">
+                <span class="mr-1 text-xs font-medium opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                  자세히 보기
+                </span>
+                <ChevronRight class="size-4" stroke-width={1.75} aria-hidden="true" />
+              </span>
+            </div>
+          </article>
+        </a>
+      </li>
+    ))}
+  </ul>
+)}

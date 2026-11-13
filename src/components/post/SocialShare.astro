@@ -1,0 +1,101 @@
+---
+import { Check, Link, Share } from "@lucide/astro";
+
+import FacebookIcon from "@/assets/icons/facebook.svg";
+import LinkedinIcon from "@/assets/icons/linkedin.svg";
+import XIcon from "@/assets/icons/x.svg";
+
+import ShareLink from "./ShareLink.astro";
+
+interface Props {
+  title: string;
+  url: string;
+}
+
+const { title, url } = Astro.props;
+const encodedTitle = encodeURIComponent(title);
+const encodedUrl = encodeURIComponent(url);
+const BUTTON_CLASS =
+  "group rounded-lg p-2 text-third transition-colors duration-200 hover:bg-hover hover:text-primary";
+---
+
+<div class="inline-flex items-center gap-1" data-social-share data-title={title} data-url={url}>
+  <ShareLink
+    platform="x"
+    label="X에 공유"
+    href={`https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`}
+  >
+    <XIcon class="size-4" aria-hidden="true" />
+  </ShareLink>
+  <ShareLink
+    platform="facebook"
+    label="Facebook에 공유"
+    href={`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`}
+  >
+    <FacebookIcon class="size-4" aria-hidden="true" />
+  </ShareLink>
+  <ShareLink
+    platform="linkedin"
+    label="LinkedIn에 공유"
+    href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`}
+  >
+    <LinkedinIcon class="size-4" aria-hidden="true" />
+  </ShareLink>
+  <span class="mx-1 h-4 w-px bg-border" aria-hidden="true"></span>
+  <button
+    type="button"
+    class={BUTTON_CLASS}
+    aria-label="링크 복사"
+    data-copy-button
+    data-copy-text={url}
+  >
+    <Link class="size-4 group-data-copied:hidden" stroke-width={1.75} aria-hidden="true" />
+    <Check
+      class="hidden size-4 text-heading group-data-copied:block"
+      stroke-width={1.75}
+      aria-hidden="true"
+    />
+  </button>
+  <!-- 앞의 버튼이 밀리지 않도록 지원 여부를 확인한 뒤 맨 뒤에 드러낸다. -->
+  <button
+    type="button"
+    class:list={[BUTTON_CLASS, "hidden"]}
+    aria-label="공유하기"
+    data-native-share
+  >
+    <Share class="size-4" stroke-width={1.75} aria-hidden="true" />
+  </button>
+</div>
+
+<script>
+  import { setupCopyButtons } from "@/components/site/copy-buttons";
+
+  import { trackShare } from "./share-tracking";
+
+  setupCopyButtons();
+
+  for (const share of document.querySelectorAll<HTMLElement>("[data-social-share]")) {
+    const nativeShareButton = share.querySelector<HTMLButtonElement>("[data-native-share]");
+    const { title = document.title, url = location.href } = share.dataset;
+
+    if (nativeShareButton && "share" in navigator) {
+      nativeShareButton.hidden = false;
+      nativeShareButton.classList.remove("hidden");
+      nativeShareButton.addEventListener("click", async () => {
+        try {
+          await navigator.share({ title, url });
+          trackShare("native");
+        } catch {
+          // 사용자가 공유 창을 닫은 경우다.
+        }
+      });
+    }
+
+    for (const link of share.querySelectorAll<HTMLAnchorElement>("[data-share-platform]")) {
+      link.addEventListener("click", () => trackShare(link.dataset.sharePlatform ?? "link"));
+    }
+    share
+      .querySelector("[data-copy-button]")
+      ?.addEventListener("click", () => trackShare("copy_link"));
+  }
+</script>

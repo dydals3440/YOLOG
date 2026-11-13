@@ -1,15 +1,15 @@
 ---
-import Text404 from "@/components/Text404.astro";
-import Yong404 from "@/components/Yong404.astro";
+import Text404 from "@/assets/text-404.svg";
+import Yong404 from "@/assets/yong-404.svg";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 ---
 
 <BaseLayout seo={{ title: "404", noindex: true }}>
   <section data-animate data-animate-speed="slow">
     <div class="flex h-dvh flex-col items-center justify-center gap-2">
-      <Text404 />
+      <Text404 aria-hidden="true" />
       <p class="my-6 text-center">페이지를 찾을 수 없습니다</p>
-      <Yong404 />
+      <Yong404 aria-hidden="true" />
     </div>
   </section>
 </BaseLayout>
