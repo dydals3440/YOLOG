@@ -1,29 +1,13 @@
-.mf-code-example {
-  --code-highlighted: rgb(59 130 246 / 12%);
-}
 body:has(.mf-code-example) h1 {
   word-break: keep-all;
   text-wrap: balance;
 }
-.mf-code-example :is(h2, h3, h4, [data-code-title]) {
+.mf-code-example :is(h2, h3, h4, figcaption) {
   word-break: keep-all;
   overflow-wrap: break-word;
   text-wrap: pretty;
 }
-[data-theme="dark"] .mf-code-example {
-  --code-highlighted: rgb(96 165 250 / 18%);
-}
-.mf-code-example pre.astro-code span.highlighted.error {
-  background-color: var(--vp-code-line-error-color) !important;
-}
-.mf-code-example pre.astro-code span.highlighted.warning {
-  background-color: var(--vp-code-line-warning-color) !important;
-}
-[data-theme="dark"] .mf-code-example pre.astro-code span.highlighted span {
-  background-color: transparent !important;
-}
-
-.mf-demo {
+[data-theme="dark"] .mf-demo {
   --mr-text: #334155;
   --mr-muted: #606d7c;
   --mr-border: #dfddd4;

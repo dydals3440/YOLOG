@@ -62,11 +62,11 @@ function PostsPage() {
 
 제목 아래 한 줄에 보기 탭과 상태 필터, 검색창이 놓이고 그 아래로 목록이 이어진다. 아래는 이 순서를 그대로 옮긴 코드다. 앞의 코드와 비교하면 어느 쪽이 구성과 흐름을 더 잘 보여 줄까?
 
-```tsx title="After: 제목·검색·목록 순서로 배치한다"
+```tsx title="After: 제목·검색·목록 순서로 배치한다" {3-4}
 // QueryBoundary는 Suspense와 오류 경계를 묶은 공통 컴포넌트다.
 function PostsPage() {
-  const [view, setView] = usePostView(); // [!code highlight]
-  const [{ query, status }, setFilters] = usePostFilters(); // [!code highlight]
+  const [view, setView] = usePostView();
+  const [{ query, status }, setFilters] = usePostFilters();
 
   return (
     <VStack gap={6}>
@@ -137,7 +137,7 @@ function PostsPage() {
 
 차이를 보려고 지금의 두 보기에 '예약 글'을 추가한다고 가정해 보자. `ExpandedPostView`는 이 비교에서만 쓰는 타입이다.
 
-```ts title="Before: default가 빠뜨린 탭까지 처리한다"
+```ts title="Before: default가 빠뜨린 탭까지 처리한다" {10}
 type ExpandedPostView = "channel_posts" | "posts" | "scheduled";
 
 function getPostViewLabel(view: ExpandedPostView) {
@@ -147,12 +147,12 @@ function getPostViewLabel(view: ExpandedPostView) {
     case "posts":
       return "모여 게시물";
     default:
-      return "모여 게시물"; // 예약 글도 이 이름으로 표시된다. // [!code highlight]
+      return "모여 게시물"; // 예약 글도 이 이름으로 표시된다.
   }
 }
 ```
 
-```ts title="After: exhaustive가 빠뜨린 탭을 타입 오류로 알린다"
+```ts title="After: exhaustive가 빠뜨린 탭을 타입 오류로 알린다" {9}
 import { match } from "ts-pattern";
 
 // 같은 ExpandedPostView 타입을 사용한다.
@@ -161,7 +161,7 @@ function getPostViewLabel(view: ExpandedPostView) {
     .with("channel_posts", () => "채널 게시물")
     .with("posts", () => "모여 게시물")
     // 'scheduled' 분기가 빠져 있어 타입 오류가 난다.
-    .exhaustive(); // [!code highlight]
+    .exhaustive();
 }
 ```
 
@@ -230,11 +230,11 @@ function getPostViewLabel(view: ExpandedPostView) {
 </InputGroup>
 ```
 
-```tsx title="After: AmountInput에 금액의 표시와 변환을 맡긴다" snippet
+```tsx title="After: AmountInput에 금액의 표시와 변환을 맡긴다" snippet {3-4}
 <AmountInput
   aria-label="상품 가격"
-  value={productPrice} // [!code highlight]
-  onChange={setProductPrice} // [!code highlight]
+  value={productPrice}
+  onChange={setProductPrice}
   suffix="원"
   placeholder="가격을 입력하세요"
 />
@@ -244,7 +244,7 @@ function getPostViewLabel(view: ExpandedPostView) {
 
 Props는 원래 입력 요소의 관례를 따랐다. 안내 문구는 `placeholder`로, 저장 중에 입력을 막을 때는 `disabled`로 쓴다. 구현을 열어 보거나 새 이름을 외울 필요가 없다. 접근성 속성도 그대로 전달하고, 값과 변경 함수만 숫자를 주고받게 정의했다.
 
-```ts title="amount-input.tsx: 숫자를 주고받는 입력 Props"
+```ts title="amount-input.tsx: 숫자를 주고받는 입력 Props" {8}
 import type { ComponentProps, ReactNode } from "react";
 
 interface AmountInputProps extends Omit<
@@ -252,7 +252,7 @@ interface AmountInputProps extends Omit<
   "defaultValue" | "inputMode" | "value" | "onChange"
 > {
   value?: number | null;
-  onChange: (value: number | null) => void; // [!code highlight]
+  onChange: (value: number | null) => void;
   suffix?: ReactNode;
 }
 ```
@@ -271,7 +271,7 @@ interface AmountInputProps extends Omit<
 />
 ```
 
-```ts title="입력을 지운 것과 0원을 구분한다"
+```ts title="입력을 지운 것과 0원을 구분한다" {9}
 const MAX_AMOUNT_DIGITS = 12;
 const NON_DIGIT_PATTERN = /\D/gu;
 
@@ -280,7 +280,7 @@ function parseAmountText(text: string): number | null {
     .replaceAll(NON_DIGIT_PATTERN, "")
     .slice(0, MAX_AMOUNT_DIGITS);
 
-  return digits.length === 0 ? null : Number(digits); // [!code highlight]
+  return digits.length === 0 ? null : Number(digits);
 }
 ```
 
@@ -306,7 +306,7 @@ onChange(12_900); // 함수가 없으면 사용자가 입력해도 값이 바뀌
 
 다시 게시물 화면으로 돌아가자. 목록에서 글을 고르면 본문·첨부 파일 수·게시 상태를 보여 준다고 하자. `PostInfoRow`는 항목의 이름과 값을 놓는 행이다. 여기서 "게시 상태만 배지로 바꿔 주세요"라는 요청을 받으면 `map` 안에서 상태 항목을 따로 구분하게 된다.
 
-```tsx title="Before: 반복문 안에서 상태 행을 구분한다"
+```tsx title="Before: 반복문 안에서 상태 행을 구분한다" {16-17}
 const rows = [
   { id: "text", label: "본문", value: post.text },
   {
@@ -322,8 +322,8 @@ rows.map((row) => (
     key={row.id}
     label={row.label}
     value={
-      row.id === "status" // [!code highlight]
-        ? <PostStatusBadge post={post} /> // [!code highlight]
+      row.id === "status"
+        ? <PostStatusBadge post={post} />
         : row.value
     }
   />
@@ -332,7 +332,7 @@ rows.map((row) => (
 
 지금은 분기 하나지만 본문에 더 보기, 첨부 파일에 미리보기가 붙으면 반복문 안의 조건도 늘어난다. 세 항목은 모양이 비슷할 뿐 서로 다른 이유로 바뀐다. 각 행을 직접 적으면 요구사항마다 고칠 자리가 드러난다.
 
-```tsx title="After: 바꿀 항목의 JSX를 직접 수정한다"
+```tsx title="After: 바꿀 항목의 JSX를 직접 수정한다" {18}
 // @moyeo/api는 서버와 웹이 함께 쓰는 API 계약 패키지다.
 import type { PostRecord } from "@moyeo/api";
 import { Card, CardContent } from "@moyeo/ui/components/card";
@@ -350,7 +350,7 @@ PostInfoCard.Content = function Content({ post }: { post: PostRecord }) {
           <PostInfoRow
             label="게시 상태"
             // 다른 행은 그대로 두고, 이 값만 바꾼다.
-            value={<PostStatusBadge post={post} />} // [!code highlight]
+            value={<PostStatusBadge post={post} />}
           />
         </VStack>
       </CardContent>
@@ -387,12 +387,12 @@ PostInfoCard.Empty = function Empty() {
 
 `Content`와 `Empty`는 이 카드 안에서만 의미가 있다. 네임스페이스 패턴으로 소속을 드러내고 같은 파일에 두었다. 행의 배치와 글자 스타일은 파일 안의 지역 컴포넌트가 맡는다.
 
-```tsx title="PostInfoRow와 Message에 반복 스타일을 모은다"
+```tsx title="PostInfoRow와 Message에 반복 스타일을 모은다" {5,14}
 import type { ReactNode } from "react";
 
 function PostInfoRow({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <VStack gap={1}> // [!code highlight]
+    <VStack gap={1}>
       <Text variant="caption" color="muted">{label}</Text>
       <Text variant="body2" weight="medium">{value}</Text>
     </VStack>
@@ -401,7 +401,7 @@ function PostInfoRow({ label, value }: { label: string; value: ReactNode }) {
 
 function Message({ text }: { text: string }) {
   return (
-    <Text variant="body2" color="muted"> // [!code highlight]
+    <Text variant="body2" color="muted">
       {text}
     </Text>
   );
@@ -473,7 +473,7 @@ type PostsSearch = z.output<typeof postsSearchSchema>;
 
 먼저 선택한 보기를 URL에 저장해 보자. 페이지에 돌려주는 것은 값과 변경 함수뿐이다.
 
-```ts title="Before: 선택한 보기를 URL에 저장한다"
+```ts title="Before: 선택한 보기를 URL에 저장한다" {17}
 // postsRouteApi로 게시물 라우트의 검색 조건을 읽고 변경한다.
 function usePostView(): PostViewState {
   const view = postsRouteApi.useSearch({ select: (search) => search.view });
@@ -490,7 +490,7 @@ function usePostView(): PostViewState {
     );
   };
 
-  return [view, setView] as const; // [!code highlight]
+  return [view, setView] as const;
 }
 ```
 
@@ -498,7 +498,7 @@ function usePostView(): PostViewState {
 
 이제 요구사항이 바뀌었다고 해 보자. "이 탭 선택은 링크로 공유하지 않고, 기기마다 마지막으로 본 탭을 기억하게 하자." 그러면 훅 내부만 브라우저 저장소로 바꾸면 된다. 아래 코드는 현재 모여의 저장소 유틸로 같은 인터페이스를 구현한 대안이다.
 
-```ts title="After: 같은 튜플을 반환하고 기기에 저장한다"
+```ts title="After: 같은 튜플을 반환하고 기기에 저장한다" {15}
 import { useStoredValue } from "@/shared/storage/hooks/use-stored-value";
 import {
   createWebStorageStore,
@@ -513,7 +513,7 @@ const postViewStore = createWebStorageStore({
 function usePostView(): PostViewState {
   const [view, setView] = useStoredValue(postViewStore, PostView.channelPosts);
 
-  return [view, setView]; // [!code highlight]
+  return [view, setView];
 }
 ```
 
@@ -527,11 +527,11 @@ function usePostView(): PostViewState {
 
 "신메뉴 안내"를 검색하다가 임시 저장한 글만 보고 싶다면 검색어가 남아 있어야 한다. Router에서는 기존 검색 조건을 받아 바꿀 값만 덮어쓰면 된다.
 
-```ts title="검색어와 보기는 유지하고 상태만 바꾼다"
+```ts title="검색어와 보기는 유지하고 상태만 바꾼다" {3-4}
 await navigate({
   search: (previousSearch) => ({
-    ...previousSearch, // 기존 검색어와 보기 선택을 유지한다. // [!code highlight]
-    status: "draft", // 상태만 임시 저장으로 바꾼다. // [!code highlight]
+    ...previousSearch, // 기존 검색어와 보기 선택을 유지한다.
+    status: "draft", // 상태만 임시 저장으로 바꾼다.
   }),
   replace: true,
 });
@@ -552,13 +552,13 @@ setFilters({ query: "신메뉴 출시" }); // 임시 저장 조건을 유지한�
 
 임시 저장한 글 중 "신메뉴"가 들어간 목록을 공유한다고 하자. URL을 문자열로 조립하면 경로나 검색 조건을 잘못 적어도 실행 전에는 알아채기 어렵다. TanStack Router의 `Link`는 **목적지에 맞는 경로 변수와 검색 조건을 함께 검사한다.**
 
-```tsx title="목적지에 맞는 params와 search를 검사한다"
+```tsx title="목적지에 맞는 params와 search를 검사한다" {6}
 import { Link } from "@tanstack/react-router";
 
 <Link
   to="/workspaces/$workspaceId/posts"
   params={{ workspaceId }}
-  search={{ view: "posts", status: "draft", q: "신메뉴" }} // [!code highlight]
+  search={{ view: "posts", status: "draft", q: "신메뉴" }}
 >
   임시 저장한 신메뉴 안내 보기
 </Link>
@@ -588,7 +588,7 @@ function PostsPage() {
 
 nuqs를 쓰면 허용할 값과 기본값을 정해 두고 앞에서 본 튜플 형태로 읽고 바꾼다.
 
-```ts title="After: 허용한 값으로 읽고 URL을 바꾼다"
+```ts title="After: 허용한 값으로 읽고 URL을 바꾼다" {9}
 "use client";
 
 import { parseAsStringLiteral, useQueryState } from "nuqs";
@@ -597,7 +597,7 @@ function PostsPage() {
   const [view, setView] = useQueryState(
     "view",
     parseAsStringLiteral(["channel_posts", "posts"])
-      .withDefault("channel_posts"), // 잘못된 값도 기본 보기로 읽는다. // [!code highlight]
+      .withDefault("channel_posts"), // 잘못된 값도 기본 보기로 읽는다.
   );
 
   // 중략
@@ -616,20 +616,20 @@ function PostsPage() {
 
 검색 조건을 정했으니 목록을 불러올 차례다. 게시물 관리에서는 전체 글을, 임시 저장 목록에서는 작성 중인 글만 보여 주고 싶다. 이 차이를 목록의 Props로 어떻게 표현하면 좋을까?
 
-```tsx title="Before: 화면 이름으로 조회 조건을 정한다" snippet
+```tsx title="Before: 화면 이름으로 조회 조건을 정한다" snippet {3}
 // 임시 저장한 글을 보고 싶은데, 페이지 이름부터 알려 줘야 한다.
 <PostList
-  isDraftPage // [!code highlight]
+  isDraftPage
   pageSize={20}
 />
 ```
 
 이 인터페이스에서는 `isDraftPage`가 임시 저장한 글 조회를 뜻한다는 규칙이 목록 안에 숨어 있다. 보관된 글을 보여 주는 화면이 생기면 `isArchivedPage`와 분기가 늘어나기 쉽다.
 
-```tsx title="After: 필요한 조회 조건을 전달한다" snippet
+```tsx title="After: 필요한 조회 조건을 전달한다" snippet {3}
 // 같은 임시 저장 목록이다. 조회할 상태를 직접 전달한다.
 <PostList
-  filters={{ statuses: ["draft"] }} // [!code highlight]
+  filters={{ statuses: ["draft"] }}
   pageSize={20}
 />
 ```
@@ -642,10 +642,10 @@ function PostsPage() {
 
 목록에 무엇을 보여 줄지 정했으니 기다리는 동안과 실패했을 때의 화면도 정해야 한다. 처음에 본 `QueryBoundary` 안에 목록을 두면 목록·로딩·오류 화면이 한자리에서 읽힌다.
 
-```tsx title="로딩·오류 화면을 목록과 함께 배치한다" snippet
+```tsx title="로딩·오류 화면을 목록과 함께 배치한다" snippet {2-3}
 <QueryBoundary
-  pending={<PostList.Loading />} // [!code highlight]
-  error={PostList.Error} // [!code highlight]
+  pending={<PostList.Loading />}
+  error={PostList.Error}
 >
   <PostList
     filters={{ statuses: ["draft"] }}
@@ -683,20 +683,20 @@ range(3).map((index) => (
 
 컴포넌트 안에서 배열을 펼쳐도 된다. 여러 곳에서 같은 형태로 읽는다면 `select`에 선택 함수를 연결하는 방법도 있다. 두 방식 모두 같은 게시물 배열을 만든다.
 
-```tsx title="Before: 조회한 뒤 페이지별 게시물을 펼친다"
+```tsx title="Before: 조회한 뒤 페이지별 게시물을 펼친다" {7}
 function PostList({ filters, pageSize = 20 }: PostListProps) {
   const { workspaceId } = workspaceRouteApi.useParams();
   const orpc = useOrpc();
   const { data } = useSuspenseInfiniteQuery(
     postListInfiniteOptions(orpc, { workspaceId, ...filters, limit: pageSize }),
   );
-  const posts = data.pages.flatMap((page) => page.items); // [!code highlight]
+  const posts = data.pages.flatMap((page) => page.items);
 
   // 중략
 }
 ```
 
-```tsx title="After: select로 목록에서 읽을 형태를 정한다"
+```tsx title="After: select로 목록에서 읽을 형태를 정한다" {25}
 import type { InfiniteData } from "@tanstack/react-query";
 import type { ListPostsInput, PostList as PostListOutput } from "@moyeo/api";
 
@@ -721,7 +721,7 @@ function PostList({ filters, pageSize = 20 }: PostListProps) {
       ...filters,
       limit: pageSize,
     }),
-    select: selectPosts, // [!code highlight]
+    select: selectPosts,
   });
 
   // 중략
@@ -740,7 +740,7 @@ function PostList({ filters, pageSize = 20 }: PostListProps) {
 
 `loaderDeps`에서 검색어와 상태를 고르고, `loader`에서 그 조건으로 조회한다. 앞의 목록에 넘긴 조건과 비교해 보자.
 
-```ts title="loader도 목록과 같은 조건으로 조회한다"
+```ts title="loader도 목록과 같은 조건으로 조회한다" {8,21-22}
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute(
@@ -748,7 +748,7 @@ export const Route = createFileRoute(
   "/_authenticated/workspaces/$workspaceId/_app/posts",
 )({
   validateSearch: postsSearchSchema,
-  loaderDeps: ({ search }) => ({ // [!code highlight]
+  loaderDeps: ({ search }) => ({
     view: search.view,
     query: search.q ?? "", // 검색어가 없으면 빈 입력으로 다룬다.
     status: search.status,
@@ -761,8 +761,8 @@ export const Route = createFileRoute(
     await context.queryClient.infiniteQuery(
       postListInfiniteOptions(context.orpc, {
         workspaceId: params.workspaceId,
-        searchText: deps.query.trim() || undefined, // [!code highlight]
-        statuses: deps.status === "all" ? undefined : [deps.status], // [!code highlight]
+        searchText: deps.query.trim() || undefined,
+        statuses: deps.status === "all" ? undefined : [deps.status],
         limit: 20,
       }),
     );
@@ -819,7 +819,7 @@ type PostResponse = { id: string; text: string };
 
 모여는 요청·응답의 약속인 **API 계약**을 `packages/api`에 둔다. 앞에서 사용한 `@moyeo/api`가 이 공유 패키지다. 응답 스키마를 계약에 연결하면 서버와 웹이 같은 정의를 사용한다.[^orpc-version]
 
-```ts title="After: 응답 스키마를 공유 계약에 연결한다"
+```ts title="After: 응답 스키마를 공유 계약에 연결한다" {16,27}
 import { oc } from "@orpc/contract";
 import { openapi } from "@orpc/openapi";
 import { z } from "zod";
@@ -835,7 +835,7 @@ export type PostRecord = z.infer<typeof postDetailSchema>;
 export const getPostContract = oc
   .meta(openapi({
     method: "GET",
-    path: "/workspaces/{workspaceId}/posts/{postId}", // [!code highlight]
+    path: "/workspaces/{workspaceId}/posts/{postId}",
     inputStructure: "detailed", // params를 HTTP 경로에 연결한다.
   }))
   .input(
@@ -846,12 +846,12 @@ export const getPostContract = oc
       }),
     }),
   )
-  .output(postDetailSchema); // [!code highlight]
+  .output(postDetailSchema);
 ```
 
 `input`은 조회할 워크스페이스와 게시물 ID, `output`은 응답의 형태다. 같은 계약의 `method`와 `path`는 외부에서 호출할 HTTP 경로를 정한다. 서버는 이 계약에 맞춰 구현하고, 웹은 계약에 연결된 클라이언트로 조회한다.
 
-```tsx title="웹은 응답 타입을 다시 적지 않고 조회한다"
+```tsx title="웹은 응답 타입을 다시 적지 않고 조회한다" {11}
 function PostArticle() {
   const { workspaceId, postId } = postDetailRouteApi.useParams();
   const orpc = useOrpc();
@@ -862,7 +862,7 @@ function PostArticle() {
   );
 
   // 응답 타입을 따로 적지 않아도 본문이 문자열임을 알 수 있다.
-  return <Text>{post.text}</Text>; // [!code highlight]
+  return <Text>{post.text}</Text>;
 }
 ```
 
@@ -876,14 +876,14 @@ function PostArticle() {
 
 역할만 보고 버튼을 활성화하면 이런 차이를 놓친다.
 
-```tsx title="Before: 관리자라는 이유만으로 연결 버튼을 연다"
+```tsx title="Before: 관리자라는 이유만으로 연결 버튼을 연다" {7}
 function ChannelConnectButton() {
   const role = useWorkspaceAccessContext(
     (context) => context.currentMembership.role,
   );
 
   // 중략
-  const canConnect = role === "owner" || role === "admin"; // [!code highlight]
+  const canConnect = role === "owner" || role === "admin";
 
   return <Button disabled={!canConnect}>채널 연결</Button>;
 }
@@ -901,16 +901,16 @@ function ChannelConnectButton() {
 
 화면에는 판단 결과와 허용하지 않은 이유를 전달한다. 같은 버튼이라도 권한이 없는 사람에게는 관리자에게 문의하도록, 채널 한도를 다 쓴 사람에게는 요금제를 확인하도록 안내한다.
 
-```tsx title="After: 서버가 판단한 허용 여부와 이유를 읽는다"
+```tsx title="After: 서버가 판단한 허용 여부와 이유를 읽는다" {3,9}
 function ChannelConnectButton() {
   const availability = useWorkspaceAccessContext(
-    (context) => context.actions.connectChannel, // [!code highlight]
+    (context) => context.actions.connectChannel,
   );
 
   // 중략
   return (
     <ActionButton
-      availability={availability} // [!code highlight]
+      availability={availability}
       reasonMessages={CHANNEL_CONNECT_REASON_MESSAGES}
     >
       채널 연결
@@ -941,21 +941,21 @@ function ChannelConnectButton() {
 
 "예약 2분 전 말고 3분 전부터 확인하자"는 요청을 받았다고 하자. 목록과 상세에 다음 조건을 각각 적었다면 두 곳을 같은 기준으로 고쳐야 한다.
 
-```ts title="Before: 조회하는 곳에서 확인할 작업을 직접 판단한다"
+```ts title="Before: 조회하는 곳에서 확인할 작업을 직접 판단한다" {5}
 const needsPolling = publications.some((publication) =>
   ["publishing", "retry_wait", "unconfirmed"].includes(publication.status) ||
   (publication.status === "scheduled" &&
     publication.schedule != null &&
-    Date.parse(publication.schedule.scheduledAt) - nowMs < 2 * 60_000), // [!code highlight]
+    Date.parse(publication.schedule.scheduledAt) - nowMs < 2 * 60_000),
 );
 ```
 
 이 판단을 `publication.model.ts`에 모아 보자. `PublicationListItem`은 공유 패키지에 정의한 예약·게시 작업의 응답 타입이다. 상태와 시각을 낱개로 전달하거나 모델을 다시 만들지 않고, 작업을 그대로 받아 판단한다.
 
-```ts title="After: publication.model.ts에 판단을 모은다"
+```ts title="After: publication.model.ts에 판단을 모은다" {3,28-29}
 import type { PublicationListItem } from "@moyeo/api";
 
-const POLLING_WINDOW_MS = 2 * 60_000; // [!code highlight]
+const POLLING_WINDOW_MS = 2 * 60_000;
 
 export function isInProgress(publication: PublicationListItem) {
   return ["publishing", "retry_wait", "unconfirmed"].includes(
@@ -980,8 +980,8 @@ export function isScheduleDueSoon(
 export const PublicationPolicy = {
   shouldPoll(publication: PublicationListItem, nowMs: number) {
     return (
-      isInProgress(publication) || // [!code highlight]
-      isScheduleDueSoon(publication, nowMs) // [!code highlight]
+      isInProgress(publication) ||
+      isScheduleDueSoon(publication, nowMs)
     );
   },
 };
@@ -989,9 +989,9 @@ export const PublicationPolicy = {
 
 진행 중인지와 예약 시각이 가까운지는 각각 순수 함수가 판단한다. `PublicationPolicy`는 두 함수를 묶어 사용하는 쪽에 판단 하나만 내놓는다. 목록과 상세에서는 내부 조건을 다시 적지 않고 같은 정책을 호출한다.
 
-```ts title="목록과 상세에서 같은 정책을 호출한다"
+```ts title="목록과 상세에서 같은 정책을 호출한다" {2}
 const needsPolling = publications.some((publication) =>
-  PublicationPolicy.shouldPoll(publication, nowMs), // [!code highlight]
+  PublicationPolicy.shouldPoll(publication, nowMs),
 );
 ```
 
@@ -1035,9 +1035,9 @@ it("예약 시각이 2분 미만으로 남으면 다시 확인한다", () => {
 
 큰 영상을 첨부한 뒤에도 사용자는 본문을 계속 쓰고 싶다. 모여는 업로드하기 전에 파일 내용으로 SHA-256 해시를 만들어 식별값으로 쓴다. 이때 영상을 한 번에 읽으면 계산을 시작하기도 전에 큰 메모리가 필요하다.
 
-```ts title="Before: 파일 전체를 읽고 해시를 계산한다"
+```ts title="Before: 파일 전체를 읽고 해시를 계산한다" {2}
 async function hashBlob(blob: Blob) {
-  const fileBytes = await blob.arrayBuffer(); // [!code highlight]
+  const fileBytes = await blob.arrayBuffer();
   const digest = await crypto.subtle.digest("SHA-256", fileBytes);
 
   return Array.from(new Uint8Array(digest), (byte) =>
@@ -1048,7 +1048,7 @@ async function hashBlob(blob: Blob) {
 
 `arrayBuffer()`와 `digest` 호출 모두 파일 전체를 한 번에 다룬다. 모여는 hash-wasm으로 8MiB씩 읽어 같은 계산에 차례로 넣었다.[^hash]
 
-```ts title="After: 8MiB씩 읽어 같은 해시 계산에 누적한다"
+```ts title="After: 8MiB씩 읽어 같은 해시 계산에 누적한다" {15}
 import { createSHA256 } from "hash-wasm";
 
 async function hashBlobInChunks(blob: Blob, signal?: AbortSignal) {
@@ -1063,7 +1063,7 @@ async function hashBlobInChunks(blob: Blob, signal?: AbortSignal) {
     // 전체 파일 대신 이번에 계산할 8MiB만 읽는다.
     const chunkBuffer = await blob
       .slice(offset, offset + chunkBytes)
-      .arrayBuffer(); // [!code highlight]
+      .arrayBuffer();
     hasher.update(new Uint8Array(chunkBuffer));
   }
 
@@ -1093,12 +1093,12 @@ RSS는 프로세스가 실제로 차지한 메모리다. 최대 추가 RSS는 �
 
 그림의 마지막 칸처럼 A의 제안은 편집기 밖에 머물고 화면에는 B가 남아야 한다. 응답을 작성 폼에 바로 넣으면 요청 뒤에 고친 내용이 사라진다. 아래의 `form`은 본문을 관리하는 React Hook Form 객체다.
 
-```ts title="Before: 응답이 오면 현재 본문을 무조건 교체한다"
+```ts title="Before: 응답이 오면 현재 본문을 무조건 교체한다" {5}
 function PostComposer() {
   // 중략
   function applySuggestion(suggestedText: string) {
     // 응답을 기다리는 사이 수정한 본문도 덮어쓴다.
-    form.setValue("baseText", suggestedText); // [!code highlight]
+    form.setValue("baseText", suggestedText);
   }
   // 중략
 }
@@ -1106,7 +1106,7 @@ function PostComposer() {
 
 모여는 요청 당시의 본문과 대상 채널을 기억한다. **둘 중 하나라도 바뀌었다면 현재 글을 유지한다.** 이 판단도 앞의 조회 정책처럼 순수 함수로 분리했다.
 
-```ts title="After: 요청 당시의 초안과 같을 때만 제안을 적용한다"
+```ts title="After: 요청 당시의 초안과 같을 때만 제안을 적용한다" {15}
 type DraftSnapshot = {
   text: string;
   channelId: string;
@@ -1121,7 +1121,7 @@ function resolveSuggestedText(
     requestedDraft.text === currentDraft.text &&
     requestedDraft.channelId === currentDraft.channelId;
 
-  return isUnchanged ? suggestedText : currentDraft.text; // [!code highlight]
+  return isUnchanged ? suggestedText : currentDraft.text;
 }
 ```
 
@@ -1150,11 +1150,11 @@ function resolveSuggestedText(
 
 날짜와 시각만으로는 두 후보를 구분할 수 없다. 그렇다고 기기의 시간대로 먼저 바꾸면 사용자가 고른 뉴욕 시간이라는 의미가 사라진다. 그래서 모여는 입력한 날짜·시각·시간대를 함께 서버에 보낸다.
 
-```ts title="예약 입력에는 선택한 지역의 시간대를 함께 담는다"
+```ts title="예약 입력에는 선택한 지역의 시간대를 함께 담는다" {4}
 const scheduleInput = {
   scheduledLocalDate: "2026-11-01",
   scheduledLocalTime: "01:30",
-  scheduledTimeZone: "America/New_York", // [!code highlight]
+  scheduledTimeZone: "America/New_York",
 };
 ```
 
@@ -1180,12 +1180,12 @@ ENV TZ=UTC
 
 설정 파일에 적는 것만으로는 배포할 때 다른 값이 들어오는 것을 막지 못한다. 서버의 환경 검증에서도 UTC만 받도록 했다.
 
-```ts title="다른 시간대가 설정되면 시작할 때 발견한다"
+```ts title="다른 시간대가 설정되면 시작할 때 발견한다" {5}
 import { z } from "zod";
 
 // packages/env/src/server/fields/process.fields.ts 중 일부
 export const processFields = {
-  TZ: z.literal("UTC", "TZ는 UTC여야 합니다.").default("UTC"), // [!code highlight]
+  TZ: z.literal("UTC", "TZ는 UTC여야 합니다.").default("UTC"),
 };
 ```
 
@@ -1199,14 +1199,14 @@ export const processFields = {
 
 예약 시점을 제대로 저장해도 화면에서 다르게 읽힐 수 있다. 같은 순간이 서울에서는 11월 1일인데 뉴욕에서는 아직 10월 31일이기도 하다. 서버와 브라우저가 각자의 기본 시간대로 표시하면 첫 HTML과 브라우저가 이어 그린 날짜가 달라진다.
 
-```tsx title="Before: 실행 환경의 기본 시간대로 예약 시각을 표시한다"
+```tsx title="Before: 실행 환경의 기본 시간대로 예약 시각을 표시한다" {7}
 function ScheduledPostTime({
   scheduledAt,
 }: { scheduledAt: string }) {
   return (
     <time dateTime={scheduledAt}>
       {new Date(scheduledAt)
-        .toLocaleString()} // [!code highlight]
+        .toLocaleString()}
     </time>
   );
 }
@@ -1214,7 +1214,7 @@ function ScheduledPostTime({
 
 서버는 UTC로, 브라우저는 서울 시간으로 돌고 있을 수 있다. 같은 `scheduledAt`을 받아도 기본 설정이 다르면 출력이 달라진다. 언어와 시간대를 명시하면 양쪽이 같은 기준으로 날짜와 시각을 표시한다.[^start-hydration]
 
-```tsx title="After: 표시할 언어와 시간대를 지정한다"
+```tsx title="After: 표시할 언어와 시간대를 지정한다" {12}
 function ScheduledPostTime({
   scheduledAt,
 }: { scheduledAt: string }) {
@@ -1226,7 +1226,7 @@ function ScheduledPostTime({
     <time dateTime={scheduledAt}>
       {new Date(scheduledAt).toLocaleString(
         locale,
-        { timeZone }, // [!code highlight]
+        { timeZone },
       )}
     </time>
   );
@@ -1239,7 +1239,7 @@ function ScheduledPostTime({
 
 오늘 예약은 시각만, 다른 날 예약은 날짜까지 보여 주려면 현재 시각도 알아야 한다. 이 현재 시각도 서버와 맞춰야 한다. 서버가 자정 직전에 렌더링하고 브라우저가 자정 직후에 이어 그릴 수도 있기 때문이다.
 
-```tsx title="첫 화면에서는 서버가 정한 기준 시각도 이어받는다"
+```tsx title="첫 화면에서는 서버가 정한 기준 시각도 이어받는다" {8}
 function ScheduledPostTime({
   scheduledAt,
 }: { scheduledAt: string }) {
@@ -1247,7 +1247,7 @@ function ScheduledPostTime({
     (context) => context.preferences,
   );
   // 서버와 첫 클라이언트 렌더링이 공유한다.
-  const nowAt = useNowAt(); // [!code highlight]
+  const nowAt = useNowAt();
 
   return (
     <time dateTime={scheduledAt}>
@@ -1283,7 +1283,7 @@ function ScheduledPostTime({
 
 SSE는 서버가 브라우저에 변경 신호를 계속 보내도록 연결을 유지하는 방식이다. 모여는 "게시물이 바뀌었다"는 신호를 받으면 해당 데이터를 다시 읽는다. 조회 응답과 마찬가지로 신호의 형태도 앞의 공유 계약에 정의했다.
 
-```ts title="변경 신호의 형태도 응답 계약으로 정한다"
+```ts title="변경 신호의 형태도 응답 계약으로 정한다" {10}
 import {
   notificationStreamEventSchema,
   watchNotificationsInputSchema,
@@ -1293,12 +1293,12 @@ import { asyncIteratorObject, oc } from "@orpc/contract";
 export const watchNotificationsContract = oc
   .input(watchNotificationsInputSchema)
   // 공유 스키마로 스트림의 각 이벤트를 검사한다.
-  .output(asyncIteratorObject(notificationStreamEventSchema)); // [!code highlight]
+  .output(asyncIteratorObject(notificationStreamEventSchema));
 ```
 
 공유 스키마에는 알림 변경과 게시물 변경 같은 이벤트가 들어 있다. 게시물 변경에는 워크스페이스와 게시물 ID가 있고, 알림 변경에는 게시물 ID가 없다. 웹은 이벤트 종류부터 확인하고 그에 맞는 값을 읽는다.[^orpc-sse]
 
-```ts title="게시물 변경 신호를 확인한 뒤 갱신을 맡긴다"
+```ts title="게시물 변경 신호를 확인한 뒤 갱신을 맡긴다" {17,22}
 import type { WorkspaceChangedEvent } from "@moyeo/api";
 import { consumeAsyncIterator } from "@orpc/client";
 import type { OrpcQueryUtils } from "@/api/create-api-client";
@@ -1315,12 +1315,12 @@ function subscribeToPostChanges(
     ),
     {
       onEvent(event) {
-        if (event.type !== "publishing_changed") { // [!code highlight]
+        if (event.type !== "publishing_changed") {
           return;
         }
 
         // 게시물 ID와 작업 공간을 담은 이벤트만 갱신 함수에 전달한다.
-        onPostsChanged(event); // [!code highlight]
+        onPostsChanged(event);
       },
     },
   );
@@ -1372,11 +1372,11 @@ SSE 자체의 동작은 [SSE 이해와 구현](/post/http-sse)에서 다뤘다. 
 
 먼저 화면에서 GA를 직접 호출하는 경우를 보자. 예약 요청을 보내기 직전이라는 뜻은 잘 담겨 있다. 하지만 같은 행동을 다른 화면에서도 기록하려면 이름과 속성 표기까지 일일이 맞춰야 한다.
 
-```ts title="Before: 화면이 GA의 전송 방식까지 안다"
+```ts title="Before: 화면이 GA의 전송 방식까지 안다" {4}
 function handleScheduleSubmit() {
   gtag("event", "post_schedule_submitted", {
     mode: "fixed_time",
-    channel_count: selectedChannels.length, // GA에 맞춘 속성 이름이다. // [!code highlight]
+    channel_count: selectedChannels.length, // GA에 맞춘 속성 이름이다.
   });
 
   // 중략
@@ -1385,7 +1385,7 @@ function handleScheduleSubmit() {
 
 이벤트 이름과 필요한 속성을 Zod로 모으고, 화면에는 이 정의를 따르는 `track`을 제공했다. 게시 요청 이벤트 하나만 보면 다음과 같다.
 
-```ts title="analytics-event.ts: 게시 요청 이벤트의 이름과 속성"
+```ts title="analytics-event.ts: 게시 요청 이벤트의 이름과 속성" {9}
 import { z } from "zod";
 
 const analyticsEventSchema = z.strictObject({
@@ -1394,14 +1394,14 @@ const analyticsEventSchema = z.strictObject({
   channelCount: z.int().positive(), // 게시 대상 채널은 한 개 이상이다.
 });
 
-type AnalyticsEvent = z.infer<typeof analyticsEventSchema>; // [!code highlight]
+type AnalyticsEvent = z.infer<typeof analyticsEventSchema>;
 ```
 
 `mode`에는 다음 빈 시간·지정 시각·즉시 게시 중 어떤 방식을 골랐는지 담는다. 이름에 오타를 내거나 채널 개수를 빠뜨리면 스키마에서 얻은 타입이 잡아낸다. 전송하기 직전의 값도 같은 스키마로 한 번 더 검사한다.
 
 화면은 GA의 전송 방식을 직접 호출하지 않고, 모여의 `useAnalytics`가 제공하는 인터페이스를 사용한다.
 
-```ts title="After: 화면은 게시 요청을 제출한 사실만 기록한다"
+```ts title="After: 화면은 게시 요청을 제출한 사실만 기록한다" {11}
 function PostComposer() {
   const analytics = useAnalytics();
 
@@ -1412,7 +1412,7 @@ function PostComposer() {
     analytics.track({
       name: "post_schedule_submitted",
       mode: "fixed_time",
-      channelCount: selectedChannels.length, // [!code highlight]
+      channelCount: selectedChannels.length,
     });
 
     // 중략
@@ -1424,7 +1424,7 @@ function PostComposer() {
 
 이 호출에는 GA의 SDK나 파라미터 이름이 없다. 어떤 분석 도구로 보낼지는 앱을 시작할 때 전송 객체인 `provider`를 넣어 정한다. [의존성 주입](/post/dependency-injection)으로 전송 방법을 밖에서 넣어 주니 화면은 제품의 행동을 기록하는 일만 맡는다.
 
-```ts title="create-analytics.ts: 검증과 전송을 분리한다"
+```ts title="create-analytics.ts: 검증과 전송을 분리한다" {14}
 interface AnalyticsProvider {
   track(event: AnalyticsEvent): void;
 }
@@ -1438,7 +1438,7 @@ function createAnalytics(provider: AnalyticsProvider) {
       }
 
       try {
-        provider.track(result.data); // [!code highlight]
+        provider.track(result.data);
       } catch {
         // 분석 호출의 실패가 게시나 결제를 막지 않게 한다.
       }

@@ -113,7 +113,6 @@
 
     --background: 0 0% 100%;
 
-    --code-highlighted: var(--selection);
     --progress-bar-color: oklch(0.7 0.15 250);
     --inline-code-bg: var(--gray-200);
     --inline-code-border: var(--gray-300);
@@ -149,7 +148,6 @@
 
     --background: 240 10% 3.9%;
 
-    --code-highlighted: hsla(240, 5%, 84%, 0.06);
     --progress-bar-color: oklch(0.75 0.14 250);
     --inline-code-bg: var(--gray-200);
     --inline-code-border: var(--gray-300);

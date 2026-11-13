@@ -193,17 +193,17 @@ function displayTodoStatus() {
 <p id="status"></p> <!-- todo-status에서 status로 변경됨 -->
 ```
 
-```ts
+```ts del={2,7,9-10}
 function displayTodoStatus() {
-  const $status = document.getElementById("todo-status"); // [!code error]
+  const $status = document.getElementById("todo-status");
   const incomplete = todos.filter((todo) => !todo.done);
 
   // $status가 null이므로 런타임 에러 발생
   if (incomplete.length === 0) {
-    $status.textContent = "모든 할 일을 완료했다!"; // [!code error]
+    $status.textContent = "모든 할 일을 완료했다!";
   } else {
-    $status.textContent = // [!code error]
-      `${incomplete.length}개 남음. 다음 할 일: ${incomplete[0].title}`; // [!code error]
+    $status.textContent =
+      `${incomplete.length}개 남음. 다음 할 일: ${incomplete[0].title}`;
   }
 }
 ```

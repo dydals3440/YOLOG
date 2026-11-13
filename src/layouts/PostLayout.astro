@@ -3,10 +3,8 @@ import "@/styles/mdx.css";
 import { type CollectionEntry, render } from "astro:content";
 
 import PostNavigation from "@/components/common/PostNavigation.astro";
-import CopyCodeScript from "@/components/post/CopyCodeScript.astro";
 import GiscusComment from "@/components/post/GiscusComment";
 import MediumZoomScript from "@/components/post/MediumZoomScript.astro";
-import MermaidScript from "@/components/post/MermaidScript.astro";
 import PageActions from "@/components/post/PageActions";
 import PostImage from "@/components/post/PostImage.astro";
 import PostTable from "@/components/post/PostTable.astro";
@@ -143,12 +141,12 @@ const articleSection = category ? BLOG_CATEGORIES[category] : undefined;
     </footer>
   </section>
   <MediumZoomScript />
-  <CopyCodeScript />
-  <MermaidScript />
 </BaseLayout>
 
 <script>
+  import { setupMermaidReadability } from "@/lib/mermaid-readability";
   import { setupPostNavigation } from "@/lib/post-navigation";
 
   setupPostNavigation();
+  setupMermaidReadability();
 </script>

@@ -282,11 +282,8 @@ sudo vi /private/etc/hosts
 
 실습을 위해 일시적으로 **이스케이프 처리를 제거**한다:
 
-:::warning
-
-**경고: 실제 서비스에서는 절대 이렇게 하지 마세요!**
-
-:::
+> [!WARNING]
+> **경고: 실제 서비스에서는 절대 이렇게 하지 마세요!**
 
 ```javascript
 const postProduct = (req, res) => {
@@ -358,11 +355,8 @@ node attacker-server.js
 
 ![해커 서버에 세션 정보가 로깅됨](/images/security-session-hijacking/7.webp)
 
-:::warning
-
-**세션 ID가 성공적으로 탈취되었다!** 🚨
-
-:::
+> [!WARNING]
+> **세션 ID가 성공적으로 탈취되었다!** 🚨
 
 ### 탈취한 세션으로 계정 접근
 
@@ -380,11 +374,8 @@ curl http://matthew.com:8080 -H "Cookie: sid=session-id-1756852495508"
 
 이것이 바로 `세션 하이재킹(Session Hijacking)`입니다.
 
-:::info
-
-**"하이재킹(Hijacking)"의 어원**
-
-:::
+> [!NOTE]
+> **"하이재킹(Hijacking)"의 어원**
 
 > 운항 중인 비행기를 납치하는 것을 하이재킹이라고 부르듯이, 실행 중인 세션을 가로채는 이 공격을 `세션 하이재킹`이라고 부릅니다.
 
