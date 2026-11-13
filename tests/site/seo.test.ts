@@ -8,7 +8,7 @@ import {
   queryAll,
   readCanonical,
   readJsonLd,
-  readArtifact,
+  listArtifacts,
   readMeta,
   readXmlArtifact,
   SITE_URL,
@@ -270,6 +270,7 @@ describe("배포된 페이지의 SEO", () => {
 
   it("내부 링크는 모두 빌드된 페이지나 파일을 가리킨다", async () => {
     // Given
+    const artifacts = await listArtifacts();
     const internalLinks = new Set(
       pages.flatMap(({ html }) =>
         queryAll(html, "a[href^='/']")
@@ -280,18 +281,12 @@ describe("배포된 페이지의 SEO", () => {
     );
 
     // When
-    const results = await Promise.all(
-      [...internalLinks].map(async (pathname) => ({
-        pathname,
-        exists: await readArtifact(toArtifactPath(pathname)).then(
-          () => true,
-          () => false,
-        ),
-      })),
+    const brokenLinks = [...internalLinks].filter(
+      (pathname) => !artifacts.has(toArtifactPath(pathname)),
     );
 
     // Then
-    expect(results.filter(({ exists }) => !exists).map(({ pathname }) => pathname)).toEqual([]);
+    expect(brokenLinks).toEqual([]);
   });
 
   it("플레이스홀더 광고 슬롯을 내보내지 않는다", () => {

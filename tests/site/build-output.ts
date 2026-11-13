@@ -24,6 +24,12 @@ export async function readXmlArtifact(file: string): Promise<unknown> {
   return Bun.XML.parse(await readArtifact(file));
 }
 
+/** 빌드된 모든 파일 경로. 대소문자를 구분하지 않는 파일 시스템(macOS)에서도 운영과 같게 비교하려고 목록으로 돌려준다. */
+export async function listArtifacts() {
+  const glob = new Bun.Glob("**/*");
+  return new Set(await Array.fromAsync(glob.scan({ cwd: fileURLToPath(DIST_DIRECTORY) })));
+}
+
 export async function loadPages(): Promise<BuiltPage[]> {
   const glob = new Bun.Glob("**/*.html");
   const files = (await Array.fromAsync(glob.scan({ cwd: fileURLToPath(DIST_DIRECTORY) })))
