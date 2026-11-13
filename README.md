@@ -1,36 +1,59 @@
 # YOLOG
 
-개발자 매튜의 기술 블로그. Astro + MDX, Node.js 24, Bun 1.4.2, Vercel로 운영합니다.
+개발자 매튜의 기술 블로그예요. Astro 7 정적 사이트로 만들고 Vercel(Hobby)에 배포해요.
 
-## 개발과 검증
+## 시작하기
 
 ```sh
-bun install --frozen-lockfile
-cp .env.example .env  # 새 환경에서만 실행. 기존 .env를 덮어쓰지 않는다.
+bun ci                    # bun.lock 그대로 설치
+[ -f .env ] || cp .env.example .env   # 이미 있는 .env는 덮어쓰지 않아요.
 bun run dev
-bun run validate
 ```
 
-`validate`는 lint/format, Astro/TypeScript, 단위 테스트, 정적 빌드, 생성된 SEO·분석 설정을 확인합니다.
-`bun run test`는 JSON-LD 직렬화가 콘텐츠를 보존하면서 script 태그 삽입을 막는지 검사합니다.
-`verify:site`는 Node 기본 테스트 러너로 `tests/site/seo.test.mjs`와
-`tests/site/analytics.test.mjs`를 실행합니다. 파일 탐색은 Node의 glob,
-HTML/XML 파싱은 Cheerio를 사용합니다. 실패 시 검사 항목과 파일 경로가 표시됩니다.
-테스트 이름과 실패 메시지는 한국어로 작성하고 Given / When / Then으로 조건·실행·검증을 구분합니다.
-파일 읽기와 GA 브라우저 대역은 별도 도우미에 두며, 각 테스트는 하나의 동작을 검증합니다.
-GitHub Actions가 PR과 main에서 실행하고, Vercel Preview 빌드의 분석 제외도 검증합니다.
-`verify:site`는 빌드 후 실행하며 canonical, OG, JSON-LD, 전체 사이트맵, RSS,
-광고 스크립트 중복, GA 초기화 중복, 로컬 호스트 제외를 확인합니다.
-GA 검증에는 실제 운영 데이터를 전송하지 않습니다.
-로컬 검증은 `.env`를 읽고, CI의 `EXPECT_ANALYTICS`는 기대하는 태그 포함 여부를 명시합니다.
-실제 결과에서 기대값을 추측하지 않으므로 태그가 실수로 빠져도 검사가 실패합니다.
-의존성 보안 점검은 `bun audit`로 실행합니다. 배포는 Vercel의 Git 연동을 사용하며,
-사용하지 않는 Vercel CLI 패키지는 설치하지 않습니다(`@astrojs/vercel` 어댑터는 유지).
+| 스크립트 | 하는 일 |
+| --- | --- |
+| `bun run dev` / `build` / `preview` | Astro 개발 서버, 정적 빌드, 빌드 결과 미리보기 |
+| `bun run check` | `astro check`(생성 타입 포함) → oxlint(타입 기반) → oxfmt → `bun check` → knip(미사용 파일·export·의존성) |
+| `bun run fix` | 린트 자동 수정과 포맷 |
+| `bun run test` | `src/**/*.test.ts` 단위 테스트(`bun test`) |
+| `bun run test:site` | 빌드 결과(`dist`)의 SEO·GEO·링크·이미지·분석 태그 검사 |
+| `bun run lighthouse` | `dist`로 Lighthouse CI 실행(CLS·접근성·SEO는 실패, LCP·성능은 경고) |
+| `bun run validate` | `check` → `test` → `build` → `test:site` |
+
+Node 24와 Bun 1.4.4를 써요(`package.json`의 `engines`·`packageManager`). `bunfig.toml`의
+`minimumReleaseAge`로 배포된 지 3일이 지나지 않은 패키지는 설치하지 않아요.
+
+## 구조
+
+```text
+src/
+  constants/site.ts            사이트 URL·작성자·연락처
+  domains/                     기능별 모델과 비즈니스 규칙(순수 함수 + Policy)
+    post.model.ts              PostSchema, filterBy*/orderBy*, calculate*, PostPolicy
+    category.model.ts          CategorySchema, CATEGORY_LABEL
+  apis/posts.ts                글 조회(getPosts·getPost·renderPost). 저장소를 바꾸는 유일한 지점
+  apis/__fixtures__/           테스트 픽스처(createPost)
+  utils/                       도메인과 무관한 순수 함수(date, pagination, routes, markdown, structured-data …)
+  stores/theme.ts              테마 상태(nanostores)
+  components/site/             헤더·푸터·SEO·분석·페이지네이션 등 사이트 공통 UI
+  components/post/             글 목록·글 화면 UI
+  components/mdx/              글 안의 인터랙션(React 섬)
+  layouts/BaseLayout.astro     html 골격
+  pages/                       화면 조립(위에서 아래로 읽히게)과 RSS·llms·robots 엔드포인트
+  content/posts/<slug>/        글(index.mdx)과 그 글의 이미지
+tests/site/                    빌드 결과 검사
+```
+
+- 모델은 서버 응답과 분리된 클라이언트 모델이에요. 컴포넌트는 `CollectionEntry`가 아니라 `Post`만 알아요.
+- 글을 서버·CMS로 옮기면 `src/content.config.ts`의 `glob()` loader를 객체 loader로 바꾸고, `apis/posts.ts`만 손봐요.
+  CMS 웹훅으로 다시 빌드하는 방식이 무료 플랜에 가장 잘 맞아요. 요청 시 렌더링이 필요해지면
+  `@astrojs/vercel` 어댑터와 Astro route caching(`cache` + `routeRules`)을 함께 검토해요.
+- 공통 UI는 서버 렌더링 HTML과 작은 `<script>`로 만들어요. React는 인터랙션이 있는 글에서만 로드돼요.
 
 ## 글 작성
 
-`src/content/post/blog/<slug>.mdx`에 작성합니다. 파일명을 바꾸면 URL이 바뀌므로
-기존 글의 slug는 유지하세요. 주소는 `https://www.yolog.co.kr/post/<slug>`입니다.
+`src/content/posts/<slug>/index.mdx`에 쓰고 이미지는 같은 폴더에 둬요. 폴더 이름이 곧 주소(`/post/<slug>`)라서
+공개한 글의 폴더 이름은 바꾸지 않아요. 문체와 마크다운 규칙은 `CLAUDE.md`를 따라요.
 
 ```yaml
 ---
@@ -39,20 +62,34 @@ description: HTTP 연결 재사용과 커넥션 풀의 차이를 설명하고, �
 date: 2026-10-04
 category: HTTP
 tags: [HTTP, Keep-Alive, 커넥션 풀]
-image: /images/http-keep-alive/thumbnail.webp
+image: ./thumbnail.webp
 draft: true
 ---
 ```
 
-- `draft: true`인 글은 글 페이지·목록·관련 글·RSS·사이트맵·llms.txt에서 제외됩니다.
-  `*.draft.mdx` 파일은 아예 로딩하지 않고 Git에서도 제외합니다.
-- 공개할 때 `draft: false`로 바꾸고 `bun run validate`를 실행합니다.
-- description은 검색 의도와 글이 답하는 문제를 자연스러운 1~2문장으로 직접 작성하세요.
-  없으면 본문에서 코드·제목·마크다운을 제거한 설명을 자동 생성합니다.
-- 내용을 실질적으로 수정할 때만 `updatedDate`를 변경합니다. 독자에게 수정일도 표시합니다.
-- category는 DEVELOPMENT / HTTP / DESIGN_PATTERN / REVIEW / STORY 중 하나입니다.
-- 검색어는 제목과 첫 문단, 소제목에 자연스럽게 씁니다. meta keywords와 태그 나열만으로
-  검색 순위가 올라가지는 않습니다. 본문에 관련 글의 내부 링크와 정확한 이미지 설명을 추가하세요.
+- `draft: true`인 글은 모든 페이지·RSS·사이트맵·llms.txt에서 빠져요. `index.draft.mdx` 같은 파일은 아예 읽지 않아요.
+- `description`이 없으면 `PostPolicy.summary`가 본문 문단으로 160자 요약을 만들어요.
+- 내용을 실질적으로 고칠 때만 `updatedDate`를 바꿔요. 독자에게 수정일로 보여요.
+- category는 DEVELOPMENT / REVIEW / HTTP / STORY / DESIGN_PATTERN 중 하나예요.
+- 이미지는 빌드할 때 Astro가 크기를 읽고 `srcset`을 만들어요. 따로 압축하지 않아도 돼요.
+
+## 배포와 무료 플랜
+
+Vercel Git 연동으로 `main`은 운영, PR은 미리보기로 배포해요. 설정은 `vercel.json`에 있어요.
+
+- 이미지 최적화는 빌드 시점 sharp라 Vercel Image Optimization 사용량이 없어요. 결과는 `node_modules/.astro`에 캐시돼요.
+- Speed Insights는 `sampleRate` 0.5로 Hobby 한도(30일 10,000 이벤트) 안에서 수집해요.
+- Dependabot 브랜치는 미리보기 배포를 만들지 않아요.
+- Hobby는 비상업 개인용이에요. AdSense를 유지하는 동안 약관 해석은 Vercel 지원팀에 확인이 필요해요.
+
+## CI
+
+`.github/workflows/ci.yml`이 PR과 `main`에서 `bun ci` → `bun audit` → `check` → `test` → `build` → `test:site`
+→ (PR) Lighthouse를 실행해요. 스택 PR은 아래층 변경이 모두 들어 있는 **맨 위 PR에서만** 검증하고,
+Vercel 미리보기도 `vercel.json`의 `ignoreCommand`로 맨 위 브랜치만 빌드해요.
+액션은 모두 커밋 SHA로 고정하고, Dependabot이 주 1회 배포된 지 7일 지난 버전으로 올려요.
+`.github` 변경은 zizmor로 워크플로 보안을 검사해요. 저장소 설정에서
+"Require actions to be pinned to a full-length commit SHA"를 켜 두면 고정을 강제할 수 있어요.
 
 ## GA4
 
@@ -63,9 +100,9 @@ API secret·서비스 계정 키·접근 토큰에는 `PUBLIC_` 접두사를 사
 Vercel 서버 환경 변수나 GitHub Actions Secrets에 보관합니다.
 CI는 실제 GA 속성과 무관한 테스트용 측정 ID를 사용합니다.
 
-`Monitoring.astro`가 Google 태그를 한 번 초기화합니다. 문서 이동은 기본
+`src/components/site/Analytics.astro`가 Google 태그를 한 번 초기화합니다. 문서 이동은 기본
 `page_view`를 사용하며 수동 page_view 이벤트를 추가하지 않습니다.
-Vercel Preview/Development 빌드에는 GA·광고·Vercel 모니터링을 넣지 않고,
+Vercel Preview/Development 빌드에는 GA·광고·Vercel 모니터링을 넣지 않고(`astro:env`의 `VERCEL_ENV`),
 GA는 실제 `www.yolog.co.kr` 호스트에서만 로드합니다. 빈 값·예시 ID도 제외합니다.
 UTM/광고 유입 파라미터는 보존하고 임의 쿼리와 hash는 page_location에서 제거합니다.
 
@@ -101,6 +138,10 @@ Astro, Vercel, canonical, OG, JSON-LD, 공유 링크, RSS, 사이트맵이 같�
 - [사이트맵](https://www.yolog.co.kr/sitemap-index.xml), [RSS](https://www.yolog.co.kr/rss.xml)
 - 공식 `@astrojs/sitemap`이 실제 정적 경로에서 `/sitemap-index.xml`과 `/sitemap-0.xml`을 생성합니다.
   기존 `/sitemap.xml`은 index로 영구 리디렉션합니다. 글의 lastmod는 생성된 수정일 메타데이터를 재사용합니다.
+- 목록 페이지네이션 주소는 `/blogs/2`, `/blogs/http/2` 형식입니다. 이전 `/blogs/page/2` 형식은 `vercel.json`에서 301로 연결합니다.
+- LLM·AI 검색용으로 [`/llms.txt`](https://www.yolog.co.kr/llms.txt), [`/llms-full.txt`](https://www.yolog.co.kr/llms-full.txt),
+  글마다 `/post/<slug>.md` 마크다운 미러를 만듭니다. `robots.txt`는 주요 AI 크롤러를 허용합니다.
+- 운영 배포가 끝나면 `.github/workflows/indexnow.yml`이 오늘 바뀐 글을 IndexNow(Bing·Naver 등)에 알립니다.
 
 **발행할 때:** validate → PR 검증 → main 병합/배포 → 글 주소/이미지 확인.
 새 글은 Search Console URL 검사에서 필요할 때 색인 생성을 요청합니다.

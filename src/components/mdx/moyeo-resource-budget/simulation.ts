@@ -5,14 +5,14 @@ export interface Request {
   group: string;
 }
 
-export interface Execution extends Request {
+interface Execution extends Request {
   admitted: number;
   started: number;
   ended: number;
   slot: number;
 }
 
-export interface PoolSample {
+interface PoolSample {
   time: number;
   arrived: number;
   admitted: number;
