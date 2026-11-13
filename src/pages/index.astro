@@ -6,7 +6,7 @@ import { buildProfilePageSchema } from "@/utils/structured-data";
 
 <BaseLayout seo={{ schemas: [buildProfilePageSchema()] }}>
   <div data-animate data-animate-speed="slow">
-    <section class="my-10 space-y-5 text-[16px] leading-relaxed sm:text-[15px]">
+    <section class="my-10 space-y-5 text-[16px] leading-relaxed max-sm:text-[15px]">
       <p>
         소프트웨어 개발자 <strong>매튜</strong>입니다. 좋은 사람들과 문제를 해결하고 함께 성장하는
         과정을 좋아합니다. 단순한 코드뿐 아니라 비즈니스와 사용자 가치를 고민하는 개발자가 되고자
@@ -44,7 +44,7 @@ import { buildProfilePageSchema } from "@/utils/structured-data";
     </section>
 
     <div class="mt-12 flex justify-center">
-      <Yong aria-hidden="true" />
+      <Yong class="h-auto max-w-full" aria-hidden="true" />
     </div>
   </div>
 </BaseLayout>

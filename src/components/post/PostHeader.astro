@@ -13,7 +13,7 @@ const { post } = Astro.props;
 const canonicalUrl = new URL(getPostPath(post.id), Astro.site).href;
 ---
 
-<div class="pt-12 pb-8 sm:pt-8 sm:pb-6">
+<header class="pt-12 pb-8 max-sm:pt-8 max-sm:pb-6">
   <time datetime={toIsoDate(post.publishedAt)} class="text-xs text-third">
     {formatKoreanDate(post.publishedAt)}
   </time>
@@ -22,8 +22,8 @@ const canonicalUrl = new URL(getPostPath(post.id), Astro.site).href;
       수정 <time datetime={toIsoDate(post.updatedAt)}>{formatKoreanDate(post.updatedAt)}</time>
     </span>
   )}
-  <h1 class="mt-3 text-3xl leading-tight font-bold tracking-tight sm:text-2xl">{post.title}</h1>
+  <h1 class="mt-3 text-3xl leading-tight font-bold tracking-tight max-sm:text-2xl">{post.title}</h1>
   <div class="mt-6">
     <SocialShare title={post.title} url={canonicalUrl} />
   </div>
-</div>
+</header>

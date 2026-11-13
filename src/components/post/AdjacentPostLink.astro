@@ -16,7 +16,7 @@ const { href, direction, title, class: className, ...props } = Astro.props;
   class:list={["group flex flex-col gap-1", className]}
   {...props}
 >
-  <span class="text-disabled transition-colors group-hover:text-second">{direction}</span>
+  <span class="text-third transition-colors group-hover:text-second">{direction}</span>
   <span class="-mx-1 rounded px-1 text-second transition-colors group-hover:bg-selection group-hover:text-heading">
     {title}
   </span>

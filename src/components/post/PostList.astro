@@ -23,7 +23,7 @@ const { posts } = Astro.props;
       <li>
         <a
           href={getPostPath(post.id)}
-          class="group -mx-4 block rounded-lg px-4 py-6 transition-colors duration-200 hover:bg-hover sm:-mx-3 sm:px-3 sm:py-5"
+          class="group -mx-4 block rounded-lg px-4 py-6 transition-colors duration-200 hover:bg-hover max-sm:-mx-3 max-sm:px-3 max-sm:py-5"
         >
           <article>
             <div class="mb-3 flex items-center gap-3">
@@ -35,7 +35,7 @@ const { posts } = Astro.props;
                 {PostPolicy.readingMinutes(post)}분 읽기
               </span>
             </div>
-            <h2 class="mb-2 line-clamp-2 text-lg leading-snug font-semibold text-primary sm:text-base">
+            <h2 class="mb-2 line-clamp-2 text-lg leading-snug font-semibold text-primary max-sm:text-base">
               {post.title}
             </h2>
             {post.description && (

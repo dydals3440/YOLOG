@@ -216,7 +216,7 @@ body:has(.mf-code-example) h1 {
     margin-inline: auto;
   }
 }
-@media (max-width: 600px) {
+@media (width <= 37.5rem) {
   .mf-demo {
     padding: 16px 10px;
   }
@@ -241,7 +241,7 @@ body:has(.mf-code-example) h1 {
 }
 
 /* 이 글의 긴 예제가 모바일에서 중첩된 여백 때문에 좁아지지 않게 한다. */
-@media (max-width: 600px) {
+@media (width <= 37.5rem) {
   .main-container:has(.mf-code-example) {
     padding-inline: 0;
   }

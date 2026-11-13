@@ -77,13 +77,13 @@ const structuredDataImages = cover
   <aside
     class:list={[
       "fixed top-page flex max-w-[200px] translate-x-[-210px] translate-y-[60px] flex-col px-2",
-      "lg:relative lg:top-[-24px] lg:mb-7 lg:-ml-2 lg:w-full lg:max-w-none lg:translate-x-0 lg:flex-row lg:items-center lg:justify-between lg:px-0 lg:pl-2",
+      "max-lg:relative max-lg:top-[-24px] max-lg:mb-7 max-lg:-ml-2 max-lg:w-full max-lg:max-w-none max-lg:translate-x-0 max-lg:flex-row max-lg:items-center max-lg:justify-between max-lg:px-0 max-lg:pl-2",
     ]}
     data-animate
   >
     <a
       href="/blogs"
-      class="group flex w-fit items-center gap-1.5 text-third transition-colors hover:text-primary lg:gap-2"
+      class="group flex w-fit items-center gap-1.5 text-third transition-colors hover:text-primary max-lg:gap-2"
       data-post-back
     >
       <ArrowLeft
@@ -93,10 +93,10 @@ const structuredDataImages = cover
       />
       <span class="text-sm">뒤로</span>
     </a>
-    <div class="mt-6 lg:hidden">
+    <div class="mt-6 max-lg:hidden">
       <TableOfContents headings={headings} />
     </div>
-    <div class="mt-auto pt-6 lg:mt-0 lg:pt-0">
+    <div class="mt-auto pt-6 max-lg:mt-0 max-lg:pt-0">
       <PostActions />
     </div>
   </aside>
@@ -111,7 +111,7 @@ const structuredDataImages = cover
     <RelatedPosts />
   </div>
 
-  <footer class="px-0">
+  <footer>
     <hr class="my-8 border-border" />
     <PostNavigation />
     <div class="mx-auto my-half-page">

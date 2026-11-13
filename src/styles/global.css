@@ -2,40 +2,12 @@
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* v3 theme.container equivalent (center + 2rem padding + 2xl: 1400px) */
-@utility container {
-  margin-inline: auto;
-  padding-inline: 2rem;
-  @media (width >= 1400px) {
-    max-width: 1400px;
-  }
-}
-
-/* v3 theme.screens { sm/md/lg/xl: { max: ... } } equivalent:
-   remove default min-width breakpoints, redefine as max-width. */
-@theme {
-  --breakpoint-sm: initial;
-  --breakpoint-md: initial;
-  --breakpoint-lg: initial;
-  --breakpoint-xl: initial;
-  --breakpoint-2xl: initial;
-}
-
-@custom-variant sm (@media (max-width: 640px));
-@custom-variant md (@media (max-width: 768px));
-@custom-variant lg (@media (max-width: 1024px));
-@custom-variant xl (@media (max-width: 1200px));
-
-/* v3 theme tokens as Tailwind v4 theme variables.
-   Use `inline` so external CSS variables resolve at usage time
-   (no circular references for --font-sans / --font-serif / --font-mono). */
+/* 외부 CSS 변수(Astro <Font>, 테마 토큰)를 사용 시점에 읽도록 inline으로 연결한다. */
 @theme inline {
-  /* font families (--font-sans, --font-mono are injected by Astro <Font />) */
-  --font-sans: var(--font-sans), sans;
-  --font-serif: var(--font-serif), sans-serif;
+  --font-sans: var(--font-sans), sans-serif;
+  --font-serif: var(--font-serif), serif;
   --font-mono: var(--font-mono), monospace;
 
-  /* gray palette (50–950) */
   --color-gray-50: var(--gray-50);
   --color-gray-75: var(--gray-75);
   --color-gray-100: var(--gray-100);
@@ -49,42 +21,30 @@
   --color-gray-900: var(--gray-900);
   --color-gray-950: var(--gray-950);
 
-  /* simple tokens */
+  --color-page: var(--page-background);
   --color-selection: var(--selection);
   --color-drag: var(--drag);
-
-  /* shadcn-style HSL tokens */
+  --color-hover: var(--selection);
   --color-border: var(--border);
-  --color-background: hsl(var(--background));
-  --color-primary: var(--heading);
 
-  /* text colors (text-heading / text-body / text-second / text-third / text-disabled) */
+  --color-primary: var(--heading);
   --color-heading: var(--heading);
   --color-body: var(--text-body);
   --color-second: var(--text-second);
   --color-third: var(--text-third);
-  --color-disabled: var(--text-disabled);
 
-  /* backgrounds (bg-page / bg-opacity / bg-hover) */
-  --color-page: var(--page-background);
-  --color-opacity: var(--page-opacity);
-  --color-hover: var(--selection);
-
-  /* widths (w-page / w-content / max-w-page / max-w-content) */
   --spacing-page: var(--page-top);
   --spacing-half-page: var(--page-half-top);
 }
 
-/* width/max-w tokens that should not be inlined (no external var refs at use site) */
 @theme {
-  --container-page: 1024px;
   --container-content: 680px;
 }
 
-/* colors */
 @layer base {
   :root {
-    --font-serif: "Noto Serif KR", Georgia, "Times New Roman", serif;
+    --font-serif: Georgia, "Times New Roman";
+
     --gray-50: #fafaf9;
     --gray-75: #f5f5f4;
     --gray-100: #f4f4f5;
@@ -98,24 +58,25 @@
     --gray-900: #18181b;
     --gray-950: #09090b;
 
-    --selection: hsla(240, 5%, 84%, 0.35);
-    --drag: hsla(217, 91%, 60%, 0.12);
-    --border: hsla(240, 5%, 84%, 0.16);
     --page-background: var(--gray-50);
-    --page-opacity: rgba(255, 255, 255, 0.85);
-    --blockquote-border: var(--gray-300);
+    --selection: hsl(240 5% 84% / 35%);
+    --drag: hsl(217 91% 60% / 12%);
+    --border: hsl(240 5% 84% / 16%);
 
     --heading: var(--gray-900);
     --text-body: var(--gray-800);
     --text-second: var(--gray-600);
     --text-third: var(--gray-500);
-    --text-disabled: var(--gray-500);
-
-    --background: 0 0% 100%;
 
     --progress-bar-color: oklch(0.7 0.15 250);
     --inline-code-bg: var(--gray-200);
     --inline-code-border: var(--gray-300);
+
+    --header-height: 3.5rem;
+    --page-top: 76px;
+    --page-half-top: 64px;
+    --body-margin-left: max(24px, env(safe-area-inset-left));
+    --body-margin-right: max(24px, env(safe-area-inset-right));
   }
 
   [data-theme="dark"] {
@@ -134,39 +95,13 @@
     --gray-900: #fafafa;
     --gray-950: #fefefe;
 
-    --selection: hsla(240, 5%, 84%, 0.12);
-    --border: hsla(240, 5%, 84%, 0.12);
-    --page-background: var(--gray-50);
-    --page-opacity: rgba(9, 9, 11, 0.85);
-    --blockquote-border: var(--gray-300);
-
-    --heading: var(--gray-900);
-    --text-body: var(--gray-800);
-    --text-second: var(--gray-600);
-    --text-third: var(--gray-500);
-    --text-disabled: var(--gray-500);
-
-    --background: 240 10% 3.9%;
+    --selection: hsl(240 5% 84% / 12%);
+    --border: hsl(240 5% 84% / 12%);
 
     --progress-bar-color: oklch(0.75 0.14 250);
-    --inline-code-bg: var(--gray-200);
-    --inline-code-border: var(--gray-300);
-  }
-}
-
-/* variables */
-@layer base {
-  :root {
-    --header-height: 3.5rem;
-    --page-top: 76px;
-    --page-half-top: 64px;
-    --page-width: 1024px;
-    --content-width: 680px;
-    --body-margin-left: max(24px, env(safe-area-inset-left));
-    --body-margin-right: max(24px, env(safe-area-inset-right));
   }
 
-  @media (max-width: 768px) {
+  @media (width < 48rem) {
     :root {
       --header-height: 3rem;
       --page-top: 64px;
@@ -177,7 +112,6 @@
   }
 }
 
-/* layout */
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -186,20 +120,16 @@
   }
 
   body {
-    @apply m-0 min-h-screen p-0;
-    @apply font-sans text-base leading-7 tracking-normal antialiased;
-    @apply bg-page text-second;
+    @apply m-0 min-h-dvh p-0 font-sans text-base leading-7 tracking-normal text-second antialiased;
+    @apply bg-page;
   }
 
-  header,
-  main,
-  footer {
-    padding-right: var(--body-margin-right);
-    padding-left: var(--body-margin-left);
+  body > :is(header, main, footer) {
+    padding-inline: var(--body-margin-left) var(--body-margin-right);
   }
 
   main > .main-container {
-    min-height: calc(100vh - var(--page-half-top) * 2 - 20px);
+    min-height: calc(100dvh - var(--page-half-top) * 2 - 20px);
   }
 
   * {
@@ -214,25 +144,21 @@
     @apply text-xl font-semibold text-heading;
   }
 
-  /* a11y: 버튼과 role=button은 기본 커서 pointer.
-     비활성 상태는 예외 처리. */
-  button:not(:disabled):not([aria-disabled="true"]),
+  button:not(:disabled, [aria-disabled="true"]),
   [role="button"]:not([aria-disabled="true"]),
   summary {
     cursor: pointer;
   }
 
-  button:disabled,
-  button[aria-disabled="true"],
-  [role="button"][aria-disabled="true"] {
+  :is(button, [role="button"]):is(:disabled, [aria-disabled="true"]) {
     cursor: not-allowed;
   }
 
-  /* a11y: focus-visible ring 통일 (키보드 탐색 시만 나타남) */
+  /* 키보드 탐색일 때만 포커스 링을 보여 준다. */
   :where(a, button, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+    border-radius: 6px;
     outline: 2px solid var(--heading);
     outline-offset: 2px;
-    border-radius: 6px;
   }
 
   b,
@@ -245,111 +171,56 @@
   }
 
   del {
-    @apply text-disabled;
+    @apply text-third;
   }
 
   mark {
-    @apply rounded-sm bg-selection font-medium text-body;
-    padding: 3px 5px;
-    margin: 0 2px;
-    border-radius: 4px;
+    @apply mx-0.5 rounded bg-selection px-[5px] py-[3px] font-medium text-body;
   }
 
   img {
-    width: 100%;
+    max-width: 100%;
+    height: auto;
   }
 
-  .link,
   .external-link,
   .mdx a {
     @apply relative inline-block break-all text-body hover:text-heading;
     @apply underline decoration-border decoration-1 underline-offset-4 hover:decoration-transparent;
     @apply duration-200 ease-in-out hover:duration-100;
   }
-  .link::before,
+
   .external-link::before,
   .mdx a:not(.anchor)::before {
     @apply absolute -inset-x-1 top-0 bottom-0.5 -z-10 rounded transition-colors hover:bg-selection;
     content: "";
   }
+
   .external-link::before {
     @apply -right-0.5;
   }
-  a.external-link::after,
-  .mdx a.external-link::after {
-    @apply m-0 inline-block h-3.5 w-3.5;
+
+  a.external-link::after {
+    @apply m-0 inline-block size-3.5 bg-second;
     content: "";
-    background: url('data:image/svg+xml;utf8,<svg color="%23464646" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6m0 0H9m9 0v9"/></svg>');
-    background-repeat: no-repeat;
-    background-size: cover;
-  }
-  [data-theme="dark"] a.external-link::after {
-    background: url('data:image/svg+xml;utf8,<svg color="%23B0B0B0" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6m0 0H9m9 0v9"/></svg>');
-    background-repeat: no-repeat;
-    background-size: cover;
+    mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6m0 0H9m9 0v9"/></svg>')
+      center / contain no-repeat;
   }
 
-  /* scrollbar */
   * {
-    --scrollbar-size: 16px;
-    --scrollbar-size-min: 40px;
-    --scrollbar-color: var(--gray-200);
-    scrollbar-color: var(--scrollbar-color) transparent;
-    scrollbar-width: thin; /* firefox */
-  }
-
-  ::-webkit-scrollbar {
-    width: var(--scrollbar-size);
-    height: var(--scrollbar-size);
-  }
-
-  ::-webkit-scrollbar-thumb {
-    min-width: var(--scrollbar-size-min);
-    min-height: var(--scrollbar-size-min);
-    background-color: var(--scrollbar-color);
-    background-clip: padding-box;
-    border: 5px solid transparent;
-    border-radius: var(--scrollbar-size);
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    --scrollbar-color: var(--gray-300);
-  }
-
-  ::-webkit-scrollbar-thumb:active {
-    --scrollbar-color: var(--gray-300);
-  }
-
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  ::-webkit-scrollbar-button,
-  ::-webkit-scrollbar-corner,
-  ::-webkit-resizer {
-    display: none;
+    scrollbar-color: var(--gray-200) transparent;
+    scrollbar-width: thin;
   }
 }
 
-/* header blur layer */
 @layer components {
+  /* 헤더 뒤의 본문을 흐리게 가린다. */
   .blur-layer {
-    --h: min(96px, var(--page-top));
-    position: fixed;
-    top: 0;
-    z-index: 1;
-    width: calc(100% + var(--body-margin-left) + var(--body-margin-right));
-    height: var(--h);
-    margin-bottom: calc(-1 * var(--h));
-    margin-left: calc(-1 * var(--body-margin-left));
-    pointer-events: none;
-    user-select: none;
-    backdrop-filter: blur(5px);
-    opacity: 0.95;
-    mask-image: linear-gradient(to bottom, #000000 25%, transparent);
+    @apply pointer-events-none fixed inset-0 z-10 h-(--header-height) bg-page/70 opacity-95 backdrop-blur-[10px] select-none;
+    mask-image: linear-gradient(to bottom, #000 25%, transparent);
   }
 
-  .blur-layer:after {
+  .blur-layer::after {
     position: absolute;
     inset: 0;
     content: "";
