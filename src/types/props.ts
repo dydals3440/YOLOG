@@ -3,7 +3,9 @@
  */
 
 import type { CollectionEntry } from "astro:content";
+
 import type { BlogCategory } from "@/consts";
+
 import type { SEOProps } from "./seo";
 
 // BaseLayout Props
@@ -42,6 +44,6 @@ export interface PaginationProps {
 
 // PostNavigation Props
 export interface PostNavigationProps {
-  prevPost?: CollectionEntry<"post">;
-  nextPost?: CollectionEntry<"post">;
+  prevPost?: CollectionEntry<"post"> | undefined;
+  nextPost?: CollectionEntry<"post"> | undefined;
 }

@@ -20,3 +20,9 @@ export const BLOG_CATEGORIES = {
 } as const;
 
 export type BlogCategory = keyof typeof BLOG_CATEGORIES;
+
+export function isBlogCategory(value: unknown): value is BlogCategory {
+  return typeof value === "string" && Object.hasOwn(BLOG_CATEGORIES, value);
+}
+
+export const BLOG_CATEGORY_KEYS = Object.keys(BLOG_CATEGORIES).filter(isBlogCategory);

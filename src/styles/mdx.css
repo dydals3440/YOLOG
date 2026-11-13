@@ -239,7 +239,10 @@
   color: var(--text-body);
 }
 
-.mdx li > :where(p, div, pre, blockquote, table, figure) + :where(p, div, pre, blockquote, table, figure) {
+.mdx
+  li
+  > :where(p, div, pre, blockquote, table, figure)
+  + :where(p, div, pre, blockquote, table, figure) {
   margin-top: 0.75rem;
 }
 
@@ -462,10 +465,8 @@
   background: linear-gradient(
     to bottom,
     transparent 25%,
-    color-mix(in oklch, var(--highlight) var(--highlight-opacity), transparent)
-      25%,
-    color-mix(in oklch, var(--highlight) var(--highlight-opacity), transparent)
-      100%
+    color-mix(in oklch, var(--highlight) var(--highlight-opacity), transparent) 25%,
+    color-mix(in oklch, var(--highlight) var(--highlight-opacity), transparent) 100%
   );
   background-color: transparent;
   border: none;
@@ -796,11 +797,7 @@ html.dark pre.astro-code .diff span {
   color: var(--text-second);
 }
 
-.mdx
-  :is(
-    .callout[data-variant="inline"].note,
-    .callout[data-variant="inline"].idea
-  ) {
+.mdx :is(.callout[data-variant="inline"].note, .callout[data-variant="inline"].idea) {
   color: var(--text-second);
 }
 

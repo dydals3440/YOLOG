@@ -14,15 +14,15 @@ export const STORAGE_THEME_KEY = "theme" as const;
 
 export const themeStore = persistentAtom<ThemeValue>(STORAGE_THEME_KEY, THEME_MAP.system);
 
-const initThemeStoreSubscribe = () => {
-  const applyTheme = (theme: ThemeValue) => {
-    if (theme === THEME_MAP.dark) {
-      document.documentElement.classList.add("dark");
-    } else if (theme === THEME_MAP.light) {
-      document.documentElement.classList.remove("dark");
-    }
-  };
+const applyTheme = (theme: ThemeValue) => {
+  if (theme === THEME_MAP.dark) {
+    document.documentElement.classList.add("dark");
+  } else if (theme === THEME_MAP.light) {
+    document.documentElement.classList.remove("dark");
+  }
+};
 
+const initThemeStoreSubscribe = () => {
   let mediaQuery: MediaQueryList | null = null;
   let mediaQueryHandler: ((event: MediaQueryListEvent | MediaQueryList) => void) | null = null;
 

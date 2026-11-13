@@ -1,6 +1,4 @@
-import { getPostCollection } from "@/lib/mdx";
-
-import { BLOG_CATEGORIES, type BlogCategory } from "@/consts";
+import { BLOG_CATEGORIES, BLOG_CATEGORY_KEYS } from "@/consts";
 import {
   createCategoryList,
   filterPostsByCategory,
@@ -8,12 +6,11 @@ import {
   sortPostsByDate,
 } from "@/lib/blog-utils";
 import { PAGINATION } from "@/lib/config";
+import { getPostCollection } from "@/lib/mdx";
 
 export async function buildBlogListingPaths() {
   const allPosts = await getPostCollection();
-  const categories = Object.keys(BLOG_CATEGORIES)
-    .filter((c) => c !== "ALL")
-    .map((c) => c.toLowerCase());
+  const categories = BLOG_CATEGORY_KEYS.filter((key) => key !== "ALL");
 
   const paths = [];
   const sortedAll = sortPostsByDate(allPosts);
@@ -33,8 +30,8 @@ export async function buildBlogListingPaths() {
     });
   }
 
-  for (const category of categories) {
-    const key = category.toUpperCase() as BlogCategory;
+  for (const key of categories) {
+    const category = key.toLowerCase();
     const sorted = sortPostsByDate(filterPostsByCategory(allPosts, key));
     const totalPages = Math.max(1, Math.ceil(sorted.length / PAGINATION.POSTS_PER_PAGE_CATEGORY));
 

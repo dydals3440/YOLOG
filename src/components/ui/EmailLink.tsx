@@ -1,7 +1,7 @@
-import { type MouseEvent, useCallback, useEffect, useRef, useState } from "react";
-
 import { Check, Copy, Mail, Send } from "lucide-react";
+import { type MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+
 import IconLink from "@/components/ui/IconLink";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { CONTACT, TOAST } from "@/lib/config";
@@ -29,7 +29,9 @@ const EmailLink = () => {
     firstItemRef.current?.focus();
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) setIsOpen(false);
+      if (event.target instanceof Node && !containerRef.current?.contains(event.target)) {
+        setIsOpen(false);
+      }
     };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setIsOpen(false);

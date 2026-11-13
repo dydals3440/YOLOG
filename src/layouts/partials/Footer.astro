@@ -1,19 +1,16 @@
 ---
-import EmailLink from '@/components/ui/EmailLink'
-import IconLink from '@/components/ui/IconLink'
-import { GithubIcon, LinkedinIcon, YoutubeIcon } from '@/components/ui/Icons'
+import EmailLink from "@/components/ui/EmailLink";
+import IconLink from "@/components/ui/IconLink";
+import { GithubIcon, LinkedinIcon, YoutubeIcon } from "@/components/ui/Icons";
 ---
 
-<footer class="container mt-auto pb-8 pt-16 text-center">
+<footer class="container mt-auto pt-16 pb-8 text-center">
   <div class="flex items-center justify-center gap-1">
     <EmailLink client:visible />
     <IconLink href="https://github.com/dydals3440" aria-label="깃허브">
       <GithubIcon width="1rem" height="1rem" />
     </IconLink>
-    <IconLink
-      href="https://www.linkedin.com/in/dydals3440/"
-      aria-label="링크드인"
-    >
+    <IconLink href="https://www.linkedin.com/in/dydals3440/" aria-label="링크드인">
       <LinkedinIcon width="1rem" height="1rem" />
     </IconLink>
     <IconLink href="https://www.youtube.com/@yongcoding" aria-label="유튜브">

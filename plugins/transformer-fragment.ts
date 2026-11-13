@@ -11,8 +11,11 @@ export function transformerFragment(): ShikiTransformer {
       const title = metaString.match(/title="([^"]+)"/)?.[1];
       const caption = metaString.match(/caption="([^"]+)"/)?.[1];
 
-      const preElement = root.children[0] as Element;
-      const codeElement = preElement.children[0] as Element;
+      const [preElement] = root.children;
+      const [codeElement] = preElement?.type === "element" ? preElement.children : [];
+      if (preElement?.type !== "element" || codeElement?.type !== "element") {
+        return root;
+      }
 
       const isShowLineNumbers = metaString.includes("line-numbers");
       if (isShowLineNumbers) {
@@ -43,14 +46,14 @@ export function transformerFragment(): ShikiTransformer {
   };
 }
 
-function createFragmentElement(...children: unknown[]): Element {
+function createFragmentElement(...children: (Element | "" | undefined)[]): Element {
   return {
     type: "element",
     tagName: "div",
     properties: {
       "data-code-fragment": "",
     },
-    children: (children as Element[]).filter(Boolean),
+    children: children.filter((child) => typeof child === "object"),
   };
 }
 

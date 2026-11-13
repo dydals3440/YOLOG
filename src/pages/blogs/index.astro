@@ -1,31 +1,28 @@
 ---
-import { getPostCollection } from '@/lib/mdx'
+import BlogList from "@/components/blogs/BlogList.astro";
+import CategoryList from "@/components/blogs/CategoryList.astro";
+import Pagination from "@/components/blogs/Pagination.astro";
+import YongGlass from "@/components/YongGlass.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { createCategoryList, paginateArray, sortPostsByDate } from "@/lib/blog-utils";
+import { PAGINATION, getSiteUrl } from "@/lib/config";
+import { getPostCollection } from "@/lib/mdx";
 
-import YongGlass from '@/components/YongGlass.astro'
-import BlogList from '@/components/blogs/BlogList.astro'
-import CategoryList from '@/components/blogs/CategoryList.astro'
-import Pagination from '@/components/blogs/Pagination.astro'
-import BaseLayout from '@/layouts/BaseLayout.astro'
-import { createCategoryList, paginateArray, sortPostsByDate } from '@/lib/blog-utils'
-import { PAGINATION, getSiteUrl } from '@/lib/config'
+const allPosts = await getPostCollection();
+const sortedPosts = sortPostsByDate(allPosts);
+const categories = createCategoryList(allPosts);
+const { items: posts, pagination } = paginateArray(sortedPosts, 1, PAGINATION.POSTS_PER_PAGE);
+const nextUrl = pagination.totalPages > 1 ? `${getSiteUrl(Astro.site)}/blogs/page/2` : null;
 
-const allPosts = await getPostCollection()
-const sortedPosts = sortPostsByDate(allPosts)
-const categories = createCategoryList(allPosts)
-const { items: posts, pagination } = paginateArray(sortedPosts, 1, PAGINATION.POSTS_PER_PAGE)
-const nextUrl = pagination.totalPages > 1 ? `${getSiteUrl(Astro.site)}/blogs/page/2` : null
-
-const seoTitle = '블로그'
-const seoDescription = `개발자 매튜의 글 모음 — 개발/HTTP/디자인 패턴/회고/이야기 (총 ${sortedPosts.length}개)`
+const seoTitle = "블로그";
+const seoDescription = `개발자 매튜의 글 모음 — 개발/HTTP/디자인 패턴/회고/이야기 (총 ${sortedPosts.length}개)`;
 ---
 
 <BaseLayout seo={{ title: seoTitle, description: seoDescription, nextUrl }}>
   <div class="py-12 sm:py-8">
     <div class="mb-12 sm:mb-8">
-      <h1 class="text-3xl font-bold tracking-tight mb-2 sm:text-2xl">전체</h1>
-      <p class="text-second text-sm">
-        {sortedPosts.length}개의 글
-      </p>
+      <h1 class="mb-2 text-3xl font-bold tracking-tight sm:text-2xl">전체</h1>
+      <p class="text-sm text-second">{sortedPosts.length}개의 글</p>
     </div>
 
     <div class="mb-10 sm:mb-8">
@@ -41,11 +38,9 @@ const seoDescription = `개발자 매튜의 글 모음 — 개발/HTTP/디자인
         </div>
       </div>
     ) : (
-      <div class="py-16 flex flex-col items-center justify-center text-center">
-        <YongGlass className="w-24 h-24 mb-6" />
-        <p class="text-second">
-          해당하는 게시글이 없습니다.
-        </p>
+      <div class="flex flex-col items-center justify-center py-16 text-center">
+        <YongGlass className="mb-6 h-24 w-24" />
+        <p class="text-second">해당하는 게시글이 없습니다.</p>
       </div>
     )}
   </div>

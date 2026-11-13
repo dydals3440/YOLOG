@@ -1,43 +1,43 @@
 <script>
-  const codeBlockList = document.querySelectorAll('.mdx [data-code-fragment]')
+  const codeBlockList = document.querySelectorAll(".mdx [data-code-fragment]");
 
   codeBlockList.forEach((codeBlock) => {
-    const codeElement = codeBlock.querySelector('pre > code')
-    const copyButton = codeBlock.querySelector<HTMLElement>('.copy')
-    if (!codeElement || !copyButton) return
+    const codeElement = codeBlock.querySelector("pre > code");
+    const copyButton = codeBlock.querySelector<HTMLElement>(".copy");
+    if (!codeElement || !copyButton) return;
 
-    const lines = Array.from(codeElement.querySelectorAll(':scope > .line'))
+    const lines = Array.from(codeElement.querySelectorAll(":scope > .line"));
     const code = lines.length
       ? lines
-          .filter((line) => !line.classList.contains('remove'))
+          .filter((line) => !line.classList.contains("remove"))
           .map((line) => line.textContent)
-          .join('\n')
-      : codeElement.textContent ?? ''
+          .join("\n")
+      : (codeElement.textContent ?? "");
 
-    let timeoutId: ReturnType<typeof setTimeout> | undefined
-    let blurTimeoutId: ReturnType<typeof setTimeout> | undefined
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let blurTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
-    copyButton.addEventListener('click', async () => {
+    copyButton.addEventListener("click", async () => {
       try {
-        await navigator.clipboard.writeText(code)
+        await navigator.clipboard.writeText(code);
       } catch {
         // 권한이 거부되면 복사 완료 표시를 하지 않는다.
-        return
+        return;
       }
-      copyButton.classList.add('copied')
+      copyButton.classList.add("copied");
 
-      clearTimeout(timeoutId)
-      clearTimeout(blurTimeoutId)
+      clearTimeout(timeoutId);
+      clearTimeout(blurTimeoutId);
 
       blurTimeoutId = setTimeout(() => {
         if (document.activeElement === copyButton) {
-          copyButton.blur()
+          copyButton.blur();
         }
-      }, 1500)
+      }, 1500);
 
       timeoutId = setTimeout(() => {
-        copyButton.classList.remove('copied')
-      }, 2000)
-    })
-  })
+        copyButton.classList.remove("copied");
+      }, 2000);
+    });
+  });
 </script>

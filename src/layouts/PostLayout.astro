@@ -1,54 +1,60 @@
 ---
-import '@/styles/mdx.css'
+import "@/styles/mdx.css";
+import { type CollectionEntry, render } from "astro:content";
 
-import { type CollectionEntry, render } from 'astro:content'
+import PostNavigation from "@/components/common/PostNavigation.astro";
+import CopyCodeScript from "@/components/post/CopyCodeScript.astro";
+import GiscusComment from "@/components/post/GiscusComment";
+import MediumZoomScript from "@/components/post/MediumZoomScript.astro";
+import MermaidScript from "@/components/post/MermaidScript.astro";
+import PageActions from "@/components/post/PageActions";
+import PostImage from "@/components/post/PostImage.astro";
+import PostTable from "@/components/post/PostTable.astro";
+import ReadingProgress from "@/components/post/ReadingProgress";
+import RelatedPosts from "@/components/post/RelatedPosts.astro";
+import SocialShare from "@/components/post/SocialShare";
+import TableOfContent from "@/components/post/TableOfContent";
+import { BLOG_CATEGORIES, WEBSITE_CONFIG } from "@/consts";
+import LeftSidebar from "@/layouts/partials/LeftSidebar.astro";
+import { formatDate } from "@/lib/blog-utils";
+import { RELATED_POSTS, getSiteUrl } from "@/lib/config";
+import { generateDescription, getPostCollection } from "@/lib/mdx";
+import { buildBlogPostingSchema, buildBreadcrumbSchema } from "@/lib/post-schema";
+import { getRelatedPosts } from "@/lib/related-posts";
+import { serializeJsonLd } from "@/lib/structured-data";
 
-import PostNavigation from '@/components/common/PostNavigation.astro'
-import CopyCodeScript from '@/components/post/CopyCodeScript.astro'
-import GiscusComment from '@/components/post/GiscusComment'
-import MediumZoomScript from '@/components/post/MediumZoomScript.astro'
-import MermaidScript from '@/components/post/MermaidScript.astro'
-import PageActions from '@/components/post/PageActions'
-import PostImage from '@/components/post/PostImage.astro'
-import PostTable from '@/components/post/PostTable.astro'
-import ReadingProgress from '@/components/post/ReadingProgress'
-import RelatedPosts from '@/components/post/RelatedPosts.astro'
-import SocialShare from '@/components/post/SocialShare'
-import TableOfContent from '@/components/post/TableOfContent'
-import LeftSidebar from '@/layouts/partials/LeftSidebar.astro'
-import { BLOG_CATEGORIES, WEBSITE_CONFIG } from '@/consts'
-import { formatDate } from '@/lib/blog-utils'
-import { RELATED_POSTS, getSiteUrl } from '@/lib/config'
-import { generateDescription, getPostCollection } from '@/lib/mdx'
-import { buildBlogPostingSchema, buildBreadcrumbSchema } from '@/lib/post-schema'
-import { serializeJsonLd } from '@/lib/structured-data'
-import { getRelatedPosts } from '@/lib/related-posts'
-
-import BaseLayout from './BaseLayout.astro'
+import BaseLayout from "./BaseLayout.astro";
 
 type Props = {
-  post: CollectionEntry<'post'>
-  prevPost?: CollectionEntry<'post'>
-  nextPost?: CollectionEntry<'post'>
-}
+  post: CollectionEntry<"post">;
+  prevPost?: CollectionEntry<"post"> | undefined;
+  nextPost?: CollectionEntry<"post"> | undefined;
+};
 
-const { post, prevPost, nextPost } = Astro.props
-const { title, date, updatedDate, image, tags, category } = post.data
-const body = post.body ?? ''
-const description = post.data.description || generateDescription(body)
-const formattedDate = formatDate(date)
-const { Content, headings } = await render(post)
-const toc = headings
-  .filter(({ depth }) => depth === 2)
-  .map(({ slug, text }) => ({ slug, text }))
+const { post, prevPost, nextPost } = Astro.props;
+const { title, date, updatedDate, image, tags, category } = post.data;
+const body = post.body ?? "";
+const description = post.data.description || generateDescription(body);
+const formattedDate = formatDate(date);
+const { Content, headings } = await render(post);
+const toc = headings.filter(({ depth }) => depth === 2).map(({ slug, text }) => ({ slug, text }));
 
-const blogPostingSchema = buildBlogPostingSchema({ post, description, site: Astro.site, url: Astro.url })
-const breadcrumbSchema = buildBreadcrumbSchema({ post, siteUrl: getSiteUrl(Astro.site) })
+const blogPostingSchema = buildBlogPostingSchema({
+  post,
+  description,
+  site: Astro.site,
+  url: Astro.url,
+});
+const breadcrumbSchema = buildBreadcrumbSchema({ post, siteUrl: getSiteUrl(Astro.site) });
 
-const allPosts = await getPostCollection()
-const relatedPosts = getRelatedPosts({ currentPost: post, allPosts, maxPosts: RELATED_POSTS.MAX_COUNT })
+const allPosts = await getPostCollection();
+const relatedPosts = getRelatedPosts({
+  currentPost: post,
+  allPosts,
+  maxPosts: RELATED_POSTS.MAX_COUNT,
+});
 
-const articleSection = category ? BLOG_CATEGORIES[category] : undefined
+const articleSection = category ? BLOG_CATEGORIES[category] : undefined;
 ---
 
 <BaseLayout
@@ -57,7 +63,7 @@ const articleSection = category ? BLOG_CATEGORIES[category] : undefined
     description,
     image,
     keywords: tags,
-    ogType: 'article',
+    ogType: "article",
     publishedTime: date,
     modifiedTime: updatedDate ?? date,
     author: WEBSITE_CONFIG.AUTHOR,
@@ -76,16 +82,25 @@ const articleSection = category ? BLOG_CATEGORIES[category] : undefined
       data-post-back
       data-animate
     >
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform group-hover:-translate-x-0.5"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="transition-transform group-hover:-translate-x-0.5"
+      >
+        <path d="m12 19-7-7 7-7" />
+        <path d="M19 12H5" />
+      </svg>
       <span class="text-sm">뒤로</span>
     </a>
     <div class="mt-6 lg:hidden">
-      <TableOfContent
-        className="text-sm"
-        data-animate
-        toc={toc}
-        client:idle
-      />
+      <TableOfContent className="text-sm" data-animate toc={toc} client:idle />
     </div>
     <div class="mt-auto pt-6 lg:mt-0 lg:pt-0">
       <PageActions client:visible />
@@ -93,15 +108,20 @@ const articleSection = category ? BLOG_CATEGORIES[category] : undefined
   </LeftSidebar>
   <section>
     <div class="pt-12 pb-8 sm:pt-8 sm:pb-6">
-      <time datetime={formatDate(date, 'YYYY-MM-DD')} class="text-xs text-third">{formattedDate}</time>
+      <time datetime={formatDate(date, "YYYY-MM-DD")} class="text-xs text-third">
+        {formattedDate}
+      </time>
       {updatedDate && updatedDate > date && (
-        <span class="ml-3 text-xs text-third">수정 <time datetime={formatDate(updatedDate, 'YYYY-MM-DD')}>{formatDate(updatedDate)}</time></span>
+        <span class="ml-3 text-xs text-third">
+          수정{" "}
+          <time datetime={formatDate(updatedDate, "YYYY-MM-DD")}>{formatDate(updatedDate)}</time>
+        </span>
       )}
-      <h1 class="mt-3 text-3xl font-bold tracking-tight leading-tight sm:text-2xl">{title}</h1>
+      <h1 class="mt-3 text-3xl leading-tight font-bold tracking-tight sm:text-2xl">{title}</h1>
       <div class="mt-6">
         <SocialShare
           title={title}
-          url={new URL(Astro.url.pathname.replace(/\/$/, ''), Astro.site).href}
+          url={new URL(Astro.url.pathname.replace(/\/$/, ""), Astro.site).href}
           client:only="react"
         />
       </div>
@@ -112,7 +132,7 @@ const articleSection = category ? BLOG_CATEGORIES[category] : undefined
       <Content components={{ img: PostImage, table: PostTable }} />
     </article>
     {relatedPosts.length > 0 && (
-      <div class="mt-16 pt-8 border-t border-border">
+      <div class="mt-16 border-t border-border pt-8">
         <RelatedPosts posts={relatedPosts} />
       </div>
     )}
@@ -128,7 +148,7 @@ const articleSection = category ? BLOG_CATEGORIES[category] : undefined
 </BaseLayout>
 
 <script>
-  import { setupPostNavigation } from '@/lib/post-navigation'
+  import { setupPostNavigation } from "@/lib/post-navigation";
 
-  setupPostNavigation()
+  setupPostNavigation();
 </script>

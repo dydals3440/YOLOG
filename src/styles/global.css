@@ -80,7 +80,6 @@
 @theme {
   --container-page: 1024px;
   --container-content: 680px;
-
 }
 
 /* colors */
@@ -243,7 +242,7 @@
   }
 
   em {
-    @apply font-serif font-bold not-italic text-body;
+    @apply font-serif font-bold text-body not-italic;
   }
 
   del {
@@ -271,7 +270,7 @@
   .link::before,
   .external-link::before,
   .mdx a:not(.anchor)::before {
-    @apply absolute -inset-x-1 bottom-0.5 top-0 -z-10 rounded transition-colors hover:bg-selection;
+    @apply absolute -inset-x-1 top-0 bottom-0.5 -z-10 rounded transition-colors hover:bg-selection;
     content: "";
   }
   .external-link::before {
