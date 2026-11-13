@@ -1,45 +1,25 @@
 ---
-import { readFile } from "node:fs/promises";
-
 import { Image } from "astro:assets";
-import sharp from "sharp";
 
-import { getPlaceholderColor } from "@/lib/image-placeholder";
-
-type Props = {
-  src: string;
+interface Props {
+  src: ImageMetadata;
   alt: string;
   // MDX는 불린 속성을 빈 문자열로 넘기므로 값이 아니라 존재 여부로 판단한다.
-  priority?: string;
-};
+  priority?: string | boolean | undefined;
+}
+
+// 본문 최대 폭(--container-content)이다. 이보다 넓게 보여 주지 않으므로 srcset·sizes의 기준으로 쓴다.
+const CONTENT_MAX_WIDTH = 680;
 
 const { src, alt, priority } = Astro.props;
-
-const isValidCaption = alt !== "" && !/^\d/.test(alt);
-
-const image = await readFile(`public${src}`);
-const { width, height } = await sharp(image).metadata();
-const backgroundColor = await getPlaceholderColor(image);
+const width = Math.min(src.width, CONTENT_MAX_WIDTH);
+const isPriority = priority !== undefined && priority !== false;
+const hasCaption = alt !== "" && !/^\d/.test(alt);
 ---
 
 <figure>
-  <div class="block overflow-hidden" style={{ backgroundColor }}>
-    <Image src={src} alt={alt} width={width} height={height} priority={priority !== undefined} />
+  <div class="block overflow-hidden">
+    <Image src={src} alt={alt} width={width} priority={isPriority} />
   </div>
-  {isValidCaption && <figcaption class="w-full text-center">{alt}</figcaption>}
+  {hasCaption && <figcaption class="w-full text-center">{alt}</figcaption>}
 </figure>
-
-<style>
-  figure {
-    animation: fadeIn 0.2s ease-out;
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-</style>

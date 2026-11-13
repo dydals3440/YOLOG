@@ -2,6 +2,7 @@
 import "@/styles/mdx.css";
 import { ArrowLeft } from "@lucide/astro";
 import type { GetStaticPaths, InferGetStaticPropsType } from "astro";
+import { getImage } from "astro:assets";
 
 import { getPosts, renderPost } from "@/apis/posts";
 import Comments from "@/components/post/Comments.astro";
@@ -18,6 +19,7 @@ import { CATEGORY_LABEL } from "@/domains/category.model";
 import { PostPolicy } from "@/domains/post.model";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { toKstDateTime } from "@/utils/date";
+import { getLargestCropSize } from "@/utils/image";
 import { getPostMarkdownPath } from "@/utils/routes";
 import { buildBlogPostingSchema, buildBreadcrumbSchema } from "@/utils/structured-data";
 
@@ -31,14 +33,28 @@ type Props = InferGetStaticPropsType<typeof getStaticPaths>;
 const { post } = Astro.props;
 const { Content, headings } = await renderPost(post.id);
 const summary = PostPolicy.summary(post);
-const coverImages = post.cover ? [post.cover] : [];
+// Google 권장대로 16:9·4:3·1:1 대표 이미지를 만들고, 공유 미리보기는 1200px 원본 비율을 쓴다.
+const STRUCTURED_DATA_ASPECT_RATIOS = [16 / 9, 4 / 3, 1];
+const OG_IMAGE_WIDTH = 1200;
+
+const cover = post.cover;
+const ogImage = cover
+  ? await getImage({ src: cover, width: Math.min(OG_IMAGE_WIDTH, cover.width) })
+  : null;
+const structuredDataImages = cover
+  ? await Promise.all(
+      STRUCTURED_DATA_ASPECT_RATIOS.map((ratio) =>
+        getImage({ src: cover, ...getLargestCropSize(cover, ratio), fit: "cover" }),
+      ),
+    )
+  : [];
 ---
 
 <BaseLayout
   seo={{
     title: post.title,
     description: summary,
-    image: post.cover,
+    image: ogImage?.src,
     article: {
       publishedTime: toKstDateTime(post.publishedAt),
       modifiedTime: toKstDateTime(post.updatedAt),
@@ -47,7 +63,11 @@ const coverImages = post.cover ? [post.cover] : [];
     },
     alternateMarkdownUrl: getPostMarkdownPath(post.id),
     schemas: [
-      buildBlogPostingSchema({ post, description: summary, images: coverImages }),
+      buildBlogPostingSchema({
+        post,
+        description: summary,
+        images: structuredDataImages.map(({ src }) => src),
+      }),
       buildBreadcrumbSchema(post),
     ],
   }}

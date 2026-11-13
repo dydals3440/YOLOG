@@ -1,4 +1,6 @@
 ---
+import { Image } from "astro:assets";
+
 import { getPost, getPosts } from "@/apis/posts";
 import { excludePostId, type Post, PostPolicy } from "@/domains/post.model";
 import { getPostPath } from "@/utils/routes";
@@ -40,15 +42,7 @@ const relatedPosts = currentPost
           >
             <div class="aspect-video overflow-hidden rounded-lg border border-border bg-gray-100 sm:w-28 sm:shrink-0">
               {post.cover ? (
-                <img
-                  src={post.cover}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  width="640"
-                  height="360"
-                  class="size-full object-contain"
-                />
+                <Image src={post.cover} alt="" width={640} class="size-full object-contain" />
               ) : (
                 <div
                   class="flex h-full items-center justify-center text-xs text-second"

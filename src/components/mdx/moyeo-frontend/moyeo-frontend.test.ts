@@ -9,7 +9,7 @@ import { getStory, scenes, type SceneName, type Transfer } from "./story";
 
 // 본문의 예제 코드를 직접 읽어 실행하므로, 글을 옮기면 이 경로도 함께 바꾼다.
 const ARTICLE_URL = new URL(
-  "../../../content/post/blog/moyeo-frontend-architecture.mdx",
+  "../../../content/posts/moyeo-frontend-architecture/index.mdx",
   import.meta.url,
 );
 

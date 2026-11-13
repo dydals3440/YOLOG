@@ -4,6 +4,15 @@ import { extractParagraphText } from "@/utils/markdown";
 
 import { CategorySchema } from "./category.model";
 
+// 래스터 이미지는 객체로, SVG는 Astro SVG 컴포넌트(함수)로 들어온다. 둘 다 src·width를 가진다.
+const CoverImageSchema = z.custom<ImageMetadata>(
+  (value) =>
+    (typeof value === "object" || typeof value === "function") &&
+    value !== null &&
+    "src" in value &&
+    "width" in value,
+);
+
 export const PostSchema = z
   .object({
     id: z.string(),
@@ -13,7 +22,7 @@ export const PostSchema = z
     tags: z.array(z.string()),
     publishedAt: z.date(),
     updatedAt: z.date(),
-    cover: z.string().optional(),
+    cover: CoverImageSchema.optional(),
     body: z.string(),
   })
   .strip();
