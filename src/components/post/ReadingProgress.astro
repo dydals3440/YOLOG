@@ -1,0 +1,48 @@
+<div
+  class="pointer-events-none fixed inset-x-0 top-0 z-50 h-1 opacity-0 transition-opacity duration-300 data-visible:opacity-100"
+  aria-hidden="true"
+  data-reading-progress
+>
+  <div
+    class="h-full origin-left scale-x-0 bg-(--progress-bar-color)"
+    data-reading-progress-bar
+  ></div>
+</div>
+
+<script>
+  // 본문을 다 읽었다고 볼 위치(뷰포트 높이 대비)와 막대를 보여 주기 시작할 위치
+  const READABLE_OFFSET = 0.3;
+  const VISIBILITY_OFFSET = 0.5;
+
+  const container = document.querySelector<HTMLElement>("[data-reading-progress]");
+  const bar = document.querySelector<HTMLElement>("[data-reading-progress-bar]");
+  const article = document.querySelector<HTMLElement>("article.mdx");
+
+  if (container && bar && article) {
+    let isTicking = false;
+
+    const update = () => {
+      const articleTop = article.getBoundingClientRect().top + window.scrollY;
+      const readableHeight = article.offsetHeight - window.innerHeight * READABLE_OFFSET;
+      const progress = Math.min(Math.max((window.scrollY - articleTop) / readableHeight, 0), 1);
+
+      bar.style.transform = `scaleX(${progress})`;
+      container.toggleAttribute(
+        "data-visible",
+        window.scrollY > articleTop - window.innerHeight * VISIBILITY_OFFSET &&
+          window.scrollY >= articleTop,
+      );
+      isTicking = false;
+    };
+
+    const requestUpdate = () => {
+      if (isTicking) return;
+      isTicking = true;
+      requestAnimationFrame(update);
+    };
+
+    update();
+    window.addEventListener("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", requestUpdate, { passive: true });
+  }
+</script>

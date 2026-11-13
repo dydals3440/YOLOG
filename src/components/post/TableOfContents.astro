@@ -1,0 +1,69 @@
+---
+import type { MarkdownHeading } from "astro";
+
+interface Props {
+  headings: MarkdownHeading[];
+}
+
+const SECTION_DEPTH = 2;
+
+const { headings } = Astro.props;
+const sections = headings.filter(({ depth }) => depth === SECTION_DEPTH);
+---
+
+{sections.length > 0 && (
+  <nav class="relative text-sm" aria-label="목차" data-table-of-contents>
+    <div class="absolute inset-y-0 left-0 w-px bg-gray-200" aria-hidden="true" />
+    <ul class="relative">
+      {sections.map(({ slug, text }) => (
+        <li>
+          <a
+            href={`#${slug}`}
+            data-section-link={slug}
+            class="relative block py-1.5 pl-4 text-[13px] leading-snug text-disabled transition-colors duration-200 before:absolute before:inset-y-0 before:left-0 before:w-px before:transition-colors hover:text-body aria-[current=true]:font-medium aria-[current=true]:text-heading aria-[current=true]:before:bg-heading"
+          >
+            {text}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+)}
+
+<script>
+  // 화면 위쪽 30% 안으로 들어온 마지막 섹션을 현재 위치로 표시한다.
+  const ACTIVE_ZONE = "0px 0px -70% 0px";
+
+  for (const toc of document.querySelectorAll("[data-table-of-contents]")) {
+    const links = new Map(
+      Array.from(toc.querySelectorAll<HTMLAnchorElement>("[data-section-link]")).map((link) => [
+        link.dataset.sectionLink,
+        link,
+      ]),
+    );
+    const headings = Array.from(links.keys())
+      .map((id) => (id ? document.getElementById(id) : null))
+      .filter((heading) => heading !== null);
+
+    const markCurrent = (id: string) => {
+      for (const [slug, link] of links) {
+        link.setAttribute("aria-current", String(slug === id));
+      }
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((entry) => entry.isIntersecting);
+        const current = visible.at(-1)?.target.id;
+        if (current) {
+          markCurrent(current);
+        }
+      },
+      { rootMargin: ACTIVE_ZONE },
+    );
+
+    for (const heading of headings) {
+      observer.observe(heading);
+    }
+  }
+</script>

@@ -1,0 +1,29 @@
+---
+import { getPosts } from "@/apis/posts";
+import { getPostPath } from "@/utils/routes";
+
+import AdjacentPostLink from "./AdjacentPostLink.astro";
+
+const posts = await getPosts();
+const currentIndex = posts.findIndex(({ id }) => id === Astro.params.slug);
+const previousPost = currentIndex === -1 ? undefined : posts.at(currentIndex + 1);
+const nextPost = currentIndex <= 0 ? undefined : posts.at(currentIndex - 1);
+---
+
+<nav class="flex items-stretch justify-between gap-1 text-sm" aria-label="이전·다음 글">
+  {previousPost && (
+    <AdjacentPostLink
+      href={getPostPath(previousPost.id)}
+      direction="이전 글"
+      title={previousPost.title}
+    />
+  )}
+  {nextPost && (
+    <AdjacentPostLink
+      href={getPostPath(nextPost.id)}
+      direction="다음 글"
+      title={nextPost.title}
+      class="ml-auto text-right"
+    />
+  )}
+</nav>

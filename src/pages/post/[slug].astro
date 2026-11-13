@@ -1,0 +1,111 @@
+---
+import "@/styles/mdx.css";
+import { ArrowLeft } from "@lucide/astro";
+import type { GetStaticPaths, InferGetStaticPropsType } from "astro";
+
+import { getPosts, renderPost } from "@/apis/posts";
+import Comments from "@/components/post/Comments.astro";
+import ImageZoom from "@/components/post/ImageZoom.astro";
+import PostActions from "@/components/post/PostActions.astro";
+import PostHeader from "@/components/post/PostHeader.astro";
+import PostImage from "@/components/post/PostImage.astro";
+import PostNavigation from "@/components/post/PostNavigation.astro";
+import PostTable from "@/components/post/PostTable.astro";
+import ReadingProgress from "@/components/post/ReadingProgress.astro";
+import RelatedPosts from "@/components/post/RelatedPosts.astro";
+import TableOfContents from "@/components/post/TableOfContents.astro";
+import { CATEGORY_LABEL } from "@/domains/category.model";
+import { PostPolicy } from "@/domains/post.model";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { toKstDateTime } from "@/utils/date";
+import { getPostMarkdownPath } from "@/utils/routes";
+import { buildBlogPostingSchema, buildBreadcrumbSchema } from "@/utils/structured-data";
+
+export const getStaticPaths = (async () => {
+  const posts = await getPosts();
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}) satisfies GetStaticPaths;
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { post } = Astro.props;
+const { Content, headings } = await renderPost(post.id);
+const summary = PostPolicy.summary(post);
+const coverImages = post.cover ? [post.cover] : [];
+---
+
+<BaseLayout
+  seo={{
+    title: post.title,
+    description: summary,
+    image: post.cover,
+    article: {
+      publishedTime: toKstDateTime(post.publishedAt),
+      modifiedTime: toKstDateTime(post.updatedAt),
+      section: CATEGORY_LABEL[post.category],
+      tags: post.tags,
+    },
+    alternateMarkdownUrl: getPostMarkdownPath(post.id),
+    schemas: [
+      buildBlogPostingSchema({ post, description: summary, images: coverImages }),
+      buildBreadcrumbSchema(post),
+    ],
+  }}
+>
+  <ReadingProgress />
+
+  <aside
+    class:list={[
+      "fixed top-page flex max-w-[200px] translate-x-[-210px] translate-y-[60px] flex-col px-2",
+      "lg:relative lg:top-[-24px] lg:mb-7 lg:-ml-2 lg:w-full lg:max-w-none lg:translate-x-0 lg:flex-row lg:items-center lg:justify-between lg:px-0 lg:pl-2",
+    ]}
+    data-animate
+  >
+    <a
+      href="/blogs"
+      class="group flex w-fit items-center gap-1.5 text-third transition-colors hover:text-primary lg:gap-2"
+      data-post-back
+    >
+      <ArrowLeft
+        class="size-4 transition-transform group-hover:-translate-x-0.5"
+        stroke-width={2}
+        aria-hidden="true"
+      />
+      <span class="text-sm">뒤로</span>
+    </a>
+    <div class="mt-6 lg:hidden">
+      <TableOfContents headings={headings} />
+    </div>
+    <div class="mt-auto pt-6 lg:mt-0 lg:pt-0">
+      <PostActions />
+    </div>
+  </aside>
+
+  <PostHeader post={post} />
+
+  <article data-post-id={post.id} class="mdx">
+    <Content components={{ img: PostImage, table: PostTable }} />
+  </article>
+
+  <div class="mt-16 border-t border-border pt-8 empty:hidden">
+    <RelatedPosts />
+  </div>
+
+  <footer class="px-0">
+    <hr class="my-8 border-border" />
+    <PostNavigation />
+    <div class="mx-auto my-half-page">
+      <Comments />
+    </div>
+  </footer>
+
+  <ImageZoom />
+</BaseLayout>
+
+<script>
+  import { setupMermaidReadability } from "@/components/post/mermaid-readability";
+  import { setupPostNavigation } from "@/components/post/section-navigation";
+
+  setupPostNavigation();
+  setupMermaidReadability();
+</script>

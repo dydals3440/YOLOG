@@ -1,0 +1,29 @@
+---
+import { type Post, PostPolicy } from "@/domains/post.model";
+import { formatKoreanDate, toIsoDate } from "@/utils/date";
+import { getPostPath } from "@/utils/routes";
+
+import SocialShare from "./SocialShare.astro";
+
+interface Props {
+  post: Post;
+}
+
+const { post } = Astro.props;
+const canonicalUrl = new URL(getPostPath(post.id), Astro.site).href;
+---
+
+<div class="pt-12 pb-8 sm:pt-8 sm:pb-6">
+  <time datetime={toIsoDate(post.publishedAt)} class="text-xs text-third">
+    {formatKoreanDate(post.publishedAt)}
+  </time>
+  {PostPolicy.isUpdated(post) && (
+    <span class="ml-3 text-xs text-third">
+      수정 <time datetime={toIsoDate(post.updatedAt)}>{formatKoreanDate(post.updatedAt)}</time>
+    </span>
+  )}
+  <h1 class="mt-3 text-3xl leading-tight font-bold tracking-tight sm:text-2xl">{post.title}</h1>
+  <div class="mt-6">
+    <SocialShare title={post.title} url={canonicalUrl} />
+  </div>
+</div>

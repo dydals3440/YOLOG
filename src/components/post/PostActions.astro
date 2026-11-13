@@ -1,0 +1,38 @@
+---
+import { ArrowUp, Check, Link2, MessageCircle } from "@lucide/astro";
+
+const ACTION_CLASS =
+  "group flex size-8 items-center justify-center rounded-md text-third transition-colors hover:bg-selection hover:text-heading";
+---
+
+<ul class="flex items-center gap-1">
+  <li>
+    <button type="button" class={ACTION_CLASS} data-copy-button>
+      <Link2 class="size-[18px] group-data-copied:hidden" stroke-width={1.75} aria-hidden="true" />
+      <Check
+        class="hidden size-[18px] group-data-copied:block"
+        stroke-width={1.75}
+        aria-hidden="true"
+      />
+      <span class="sr-only">링크 복사</span>
+    </button>
+  </li>
+  <li>
+    <a href="#comments" class={ACTION_CLASS}>
+      <MessageCircle class="size-[18px]" stroke-width={1.75} aria-hidden="true" />
+      <span class="sr-only">댓글로 이동</span>
+    </a>
+  </li>
+  <li class="lg:hidden">
+    <a href="#top" class={ACTION_CLASS}>
+      <ArrowUp class="size-[18px]" stroke-width={1.75} aria-hidden="true" />
+      <span class="sr-only">맨 위로 이동</span>
+    </a>
+  </li>
+</ul>
+
+<script>
+  import { setupCopyButtons } from "@/components/site/copy-buttons";
+
+  setupCopyButtons();
+</script>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { getSamePageSectionId, isPlainNavigationClick } from "./post-navigation";
+import { getSamePageSectionId, isPlainNavigationClick } from "./section-navigation";
 
 const CURRENT_URL = "https://www.yolog.co.kr/post/moyeo-product-operations?from=blogs#intro";
 

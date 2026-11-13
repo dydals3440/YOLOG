@@ -1,0 +1,23 @@
+---
+import type { HTMLAttributes } from "astro/types";
+
+interface Props extends HTMLAttributes<"a"> {
+  href: string;
+  current: boolean;
+}
+
+const { href, current, class: className, ...props } = Astro.props;
+---
+
+<a
+  href={href}
+  aria-current={current ? "page" : undefined}
+  class:list={[
+    "text-base transition-colors duration-200",
+    current ? "font-semibold text-primary" : "font-medium text-third hover:text-primary",
+    className,
+  ]}
+  {...props}
+>
+  <slot />
+</a>

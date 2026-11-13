@@ -1,0 +1,25 @@
+---
+import { CATEGORIES, CATEGORY_LABEL } from "@/domains/category.model";
+import { getCategoryPath, parseCategorySlug } from "@/utils/routes";
+
+import CategoryLink from "./CategoryLink.astro";
+
+const currentCategory = parseCategorySlug(Astro.params.category);
+---
+
+<nav aria-label="블로그 카테고리">
+  <ul class="flex flex-wrap items-center gap-6">
+    <li>
+      <CategoryLink href="/blogs" current={currentCategory === null}>
+        전체
+      </CategoryLink>
+    </li>
+    {CATEGORIES.map((category) => (
+      <li>
+        <CategoryLink href={getCategoryPath(category)} current={currentCategory === category}>
+          {CATEGORY_LABEL[category]}
+        </CategoryLink>
+      </li>
+    ))}
+  </ul>
+</nav>
