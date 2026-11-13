@@ -1,17 +1,13 @@
-import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
-import { BLOG_CATEGORIES, type BlogCategory } from "./consts";
+import { defineCollection } from "astro:content";
 
-// BLOG_CATEGORIES의 키들을 타입으로 추출 (ALL 제외)
-const categoryKeys = Object.keys(BLOG_CATEGORIES).filter((key) => key !== "ALL");
+import { type BlogCategory, isBlogCategory } from "./consts";
 
-// 최소 1개 요소를 보장하는 타입 가드
-if (categoryKeys.length === 0) {
-  throw new Error("BLOG_CATEGORIES must have at least one category besides ALL");
-}
+type PostCategory = Exclude<BlogCategory, "ALL">;
 
-const categoryValues = categoryKeys as [BlogCategory, ...BlogCategory[]];
+const isPostCategory = (value: unknown): value is PostCategory =>
+  isBlogCategory(value) && value !== "ALL";
 
 const post = defineCollection({
   loader: glob({ pattern: ["**/*.{md,mdx}", "!**/*.draft.{md,mdx}"], base: "./src/content/post" }),
@@ -23,7 +19,7 @@ const post = defineCollection({
     updatedDate: z.coerce.date().optional(),
     image: z.string().optional(),
     tags: z.array(z.string()).optional(),
-    category: z.enum(categoryValues).optional(),
+    category: z.custom<PostCategory>(isPostCategory).optional(),
   }),
 });
 

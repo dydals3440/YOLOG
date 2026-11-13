@@ -1,15 +1,15 @@
 ---
-import type { GetStaticPaths, InferGetStaticPropsType } from 'astro'
+import type { GetStaticPaths, InferGetStaticPropsType } from "astro";
 
-import PostLayout from '@/layouts/PostLayout.astro'
-import { getPostCollection, isBlogPost, resolveSlug } from '@/lib/mdx'
+import PostLayout from "@/layouts/PostLayout.astro";
+import { getPostCollection, isBlogPost, resolveSlug } from "@/lib/mdx";
 
 export const getStaticPaths = (async () => {
-  const posts = await getPostCollection()
-  const blogPosts = posts.filter((post) => isBlogPost(post))
+  const posts = await getPostCollection();
+  const blogPosts = posts.filter((post) => isBlogPost(post));
 
   return posts.map((post) => {
-    const postIndex = blogPosts.findIndex((item) => item.id === post.id)
+    const postIndex = blogPosts.findIndex((item) => item.id === post.id);
 
     return {
       params: { slug: resolveSlug(post.id) },
@@ -18,13 +18,13 @@ export const getStaticPaths = (async () => {
         prevPost: blogPosts[postIndex + 1],
         nextPost: blogPosts[postIndex - 1],
       },
-    }
-  })
-}) satisfies GetStaticPaths
+    };
+  });
+}) satisfies GetStaticPaths;
 
-type Props = InferGetStaticPropsType<typeof getStaticPaths>
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
 
-const props = Astro.props as Props
+const props = Astro.props as Props;
 ---
 
 <PostLayout {...props} />

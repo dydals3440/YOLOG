@@ -1,11 +1,12 @@
+import { Check, Link2 } from "lucide-react";
 import { useCallback } from "react";
 import { toast } from "sonner";
-import { trackShare } from "@/lib/analytics";
 
-import { Check, Link2 } from "lucide-react";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
+import { trackShare } from "@/lib/analytics";
 import { DELAYS } from "@/lib/config";
 import { copyToClipboard } from "@/lib/utils/share";
+
 import ActionButton from "./ActionButton";
 
 const CopyLinkButton = () => {

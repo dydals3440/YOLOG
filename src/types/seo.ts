@@ -3,20 +3,20 @@
  */
 
 export interface SEOModel {
-  noindex?: boolean;
-  title?: string;
-  description?: string;
-  image?: string;
-  keywords?: string[];
-  prevUrl?: string | null;
-  nextUrl?: string | null;
-  ogType?: "website" | "article";
-  publishedTime?: Date;
-  modifiedTime?: Date;
-  author?: string;
-  articleSection?: string;
-  articleTags?: string[];
-  excludeWebPageSchema?: boolean;
+  noindex?: boolean | undefined;
+  title?: string | undefined;
+  description?: string | undefined;
+  image?: string | undefined;
+  keywords?: string[] | undefined;
+  prevUrl?: string | null | undefined;
+  nextUrl?: string | null | undefined;
+  ogType?: "website" | "article" | undefined;
+  publishedTime?: Date | undefined;
+  modifiedTime?: Date | undefined;
+  author?: string | undefined;
+  articleSection?: string | undefined;
+  articleTags?: string[] | undefined;
+  excludeWebPageSchema?: boolean | undefined;
 }
 
 export type SEOProps = SEOModel;

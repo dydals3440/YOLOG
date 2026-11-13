@@ -1,62 +1,62 @@
 <script>
   // 이보다 작게 줄이면 글자를 읽을 수 없으므로, 넘치는 만큼은 가로 스크롤로 보여 준다.
-  const MIN_DIAGRAM_SCALE = 0.6
+  const MIN_DIAGRAM_SCALE = 0.6;
+
+  const isDarkTheme = () => document.documentElement.classList.contains("dark");
+
+  const keepDiagramsReadable = (blocks: HTMLElement[]) => {
+    for (const block of blocks) {
+      const diagram = block.querySelector("svg");
+      if (!diagram) continue;
+
+      const minWidth = diagram.viewBox.baseVal.width * MIN_DIAGRAM_SCALE;
+      diagram.style.minWidth = `${Math.round(minWidth)}px`;
+    }
+  };
 
   const blocks = Array.from(
-    document.querySelectorAll<HTMLElement>('pre:has(> code.language-mermaid)'),
-  )
+    document.querySelectorAll<HTMLElement>("pre:has(> code.language-mermaid)"),
+  );
 
-  if (blocks.length) {
+  if (blocks.length > 0) {
     // mermaid가 원본 소스를 SVG로 덮어쓰므로, 테마를 바꿀 때 다시 그리려면 원본이 필요하다.
-    const sources = blocks.map((block) => block.textContent ?? '')
-    const isDark = () => document.documentElement.classList.contains('dark')
+    const sources = blocks.map((block) => block.textContent ?? "");
 
-    const keepDiagramsReadable = () => {
-      for (const block of blocks) {
-        const diagram = block.querySelector('svg')
-        if (!diagram) continue
-
-        const minWidth = diagram.viewBox.baseVal.width * MIN_DIAGRAM_SCALE
-        diagram.style.minWidth = `${Math.round(minWidth)}px`
-      }
+    for (const block of blocks) {
+      block.classList.add("mermaid");
+      block.setAttribute("role", "region");
+      block.setAttribute("aria-label", "다이어그램");
+      block.tabIndex = 0;
     }
 
-    blocks.forEach((block) => {
-      block.classList.add('mermaid')
-      block.setAttribute('role', 'region')
-      block.setAttribute('aria-label', '다이어그램')
-      block.tabIndex = 0
-    })
-
     // 다이어그램이 있는 페이지에서만 무거운 mermaid 번들을 동적으로 불러온다.
-    import('mermaid').then(async ({ default: mermaid }) => {
-      const renderAll = async () => {
-        blocks.forEach((block, index) => {
-          block.removeAttribute('data-processed')
-          block.textContent = sources[index]
-        })
-        // Mermaid 12의 기본 배치와 스타일 변경 대신 기존 다이어그램 모양을 유지한다.
-        mermaid.initialize({
-          startOnLoad: false,
-          layout: 'dagre',
-          look: 'classic',
-          theme: isDark() ? 'dark' : 'default',
-        })
-        await mermaid.run({ nodes: blocks })
-        keepDiagramsReadable()
-      }
+    const { default: mermaid } = await import("mermaid");
 
-      await renderAll()
+    const renderAll = async () => {
+      blocks.forEach((block, index) => {
+        block.removeAttribute("data-processed");
+        block.textContent = sources[index] ?? "";
+      });
+      mermaid.initialize({
+        startOnLoad: false,
+        layout: "dagre",
+        look: "classic",
+        theme: isDarkTheme() ? "dark" : "default",
+      });
+      await mermaid.run({ nodes: blocks });
+      keepDiagramsReadable(blocks);
+    };
 
-      let dark = isDark()
-      new MutationObserver(() => {
-        if (isDark() === dark) return
-        dark = isDark()
-        renderAll()
-      }).observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['class'],
-      })
-    })
+    await renderAll();
+
+    let isDark = isDarkTheme();
+    new MutationObserver(() => {
+      if (isDarkTheme() === isDark) return;
+      isDark = isDarkTheme();
+      void renderAll();
+    }).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
   }
 </script>

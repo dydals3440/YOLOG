@@ -29,7 +29,7 @@ export interface Simulation {
   samples: PoolSample[];
 }
 
-/** Scaled browser example: a script, a resolved Promise reaction, then a ready timer. */
+/** 브라우저 예시의 시간을 늘린 모델: 스크립트, 완료된 Promise 반응, 준비된 타이머 순서로 실행한다. */
 export function eventLoopAt(progress: number, longSynchronousWork = false) {
   const scriptEnd = longSynchronousWork ? 0.66 : 0.22;
   const promiseStart = scriptEnd + 0.02;
@@ -59,7 +59,7 @@ export function eventLoopAt(progress: number, longSynchronousWork = false) {
   };
 }
 
-/** Conceptual I/O timings; dispatch and callbacks never overlap on the JS thread. */
+/** 개념용 I/O 시간이다. JS 스레드에서 요청 시작과 콜백 실행은 서로 겹치지 않는다. */
 export function ioModelAt(progress: number) {
   const time = Math.max(0, Math.min(1, progress)) * 1400;
   const requests = Array.from({ length: 3 }, (_, index) => {
@@ -90,7 +90,7 @@ export function ioModelAt(progress: number) {
   };
 }
 
-/** Admission limits protect a job's own queue before it joins the shared DB pool. */
+/** 작업별 실행 제한은 공용 DB 풀에 들어가기 전에 작업 자신의 대기열에서 적용한다. */
 export function simulatePool(
   requests: readonly Request[],
   capacity: number,
@@ -114,9 +114,9 @@ export function simulatePool(
     }
   }
   const ordered = requests.toSorted((a, b) => a.arrived - b.arrived);
-  const pending: Request[] = [];
+  let pending: Request[] = [];
   const waiting: Array<Request & { admitted: number }> = [];
-  const running: Execution[] = [];
+  let running: Execution[] = [];
   const executions: Execution[] = [];
   const samples: PoolSample[] = [];
   let next = 0;
@@ -125,27 +125,25 @@ export function simulatePool(
   let time = ordered[0]?.arrived ?? 0;
 
   while (completed < ordered.length) {
-    for (let i = running.length - 1; i >= 0; i -= 1) {
-      if (running[i].ended <= time) {
-        running.splice(i, 1);
-        completed += 1;
-      }
-    }
-    while (next < ordered.length && ordered[next].arrived <= time) {
-      pending.push(ordered[next]);
+    const stillRunning = running.filter((item) => item.ended > time);
+    completed += running.length - stillRunning.length;
+    running = stillRunning;
+    for (let arrival = ordered[next]; arrival && arrival.arrived <= time; arrival = ordered[next]) {
+      pending.push(arrival);
       next += 1;
     }
-    for (let i = 0; i < pending.length;) {
-      const request = pending[i];
+    // 앞에서 들어간 요청도 같은 그룹의 실행 수에 포함되도록 하나씩 판단한다.
+    const blocked: Request[] = [];
+    for (const request of pending) {
       const active = [...running, ...waiting].filter((item) => item.group === request.group).length;
       if (active >= (groupLimits[request.group] ?? Infinity)) {
-        i += 1;
+        blocked.push(request);
       } else {
         waiting.push({ ...request, admitted: time });
-        pending.splice(i, 1);
         admitted += 1;
       }
     }
+    pending = blocked;
     while (running.length < capacity && waiting.length > 0) {
       const request = waiting.shift();
       if (!request) break;
@@ -228,4 +226,4 @@ export const fanoutComparison = [
     name: "작업마다 두 개씩 시작",
     simulation: simulatePool(fanoutRequests, 8, { A: 2, B: 2, C: 2, D: 2 }),
   },
-];
+] as const;

@@ -22,13 +22,13 @@ const ShareButton = ({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`p-2 rounded-lg text-third hover:text-primary hover:bg-hover transition-colors duration-200 disabled:opacity-50 ${
+      className={`rounded-lg p-2 text-third transition-colors duration-200 hover:bg-hover hover:text-primary disabled:opacity-50 ${
         isActive ? "text-green-500" : ""
       } ${className}`}
       title={title}
       aria-label={ariaLabel}
     >
-      <span className="block w-4 h-4">{children}</span>
+      <span className="block h-4 w-4">{children}</span>
     </button>
   );
 };

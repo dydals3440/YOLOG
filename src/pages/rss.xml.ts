@@ -1,5 +1,6 @@
 import rss from "@astrojs/rss";
 import type { APIContext } from "astro";
+
 import { BLOG_CATEGORIES, WEBSITE_CONFIG } from "@/consts";
 import { generateDescription, getPostCollection, resolveSlug } from "@/lib/mdx";
 

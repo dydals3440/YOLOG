@@ -39,4 +39,4 @@ API 대안 비교는 2026-10-11 npm 배포 태그와 공식 문서를 대조했�
 - 저장소 unit test는 본문의 함수/조회 조건을 직접 추출해 금액 null/0, URL 검증·부분 변경·loader와 화면의 조건 일치, select의 순서·원본 보존, 정책 경계값, 분석 검증·provider 교체·오류 격리, 편집 보호, DST 시각과 도식 좌표를 확인한다.
 - 설치된 Query의 선택 함수 참조 재사용과 원본 캐시 보존은 이전 대조에서도 확인했다. 공식 문서는 본문의 select 각주에 남겼다.
 
-로컬 대조 스크립트: `/private/tmp/check-moyeo-rewrite.cjs`, `/private/tmp/check-moyeo-route-link.cjs`. 재사용할 행동 검사는 `tests/unit/moyeo-frontend.test.mjs`에 있다.
+로컬 대조 스크립트: `/private/tmp/check-moyeo-rewrite.cjs`, `/private/tmp/check-moyeo-route-link.cjs`. 재사용할 행동 검사는 `src/components/mdx/moyeo-frontend/moyeo-frontend.test.ts`에 있다.

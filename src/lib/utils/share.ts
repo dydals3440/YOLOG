@@ -34,7 +34,7 @@ export const shareNative = async (title: string, url: string): Promise<void> => 
     await navigator.share({ title, url });
     trackShare("native");
   } catch (err) {
-    if ((err as Error).name !== "AbortError") {
+    if (!(err instanceof Error) || err.name !== "AbortError") {
       console.error("Share failed:", err);
       throw err;
     }

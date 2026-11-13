@@ -1,4 +1,5 @@
 import type { APIContext } from "astro";
+
 import { BLOG_CATEGORIES, WEBSITE_CONFIG } from "@/consts";
 import { getSiteUrl } from "@/lib/config";
 import { generateDescription, getPostCollection, resolveSlug } from "@/lib/mdx";

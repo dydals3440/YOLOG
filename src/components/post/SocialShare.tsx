@@ -1,9 +1,10 @@
 import { CopyCheck, Link, Share } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { trackShare } from "@/lib/analytics";
+
 import { FacebookIcon, LinkedinIcon, TwitterXIcon } from "@/components/ui/Icons";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
+import { trackShare } from "@/lib/analytics";
 import {
   copyToClipboard,
   createShareUrls,
@@ -11,6 +12,7 @@ import {
   type SharePlatform,
   shareNative,
 } from "@/lib/utils/share";
+
 import ShareButton from "./ShareButton";
 import ShareContainer, { ShareDivider } from "./ShareContainer";
 

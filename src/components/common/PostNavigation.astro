@@ -1,10 +1,10 @@
 ---
-import { resolveSlug } from '@/lib/mdx'
-import type { PostNavigationProps } from '@/types'
+import { resolveSlug } from "@/lib/mdx";
+import type { PostNavigationProps } from "@/types";
 
 export interface Props extends PostNavigationProps {}
 
-const { prevPost, nextPost } = Astro.props
+const { prevPost, nextPost } = Astro.props;
 ---
 
 <nav class="flex items-stretch justify-between gap-1 text-sm" aria-label="게시물 네비게이션">

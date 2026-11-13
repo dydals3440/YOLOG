@@ -1,14 +1,14 @@
 ---
-import type { BlogCardProps } from '@/types'
+import type { BlogCardProps } from "@/types";
 
-import CategoryBadge from './CategoryBadge.astro'
-import PostMeta from './PostMeta.astro'
-import ReadingTime from './ReadingTime.astro'
+import CategoryBadge from "./CategoryBadge.astro";
+import PostMeta from "./PostMeta.astro";
+import ReadingTime from "./ReadingTime.astro";
 
 export interface Props extends BlogCardProps {}
 
-const { post } = Astro.props
-const { title, description, date, category } = post.data
+const { post } = Astro.props;
+const { title, description, date, category } = post.data;
 ---
 
 <article>
@@ -17,14 +17,12 @@ const { title, description, date, category } = post.data
     <ReadingTime content={post.body} />
   </div>
 
-  <h2 class="mb-2 text-lg font-semibold leading-snug text-primary line-clamp-2 sm:text-base">
+  <h2 class="mb-2 line-clamp-2 text-lg leading-snug font-semibold text-primary sm:text-base">
     {title}
   </h2>
 
   {description && (
-    <p class="mb-4 text-sm leading-relaxed text-second line-clamp-2">
-      {description}
-    </p>
+    <p class="mb-4 line-clamp-2 text-sm leading-relaxed text-second">{description}</p>
   )}
 
   <PostMeta date={date} showArrow={true} />

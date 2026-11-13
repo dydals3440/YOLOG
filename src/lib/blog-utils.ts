@@ -1,6 +1,7 @@
 import type { CollectionEntry } from "astro:content";
 import dayjs from "dayjs";
-import { BLOG_CATEGORIES, type BlogCategory } from "@/consts";
+
+import { BLOG_CATEGORIES, BLOG_CATEGORY_KEYS, type BlogCategory } from "@/consts";
 
 /**
  * 게시글을 날짜 기준으로 내림차순 정렬합니다.
@@ -33,9 +34,9 @@ export function createCategoryList(posts: CollectionEntry<"post">[]): Array<{
   label: string;
   count: number;
 }> {
-  return Object.entries(BLOG_CATEGORIES).map(([key, value]) => ({
-    id: key as BlogCategory,
-    label: value,
+  return BLOG_CATEGORY_KEYS.map((key) => ({
+    id: key,
+    label: BLOG_CATEGORIES[key],
     count: key === "ALL" ? posts.length : posts.filter((post) => post.data.category === key).length,
   }));
 }

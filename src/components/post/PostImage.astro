@@ -1,35 +1,30 @@
 ---
-import { readFile } from 'node:fs/promises'
-import { Image } from 'astro:assets'
-import sharp from 'sharp'
+import { readFile } from "node:fs/promises";
 
-import { getPlaceholderColor } from '@/lib/image-placeholder'
+import { Image } from "astro:assets";
+import sharp from "sharp";
+
+import { getPlaceholderColor } from "@/lib/image-placeholder";
 
 type Props = {
-  src: string
-  alt: string
+  src: string;
+  alt: string;
   // MDX는 불린 속성을 빈 문자열로 넘기므로 값이 아니라 존재 여부로 판단한다.
-  priority?: string
-}
+  priority?: string;
+};
 
-const { src, alt, priority } = Astro.props
+const { src, alt, priority } = Astro.props;
 
-const isValidCaption = alt && Number.isInteger(+alt[0]) === false
+const isValidCaption = alt !== "" && !/^\d/.test(alt);
 
-const image = await readFile(`public${src}`)
-const { width, height } = await sharp(image).metadata()
-const backgroundColor = await getPlaceholderColor(image)
+const image = await readFile(`public${src}`);
+const { width, height } = await sharp(image).metadata();
+const backgroundColor = await getPlaceholderColor(image);
 ---
 
 <figure>
   <div class="block overflow-hidden" style={{ backgroundColor }}>
-    <Image
-      src={src}
-      alt={alt}
-      width={width}
-      height={height}
-      priority={priority !== undefined}
-    />
+    <Image src={src} alt={alt} width={width} height={height} priority={priority !== undefined} />
   </div>
   {isValidCaption && <figcaption class="w-full text-center">{alt}</figcaption>}
 </figure>

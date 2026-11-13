@@ -13,112 +13,106 @@ const items = buildPaginationRange({ currentPage, totalPages, siblings: PAGINATI
 ---
 
 <nav class="flex items-center justify-center gap-1" aria-label="페이지네이션">
-  {
-    hasPrevious ? (
-      <a
-        href={getPageUrl(basePath, previousPage!)}
-        rel="prev"
-        aria-label="이전 페이지"
-        class="page-btn"
+  {hasPrevious ? (
+    <a
+      href={getPageUrl(basePath, previousPage!)}
+      rel="prev"
+      aria-label="이전 페이지"
+      class="page-btn"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.75"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="m15 18-6-6 6-6" />
-        </svg>
-      </a>
-    ) : (
-      <span aria-hidden="true" class="page-btn is-disabled">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.75"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="m15 18-6-6 6-6" />
-        </svg>
-      </span>
-    )
-  }
+        <path d="m15 18-6-6 6-6" />
+      </svg>
+    </a>
+  ) : (
+    <span aria-hidden="true" class="page-btn is-disabled">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="m15 18-6-6 6-6" />
+      </svg>
+    </span>
+  )}
 
   <ol class="flex items-center gap-1" role="list">
-    {
-      items.map((item) =>
-        item.type === "ellipsis" ? (
-          <li aria-hidden="true" class="page-ellipsis">
-            …
-          </li>
-        ) : (
-          <li>
-            {item.page === currentPage ? (
-              <span aria-current="page" class="page-btn is-active">
-                {item.page}
-              </span>
-            ) : (
-              <a
-                href={getPageUrl(basePath, item.page)}
-                aria-label={`${item.page}페이지로 이동`}
-                class="page-btn"
-              >
-                {item.page}
-              </a>
-            )}
-          </li>
-        ),
-      )
-    }
+    {items.map((item) =>
+      item.type === "ellipsis" ? (
+        <li aria-hidden="true" class="page-ellipsis">
+          …
+        </li>
+      ) : (
+        <li>
+          {item.page === currentPage ? (
+            <span aria-current="page" class="page-btn is-active">
+              {item.page}
+            </span>
+          ) : (
+            <a
+              href={getPageUrl(basePath, item.page)}
+              aria-label={`${item.page}페이지로 이동`}
+              class="page-btn"
+            >
+              {item.page}
+            </a>
+          )}
+        </li>
+      ),
+    )}
   </ol>
 
-  {
-    hasNext ? (
-      <a href={getPageUrl(basePath, nextPage!)} rel="next" aria-label="다음 페이지" class="page-btn">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.75"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="m9 18 6-6-6-6" />
-        </svg>
-      </a>
-    ) : (
-      <span aria-hidden="true" class="page-btn is-disabled">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.75"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="m9 18 6-6-6-6" />
-        </svg>
-      </span>
-    )
-  }
+  {hasNext ? (
+    <a href={getPageUrl(basePath, nextPage!)} rel="next" aria-label="다음 페이지" class="page-btn">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m9 18 6-6-6-6" />
+      </svg>
+    </a>
+  ) : (
+    <span aria-hidden="true" class="page-btn is-disabled">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="m9 18 6-6-6-6" />
+      </svg>
+    </span>
+  )}
 </nav>
 
 <style>

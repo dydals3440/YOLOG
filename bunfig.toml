@@ -1,0 +1,6 @@
+[install]
+# 배포된 지 3일이 지나지 않은 패키지는 설치하지 않는다(공급망 공격 완화).
+minimumReleaseAge = 259200
+
+[test]
+coverageSkipTestFiles = true

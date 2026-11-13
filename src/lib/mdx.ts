@@ -1,4 +1,5 @@
 import { type CollectionEntry, getCollection } from "astro:content";
+
 import { sortPostsByDate } from "./blog-utils";
 
 export const isBlogPost = (post: { id: string }) => {

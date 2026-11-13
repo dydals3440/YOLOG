@@ -1,3 +1,5 @@
+import { zip } from "es-toolkit";
+
 import type { Frame, Ink, Mark, Point } from "./graphics";
 import {
   batch,
@@ -284,19 +286,21 @@ function plot(
     yy + hh * (1 - Math.min(maximum, value) / maximum),
   ];
   const shown = values.filter(([t]) => t <= time);
-  if (shown.length === 0) shown.push([0, 0]);
-  let endValue = shown[shown.length - 1][1];
+  const last: Point = shown.at(-1) ?? [0, 0];
+  if (shown.length === 0) shown.push(last);
+  let endValue = last[1];
   const after = values.find(([t]) => t > time);
-  const last = shown[shown.length - 1];
   if (!step && after && after[0] > last[0])
     endValue = last[1] + ((after[1] - last[1]) * (time - last[0])) / (after[0] - last[0]);
   const path: Point[] = [];
-  shown.forEach((point, i) => {
-    if (step && i > 0) path.push(position([point[0], shown[i - 1][1]]));
+  let previous: Point | undefined;
+  for (const point of shown) {
+    if (step && previous) path.push(position([point[0], previous[1]]));
     path.push(position(point));
-  });
-  path.push(position([time, endValue]));
-  const end = path[path.length - 1];
+    previous = point;
+  }
+  const end = position([time, endValue]);
+  path.push(end);
   d.line([[xx, yy + hh], ...path, [end[0], yy + hh]], ink, 0, false, `${ink}Soft`);
   d.line(path, ink, 2.5);
   d.line(
@@ -376,7 +380,11 @@ export function buildScene(scene: SceneName, progress: number, width = 664): Fra
   if (scene === "symptoms") {
     const horizon = 12000;
     const t = p * horizon;
-    ["① 여유 있게 처리", "② 기다림 때문에 느림", "③ CPU가 계속 100%"].forEach((title, i) => {
+    [
+      { title: "① 여유 있게 처리", hint: "계산과 기다림 모두 짧다" },
+      { title: "② 기다림 때문에 느림", hint: "DB·락·풀·외부 응답의 대기를 확인" },
+      { title: "③ CPU가 계속 100%", hint: "트래픽·코드·실행 한도를 확인" },
+    ].forEach(({ title, hint }, i) => {
       const y = 20 + i * 302;
       const ink = i === 0 ? "green" : i === 1 ? "orange" : "red";
       d.rect(10, y - 16, Math.min(width - 20, 185), 30, `${ink}Soft`, undefined, 15);
@@ -404,19 +412,7 @@ export function buildScene(scene: SceneName, progress: number, width = 664): Fra
         "purple",
         "초",
       );
-      d.text(
-        [
-          "계산과 기다림 모두 짧다",
-          "DB·락·풀·외부 응답의 대기를 확인",
-          "트래픽·코드·실행 한도를 확인",
-        ][i],
-        width / 2,
-        y + 281,
-        ink,
-        width < 400 ? 12 : 13,
-        true,
-        "middle",
-      );
+      d.text(hint, width / 2, y + 281, ink, width < 400 ? 12 : 13, true, "middle");
     });
     return d.frame(925);
   }
@@ -457,7 +453,7 @@ export function buildScene(scene: SceneName, progress: number, width = 664): Fra
     return d.frame(450);
   }
   if (scene === "fanout") {
-    const layout = panels(width, 2, 390);
+    const layout = panels(width, fanoutComparison.length, 390);
     const legend = ["실행 중", "풀 대기", "다음 차례", "완료"];
     const inks: Ink[] = ["blue", "orange", "border", "green"];
     legend.forEach((label, i) => {
@@ -466,8 +462,7 @@ export function buildScene(scene: SceneName, progress: number, width = 664): Fra
       d.text(label, x + 9, 20, "muted", 11);
     });
     const t = p * 4300;
-    fanoutComparison.forEach(({ name, simulation }, i) => {
-      const { x, y: originY } = layout.boxes[i];
+    zip(fanoutComparison, layout.boxes).forEach(([{ name, simulation }, { x, y: originY }], i) => {
       const y = originY + 38;
       const w = layout.panelWidth;
       const state = poolAt(simulation, t);
@@ -1114,7 +1109,7 @@ export function buildScene(scene: SceneName, progress: number, width = 664): Fra
 export function buildDiagram(kind: DiagramName, width = 664): Frame {
   const d = new Drawing(width);
   if (kind === "freshness") {
-    const rows = [
+    const rows: Array<[string, string]> = [
       ["① 기존 댓글은 계속 표시", "마지막 확인 시각 · 지연 이유 안내"],
       ["② 서버가 다음 확인 시각을 알려줌", "SNS 한도와 수집 상태를 반영"],
       ["③ 보이는 화면에서 갱신 요청", "요청 접수 ≠ 수집 완료"],
@@ -1147,7 +1142,7 @@ export function buildDiagram(kind: DiagramName, width = 664): Frame {
         d.rect(x, y + 31, w, 278, "orangeSoft", "orange");
         d.text("트랜잭션 시작 → 끝", x + 13, y + 55, "orange", 12, true);
       }
-      const rows = [
+      const rows: Array<[string, string]> = [
         ["① 상태 확인 · 10ms", "DB 연결 사용"],
         ["② HTTP 응답 대기 · 3초", divided ? "DB 연결 반환" : "DB 연결 계속 점유"],
         ["③ 결과 저장 · 10ms", "DB 연결 사용"],
@@ -1184,7 +1179,7 @@ export function buildDiagram(kind: DiagramName, width = 664): Frame {
   if (kind === "deadlock") {
     const x = 28;
     const w = width - 56;
-    const rows = [
+    const rows: Array<[string, string]> = [
       ["A · 부모 행 잠금 보유", "자식 행이 필요하지만 B가 잠갔다."],
       ["B · 자식 행 잠금 보유", "부모 행이 필요하지만 A가 잠갔다."],
     ];
@@ -1201,7 +1196,7 @@ export function buildDiagram(kind: DiagramName, width = 664): Frame {
     return d.frame(383);
   }
   if (kind === "collection") {
-    const rows = [
+    const rows: Array<[string, string]> = [
       ["① 이번에 읽을 범위 정하기", "요금제 기간 · API 한도"],
       ["② 외부 SNS에서 가져오기", "페이지 단위 요청 · 응답 기다리기"],
       ["③ 가져온 분량 저장하기", "데이터 + 진행 위치 + 후속 작업 함께 저장"],
@@ -1297,7 +1292,7 @@ export function buildDiagram(kind: DiagramName, width = 664): Frame {
     );
     return d.frame(390);
   }
-  const rows = [
+  const rows: Array<[string, string]> = [
     ["Cloudflare Worker", "웹 요청 처리"],
     ["Cloudflare Tunnel", "공개 인바운드 없이 API로 전달"],
     ["EC2 t4g.medium", "API 1개 + 백그라운드 워커 1개"],

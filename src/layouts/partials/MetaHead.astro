@@ -1,16 +1,15 @@
 ---
-import '@/styles/global.css'
+import "@/styles/global.css";
+import { Font } from "astro:assets";
 
-import { Font } from 'astro:assets'
-
-import { WEBSITE_CONFIG } from '@/consts'
-import type { SEOModel } from '@/types'
-import { SITE_URL } from '@/lib/config'
-import { serializeJsonLd } from '@/lib/structured-data'
+import { WEBSITE_CONFIG } from "@/consts";
+import { SITE_URL } from "@/lib/config";
+import { serializeJsonLd } from "@/lib/structured-data";
+import type { SEOModel } from "@/types";
 
 interface Props extends SEOModel {}
 
-const canonicalURL = new URL(Astro.url.pathname.replace(/\/$/, '') || '/', Astro.site)
+const canonicalURL = new URL(Astro.url.pathname.replace(/\/$/, "") || "/", Astro.site);
 
 const {
   title = WEBSITE_CONFIG.TITLE,
@@ -19,7 +18,7 @@ const {
   keywords,
   prevUrl,
   nextUrl,
-  ogType = 'website',
+  ogType = "website",
   publishedTime,
   modifiedTime,
   author,
@@ -27,48 +26,46 @@ const {
   articleTags,
   excludeWebPageSchema = false,
   noindex = false,
-} = Astro.props
-const formattedTitle = title === WEBSITE_CONFIG.TITLE ? title : WEBSITE_CONFIG.TITLE_TEMPLATE.replace('%s', title)
+} = Astro.props;
+const formattedTitle =
+  title === WEBSITE_CONFIG.TITLE ? title : WEBSITE_CONFIG.TITLE_TEMPLATE.replace("%s", title);
 
-const ogImageURL = new URL(image, Astro.site)
-const isDefaultOgImage = image === WEBSITE_CONFIG.OG_IMAGE
+const ogImageURL = new URL(image, Astro.site);
+const isDefaultOgImage = image === WEBSITE_CONFIG.OG_IMAGE;
 
 // Structured Data for JSON-LD (WebPage)
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "WebPage",
-  "name": formattedTitle,
-  "description": description,
-  "url": canonicalURL.toString(),
-  ...(keywords && keywords.length > 0 ? { "keywords": keywords.join(', ') } : {})
-}
+  name: formattedTitle,
+  description: description,
+  url: canonicalURL.toString(),
+  ...(keywords && keywords.length > 0 ? { keywords: keywords.join(", ") } : {}),
+};
 
 // Organization Schema for Google Knowledge Panel
 const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  "name": "YOLOG",
-  "url": Astro.site?.toString() || SITE_URL,
-  "logo": {
+  name: "YOLOG",
+  url: Astro.site?.toString() || SITE_URL,
+  logo: {
     "@type": "ImageObject",
-    "url": new URL(WEBSITE_CONFIG.OG_IMAGE, Astro.site || SITE_URL).toString()
+    url: new URL(WEBSITE_CONFIG.OG_IMAGE, Astro.site || SITE_URL).toString(),
   },
-  "sameAs": [
-    WEBSITE_CONFIG.SOCIAL_LINKS.YOUTUBE
-  ]
-}
+  sameAs: [WEBSITE_CONFIG.SOCIAL_LINKS.YOUTUBE],
+};
 
 // WebSite Schema (사이트 엔티티)
 const webSiteSchema = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  "name": WEBSITE_CONFIG.TITLE,
-  "alternateName": "YOLOG",
-  "url": Astro.site?.toString() || SITE_URL,
-  "description": WEBSITE_CONFIG.DESCRIPTION,
-  "inLanguage": "ko-KR"
-}
-
+  name: WEBSITE_CONFIG.TITLE,
+  alternateName: "YOLOG",
+  url: Astro.site?.toString() || SITE_URL,
+  description: WEBSITE_CONFIG.DESCRIPTION,
+  inLanguage: "ko-KR",
+};
 ---
 
 <!-- Global Metadata -->
@@ -89,7 +86,10 @@ const webSiteSchema = {
 {nextUrl && <link rel="next" href={nextUrl} />}
 
 <!-- Primary Meta Tags -->
-<meta name="robots" content={noindex ? 'noindex, follow' : 'index, follow, max-image-preview:large'} />
+<meta
+  name="robots"
+  content={noindex ? "noindex, follow" : "index, follow, max-image-preview:large"}
+/>
 <title>{formattedTitle}</title>
 <meta name="description" content={description} />
 
@@ -106,21 +106,19 @@ const webSiteSchema = {
 <meta property="og:locale" content="ko_KR" />
 
 <!-- Article (only when ogType is 'article') -->
-{ogType === 'article' && publishedTime && (
+{ogType === "article" && publishedTime && (
   <meta property="article:published_time" content={publishedTime.toISOString()} />
 )}
-{ogType === 'article' && modifiedTime && (
+{ogType === "article" && modifiedTime && (
   <meta property="article:modified_time" content={modifiedTime.toISOString()} />
 )}
-{ogType === 'article' && author && (
-  <meta property="article:author" content={author} />
-)}
-{ogType === 'article' && articleSection && (
+{ogType === "article" && author && <meta property="article:author" content={author} />}
+{ogType === "article" && articleSection && (
   <meta property="article:section" content={articleSection} />
 )}
-{ogType === 'article' && articleTags && articleTags.map((tag) => (
-  <meta property="article:tag" content={tag} />
-))}
+{ogType === "article" &&
+  articleTags &&
+  articleTags.map((tag) => <meta property="article:tag" content={tag} />)}
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image" />
