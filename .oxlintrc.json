@@ -1,59 +1,35 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "oxc", "react", "jsx-a11y", "import"],
+  "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "react", "jsx-a11y"],
   "categories": {
     "correctness": "error",
-    "suspicious": "warn",
-    "perf": "warn",
-    "style": "off",
-    "pedantic": "off",
-    "nursery": "off"
+    "suspicious": "error",
+    "perf": "error"
+  },
+  "options": {
+    "typeAware": true,
+    "denyWarnings": true,
+    "reportUnusedDisableDirectives": "error"
   },
   "env": {
     "browser": true,
-    "node": true,
-    "es2024": true
-  },
-  "settings": {
-    "react": {
-      "version": "19.3.0"
-    }
+    "node": true
   },
   "rules": {
-    "typescript/no-explicit-any": "warn",
-    "react/no-array-index-key": "warn",
-    "typescript/consistent-type-imports": "error",
-    "eslint/prefer-const": "error",
     "eslint/no-param-reassign": "error",
-    "typescript/no-unused-vars": "warn",
-    "react/exhaustive-deps": "warn",
+    "eslint/prefer-const": "error",
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
     "react/react-in-jsx-scope": "off",
-    "unicorn/no-useless-spread": "warn"
+    "typescript/consistent-return": "off",
+    "import/no-unassigned-import": [
+      "error",
+      {
+        "allow": ["**/*.css"]
+      }
+    ],
+    "eslint/no-underscore-dangle": "off"
   },
-  "ignorePatterns": [
-    "dist/**",
-    ".astro/**",
-    ".vercel/**",
-    "node_modules/**",
-    "public/**",
-    "docs/**",
-    "src/styles/**",
-    "**/*.astro",
-    "**/*.md",
-    "**/*.mdx"
-  ],
-  "overrides": [
-    {
-      "files": ["src/components/ui/Icons.tsx", "src/components/ui/Envelopment.tsx"],
-      "rules": {
-        "jsx-a11y/alt-text": "off"
-      }
-    },
-    {
-      "files": ["src/components/post/ReadingProgress.tsx"],
-      "rules": {
-        "jsx-a11y/prefer-tag-over-role": "off"
-      }
-    }
-  ]
+  "ignorePatterns": ["public/**"]
 }

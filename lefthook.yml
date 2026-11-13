@@ -2,11 +2,11 @@ pre-commit:
   piped: true
   jobs:
     - name: oxlint
-      glob: "*.{js,mjs,cjs,jsx,ts,tsx}"
+      glob: "*.{js,mjs,ts,tsx,astro}"
       run: bunx oxlint --fix {staged_files}
       stage_fixed: true
 
     - name: oxfmt
-      glob: "*.{js,mjs,cjs,jsx,ts,tsx,json,jsonc}"
+      glob: "*.{js,mjs,ts,tsx,astro,css,json,jsonc,yml,yaml}"
       run: bunx oxfmt {staged_files}
       stage_fixed: true
