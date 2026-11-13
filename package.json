@@ -1,27 +1,22 @@
 {
   "name": "yolog",
   "version": "0.0.1",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro",
-    "prepare": "node -e \"if (!process.env.CI) { require('child_process').execSync('lefthook install', { stdio: 'inherit' }); }\"",
-    "lint": "oxlint --fix",
-    "lint:ci": "oxlint",
-    "fmt": "oxfmt",
-    "fmt:check": "oxfmt --check",
-    "check": "oxlint && oxfmt --check",
-    "typecheck": "astro check && tsc --noEmit",
-    "test": "node --test --test-reporter=spec tests/unit/*.test.mjs",
-    "verify:site": "node --env-file-if-exists=.env --test --test-reporter=spec tests/site/*.test.mjs",
-    "validate": "bun run check && bun run typecheck && bun run test && bun run build && bun run verify:site"
+    "check": "oxlint && oxfmt --check && astro check && bun check --no-script",
+    "fix": "oxlint --fix && oxfmt",
+    "test": "bun test src",
+    "test:site": "bun test tests/site",
+    "validate": "bun run check && bun run test && bun run build && bun run test:site"
   },
   "dependencies": {
-    "@astrojs/markdown-remark": "^7.3.6",
-    "@astrojs/mdx": "^8.1.3",
-    "@astrojs/react": "^7.1.4",
+    "@astrojs/markdown-remark": "7.3.8",
+    "@astrojs/mdx": "8.1.5",
+    "@astrojs/react": "7.1.8",
     "@astrojs/rss": "^4.0.19",
     "@astrojs/sitemap": "^3.7.4",
     "@giscus/react": "3.1.0",
@@ -30,7 +25,7 @@
     "@tailwindcss/vite": "^4.3.5",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.1.0",
-    "astro": "^7.4.7",
+    "astro": "7.4.11",
     "dayjs": "^1.11.23",
     "es-toolkit": "^1.53.2",
     "lucide-react": "^1.70.0",
@@ -42,22 +37,23 @@
     "sharp": "^0.35.5",
     "sonner": "2.0.8",
     "tailwindcss": "^4.3.5",
-    "typescript": "npm:@typescript/typescript6@6.0.2"
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
     "@shikijs/transformers": "^4.6.0",
+    "@types/bun": "1.4.4",
     "@types/hast": "^3.0.5",
     "@types/mdast": "4.0.4",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@typescript/native": "npm:typescript@7.0.2",
-    "cheerio": "^1.2.0",
     "clsx": "2.1.1",
     "lefthook": "^2.2.2",
-    "oxfmt": "0.77.0",
-    "oxlint": "1.92.0",
+    "oxfmt": "0.78.0",
+    "oxlint": "1.93.0",
+    "oxlint-tsgolint": "7.0.2007",
     "rehype-autolink-headings": "7.1.0",
     "rehype-external-links": "3.0.0",
     "remark-breaks": "4.0.0",
@@ -66,5 +62,11 @@
     "tailwind-merge": "^3.7.0",
     "unist-util-visit": "^5.2.0"
   },
-  "packageManager": "bun@1.4.4"
+  "engines": {
+    "node": "24.x"
+  },
+  "packageManager": "bun@1.4.4",
+  "trustedDependencies": [
+    "lefthook"
+  ]
 }
