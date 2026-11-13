@@ -1,13 +1,13 @@
 import { describe, expect, it } from "bun:test";
 
-import { createPost } from "@/apis/__fixtures__/post.fixture";
+import { createPost } from "@/apis/__fixtures__/posts.fixture";
 
 import {
   calculateReadingMinutes,
   calculateRelevanceScore,
   countSharedTags,
   excludePostId,
-  extractSummary,
+  createSummary,
   filterByCategory,
   filterByPostId,
   isPublishedWithin,
@@ -269,49 +269,35 @@ describe("calculateRelevanceScore", () => {
   });
 });
 
-describe("extractSummary", () => {
-  it("코드·제목·MDX 요소를 빼고 문단만 이어 붙인다", () => {
+describe("createSummary", () => {
+  it("최대 길이 이하면 그대로 반환한다", () => {
     // Given
-    const markdown = [
-      'import Demo from "./Demo";',
-      "",
-      "## 제목",
-      "",
-      "첫 문단이에요.",
-      "",
-      "```ts",
-      "const ignored = true;",
-      "```",
-      "",
-      "<Demo />",
-      "",
-      "[링크](https://example.com)가 있는 두 번째 문단이에요.",
-    ].join("\n");
+    const text = "짧은 요약이에요.";
 
     // When
-    const result = extractSummary(markdown);
+    const result = createSummary(text, 160);
 
     // Then
-    expect(result).toBe("첫 문단이에요. 링크가 있는 두 번째 문단이에요.");
+    expect(result).toBe("짧은 요약이에요.");
   });
 
-  it("콜아웃 표시는 요약에 넣지 않는다", () => {
+  it("최대 길이와 같으면 자르지 않는다", () => {
     // Given
-    const markdown = "> [!NOTE]\n> 중요한 내용이에요.";
+    const text = "가".repeat(10);
 
     // When
-    const result = extractSummary(markdown);
+    const result = createSummary(text, 10);
 
     // Then
-    expect(result).toBe("중요한 내용이에요.");
+    expect(result).toBe("가".repeat(10));
   });
 
   it("최대 길이를 넘으면 자르고 말줄임표를 붙인다", () => {
     // Given
-    const markdown = "가".repeat(200);
+    const text = "가".repeat(11);
 
     // When
-    const result = extractSummary(markdown, 10);
+    const result = createSummary(text, 10);
 
     // Then
     expect(result).toBe(`${"가".repeat(7)}...`);
@@ -331,9 +317,9 @@ describe("PostPolicy", () => {
       expect(result).toBe("직접 쓴 설명");
     });
 
-    it("설명이 없으면 본문에서 요약을 만든다", () => {
+    it("설명이 없으면 본문 문단으로 요약을 만든다", () => {
       // Given
-      const post = createPost({ body: "본문 문단" });
+      const post = createPost({ body: "## 제목\n\n본문 문단" });
 
       // When
       const result = PostPolicy.summary(post);

@@ -1,11 +1,6 @@
-import type { Nodes, Root } from "mdast";
-import { fromMarkdown } from "mdast-util-from-markdown";
-import { gfmFromMarkdown } from "mdast-util-gfm";
-import { mdxFromMarkdown } from "mdast-util-mdx";
-import { toString } from "mdast-util-to-string";
-import { gfm } from "micromark-extension-gfm";
-import { mdxjs } from "micromark-extension-mdxjs";
 import { z } from "zod";
+
+import { extractParagraphText } from "@/utils/markdown";
 
 import { CategorySchema } from "./category.model";
 
@@ -42,7 +37,6 @@ const RECENT_PUBLICATION_MONTHS = 6;
 
 const SUMMARY_MAX_LENGTH = 160;
 const ELLIPSIS = "...";
-const CALLOUT_MARKER = /^\[![A-Z]+\]\s*/;
 
 export function filterByCategory(post: Post, category?: Post["category"] | null) {
   if (category == null) {
@@ -102,34 +96,8 @@ export function calculateRelevanceScore({
   );
 }
 
-function collectParagraphs(node: Nodes, paragraphs: string[]) {
-  if (node.type === "paragraph") {
-    paragraphs.push(toString(node, { includeImageAlt: false }).replace(CALLOUT_MARKER, ""));
-    return;
-  }
-  if (node.type === "code" || node.type === "heading" || node.type === "table") {
-    return;
-  }
-  if ("children" in node) {
-    for (const child of node.children) {
-      collectParagraphs(child, paragraphs);
-    }
-  }
-}
-
-function parseMarkdown(markdown: string): Root {
-  return fromMarkdown(markdown, {
-    extensions: [mdxjs(), gfm()],
-    mdastExtensions: [mdxFromMarkdown(), gfmFromMarkdown()],
-  });
-}
-
-// 본문 문단만 이어 붙여 검색 미리보기용 요약을 만든다. 코드·제목·표·MDX 요소는 제외한다.
-export function extractSummary(markdown: string, maxLength = SUMMARY_MAX_LENGTH) {
-  const paragraphs: string[] = [];
-  collectParagraphs(parseMarkdown(markdown), paragraphs);
-  const text = paragraphs.join(" ").replace(/\s+/g, " ").trim();
-
+// 검색 미리보기 요약: 최대 길이를 넘으면 자르고 말줄임표를 붙인다.
+export function createSummary(text: string, maxLength = SUMMARY_MAX_LENGTH) {
   if (text.length <= maxLength) {
     return text;
   }
@@ -139,7 +107,7 @@ export function extractSummary(markdown: string, maxLength = SUMMARY_MAX_LENGTH)
 
 export const PostPolicy = {
   summary(post: Post) {
-    return post.description ?? extractSummary(post.body);
+    return post.description ?? createSummary(extractParagraphText(post.body));
   },
 
   readingMinutes(post: Post) {
