@@ -12,8 +12,30 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # 스택의 맨 위 PR에는 아래 PR의 변경이 모두 들어 있으므로 그 PR에서만 검증한다.
+  stack-top:
+    name: Stack top
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions:
+      pull-requests: read
+    outputs:
+      has-upstack: ${{ steps.upstack.outputs.has-upstack }}
+    steps:
+      - id: upstack
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          count=$(gh pr list --repo "$GITHUB_REPOSITORY" --base "$HEAD_REF" --state open --json number --jq length)
+          echo "has-upstack=$([ "$count" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
   validate:
     name: Validate
+    needs: stack-top
+    # main 푸시처럼 stack-top을 건너뛰었거나 확인에 실패해도 검증은 돌린다.
+    if: ${{ !cancelled() && needs.stack-top.outputs.has-upstack != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
