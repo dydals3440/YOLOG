@@ -7,7 +7,7 @@
         "http://localhost/blogs/index.html",
         "http://localhost/post/did-i-secure-my-service/index.html"
       ],
-      "numberOfRuns": 3
+      "numberOfRuns": 1
     },
     "assert": {
       "assertions": {

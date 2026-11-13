@@ -84,12 +84,23 @@ Vercel Git 연동으로 `main`은 운영, PR은 미리보기로 배포해요. �
 
 ## CI
 
-`.github/workflows/ci.yml`이 PR과 `main`에서 `bun ci` → `bun audit` → `check` → `test` → `build` → `test:site`
-→ (PR) Lighthouse를 실행해요. 스택 PR은 아래층 변경이 모두 들어 있는 **맨 위 PR에서만** 검증하고,
-Vercel 미리보기도 `vercel.json`의 `ignoreCommand`로 맨 위 브랜치만 빌드해요.
-액션은 모두 커밋 SHA로 고정하고, Dependabot이 주 1회 배포된 지 7일 지난 버전으로 올려요.
-`.github` 변경은 zizmor로 워크플로 보안을 검사해요. 저장소 설정에서
-"Require actions to be pinned to a full-length commit SHA"를 켜 두면 고정을 강제할 수 있어요.
+변경 하나에 검증과 배포가 한 번씩만 돌게 짰어요.
+
+| 시점 | GitHub Actions | Vercel |
+| --- | --- | --- |
+| PR | `ci.yml`: `bun ci` → `bun audit` → `check` → `test` → `build` → `test:site` → Lighthouse(URL 3개 × 1회) | 미리보기 1번 |
+| 스택 PR | 아래층 변경이 모두 들어 있는 **맨 위 PR에서만** 검증 | 맨 위 브랜치만 미리보기 |
+| `main` 머지 | 없음(PR에서 검증한 트리가 그대로 머지돼요) | 운영 배포 1번 → 성공하면 IndexNow |
+| 문서만 변경(`*.md`, 이슈 템플릿, `dependabot.yml`) | CI 건너뜀 | 빌드 건너뜀 |
+| 워크플로만 변경(`.github/workflows`) | CI + zizmor | 빌드 건너뜀 |
+
+Vercel 쪽 판단은 `vercel.json`의 `ignoreCommand` 한 줄이 해요. 마지막 성공 배포 이후 사이트에 영향 없는 파일(`*.md`, `.github`)만 바뀌었으면
+운영·미리보기 모두 건너뛰고, 그 밖의 운영 배포는 항상 빌드해요. 미리보기는 이 브랜치를 base로 하는 열린 PR이 있으면
+(스택 아래층) 건너뛰어요. GitHub API 호출이 실패하면 빌드해요.
+IndexNow 워크플로는 배포 상태 이벤트마다 실행 기록이 생기지만, 운영 배포 성공이 아니면 잡을 건너뛰어 Actions 시간을 쓰지 않아요.
+
+액션은 모두 커밋 SHA로 고정하고, Dependabot이 주 1회 배포된 지 7일 지난 버전으로 올려요(미리보기 배포 없음).
+저장소 설정에서 "Require actions to be pinned to a full-length commit SHA"를 켜 두면 고정을 강제할 수 있어요.
 
 ## GA4
 
@@ -155,9 +166,13 @@ GA에서는 Organic Search 유입, 인기 글, 참여 시간, 카테고리와 �
 **월 1회:** 색인 제외 사유, 오래된 글의 정확성, 내부 링크, 깨진 이미지, 코어 웹 바이탈을 확인합니다.
 canonical 대체 페이지와 정상 리디렉션은 반드시 오류인 것은 아닙니다.
 
-2026-10-04 점검: sitemap.xml과 RSS는 제출 성공 상태입니다. Search Console에는
-일반 글 URL 등을 사이트맵으로 잘못 제출한 과거 항목도 남아 있습니다.
-이 항목은 사이트맵 관리 목록에서만 정리할 대상이며, 검색 URL 삭제 도구를 쓰는 대상이 아닙니다.
-404 보고서에는 과거 `/post/mcp-dev-workflow/` 주소 1개가 있습니다. 삭제된 글이면 정상적인 404이며,
-동일한 내용의 새 주소가 있을 때만 그 주소로 리디렉션합니다. 관련 없는 글로 보내지 않습니다.
-실제 콘텐츠 색인과 순위는 Google의 판단과 재수집에 따라 달라집니다.
+2026-11-14 점검: Search Console에 제출한 사이트맵은 `sitemap-index.xml`과 `rss.xml` 두 개뿐입니다.
+예전에 잘못 제출한 글 주소·`robots.txt`·옛 `sitemap.xml`·Tistory 시절 항목 16개는 사이트맵 관리 목록에서 지웠습니다
+(검색 결과 삭제가 아니라 제출 기록만 지운 것입니다). robots.txt는 배포 직후 새 파일을 가져갔습니다.
+목록 주소 변경(`/blogs/page/2` → `/blogs/2`)은 301로 연결했고, 예전 이미지 주소(`/images/...`)는 404입니다.
+이미지 주소는 페이지를 다시 수집하면서 `/_astro/...`로 바뀝니다.
+404 보고서의 과거 `/post/mcp-dev-workflow/`처럼 삭제된 글은 정상적인 404이며, 같은 내용의 새 주소가 있을 때만
+그 주소로 리디렉션합니다. 관련 없는 글로 보내지 않습니다.
+
+광고 차단기(예: macOS Unicorn)가 켜진 기기에서는 GA 스크립트가 빈 파일로 바뀌어 GA4 실시간 보고서에 잡히지 않습니다.
+수집 확인은 차단기가 없는 기기(휴대폰 등)에서 합니다.
