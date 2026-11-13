@@ -20,7 +20,7 @@ category: HTTP
 image: './thumbnail.webp'
 ---
 
-# CORS란?
+## CORS란?
 
 `CORS(Cross-Origin Resource Sharing)`는 브라우저에서 다른 출처에 있는 리소스를 사용할 수 있는 규칙이다.
 
@@ -30,16 +30,16 @@ image: './thumbnail.webp'
 
 이번 장에서는 CORS의 원리와 문제 상황, 그리고 이를 해결할 수 있는 방법을 알아본다.
 
-## 핵심 용어 정리
+### 핵심 용어 정리
 
-### 1. 출처(Origin)
+#### 1. 출처(Origin)
 
 URL의 프로토콜, 호스트, 포트 세 가지를 조합한 것을 출처라고 한다.
 
 - 이 세 가지가 **모두 같으면** 출처가 같다고 표현한다
 - 하나라도 **다르면** 출처가 다르다고 표현한다
 
-### 2. 교차 출처 요청(Cross-Origin Request)
+#### 2. 교차 출처 요청(Cross-Origin Request)
 
 다른 출처의 자원을 사용하기 위해 네트워크 요청을 만드는 것을 말한다.
 
@@ -51,7 +51,7 @@ URL의 프로토콜, 호스트, 포트 세 가지를 조합한 것을 출처라�
 
 ---
 
-# CORS의 동작 원리
+## CORS의 동작 원리
 
 간단하게 DOM이 생성되면 스크립트를 실행시켜본다.
 
@@ -85,7 +85,7 @@ server.listen(8080, () => console.log('server is running ::8080'));
 
 실제로 서버를 실행하고 `localhost:8080`으로 접속하면 `GET http://localhost:8080/resource.json` 네트워크 요청을 만들고, 응답값인 JSON 문자열을 화면에 출력한다.
 
-## 교차 출처 요청 테스트
+### 교차 출처 요청 테스트
 
 이제는 교차 출처 요청을 만들 차례다. 브라우저에서 실행되는 애플리케이션은 `8080`번 포트에서 자원을 가져온다. 이번에는 `8081`번 포트를 사용해서 다른 출처로 서버를 하나 만들어본다.
 
@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 ![콘솔에서도 교차 출처 요청 차단이라는 경고 문구 표시](./3.webp)
 
-### CORS 에러 분석
+#### CORS 에러 분석
 
 콘솔을 확인하면 "교차 출처 요청 차단"이라는 경고가 표시된다. `동일 출처 정책`으로 인해 `8080`번 포트가 아닌 `8081`번 포트를 사용하는 서버의 리소스가 차단된 것이다.
 
@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 서버 `8081`은 아직 이에 대해 명시하지 않았기 때문에, 브라우저는 자원 사용을 허용하지 않은 것으로 판단하여 네트워크 오류를 발생시킨 것이다.
 
-## CORS 헤더 설정하기
+### CORS 헤더 설정하기
 
 서버 `8081`이 다른 출처에게 자원을 공유하려면 `Access-Control-Allow-Origin` 헤더를 설정해야 한다.
 
@@ -174,21 +174,21 @@ const handler = (req, res) => {
 
 ---
 
-# 단순 요청(Simple Request)
+## 단순 요청(Simple Request)
 
 교차 출처 요청 중에도 특정 조건을 만족하는 요청을 `단순 요청(Simple Request)`이라고 부른다.
 
-## 단순 요청의 조건
+### 단순 요청의 조건
 
 단순 요청이 되기 위해서는 **두 가지 조건**을 만족해야 한다:
 
-### 1. 허용된 HTTP 메소드 사용
+#### 1. 허용된 HTTP 메소드 사용
 
 - [`GET`](https://developer.mozilla.org/ko/docs/Web/HTTP/Methods/GET)
 - [`POST`](https://developer.mozilla.org/ko/docs/Web/HTTP/Methods/POST)
 - [`HEAD`](https://developer.mozilla.org/ko/docs/Web/HTTP/Methods/HEAD)
 
-### 2. 안전한 헤더 사용
+#### 2. 안전한 헤더 사용
 
 교차 출처 요청에서 사용할 수 있는 헤더를 **안전한 헤더**라고 한다.
 
@@ -206,7 +206,7 @@ const handler = (req, res) => {
 
 응답을 받은 브라우저는 이 헤더에 **자신의 출처가 포함되어 있는지** 확인한다. 포함되어 있다면 "서버가 자원 사용을 허락했다"고 판단하여 응답을 사용한다.
 
-## 안전한 헤더 목록
+### 안전한 헤더 목록
 
 ![CORS 허용 목록에 있는 요청 헤더](./7.webp)
 
@@ -222,7 +222,7 @@ const handler = (req, res) => {
 
 브라우저에서 교차 출처 요청을 할 때 **이외의 헤더를 사용**하면, 출처 확인과 마찬가지로 **헤더 사용 여부**도 서버에게 확인받아야 한다.
 
-### 커스텀 헤더 테스트
+#### 커스텀 헤더 테스트
 
 브라우저에서 동작하는 스크립트에 커스텀 헤더를 추가해본다:
 
@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 `동일 출처 정책`으로 인해 원격 리소스가 차단되었다. [`Access-Control-Allow-Headers`](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Access-Control-Allow-Headers)에 헤더 `X-Goguma`가 허용되지 않았다고 표시된다.
 
-### 커스텀 헤더 허용하기
+#### 커스텀 헤더 허용하기
 
 안전하지 않은 헤더를 사용하려면 서버가 `Access-Control-Allow-Headers` 응답 헤더에 허용할 헤더 이름을 명시해야 한다:
 
@@ -269,7 +269,7 @@ const handler = (req, res) => {
 
 ---
 
-# 사전 요청(Preflight Request)
+## 사전 요청(Preflight Request)
 
 단순한 요청에 해당하는 `GET`, `POST`, `HEAD` 메소드가 아닌 `PUT`, `PATCH`, `DELETE` 메소드를 사용하는 경우가 있다.
 
@@ -277,7 +277,7 @@ const handler = (req, res) => {
 
 이를 `사전 요청(Preflight Request)`이라고 부른다. 마치 중요한 회의 전에 사전 미팅으로 서로를 확인하는 것과 같다.
 
-## PUT 메소드로 사전 요청 테스트
+### PUT 메소드로 사전 요청 테스트
 
 브라우저에서 동작하는 스크립트의 메소드를 [`PUT`](https://developer.mozilla.org/ko/docs/Web/HTTP/Methods/PUT)으로 변경해본다:
 
@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 ![네트워크 탭에도 오류가 발생함](./11.webp)
 
-### Preflight 요청 분석
+#### Preflight 요청 분석
 
 사전 요청은 다음과 같은 특징을 가진다:
 
@@ -316,7 +316,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 브라우저는 "교차 출처로 `PUT` 메소드를 사용해도 되나요?"라고 서버에게 먼저 확인하는 것이다.
 
-## PUT 메소드 허용하기
+### PUT 메소드 허용하기
 
 서버가 다른 출처에서 `PUT` 메소드를 허용하려면 `Access-Control-Allow-Methods` 응답 헤더를 설정해야 한다:
 
@@ -334,7 +334,7 @@ const handler = (req, res) => {
 
 ![PUT 요청 응답을 브라우저에서 허용해줌](./12.webp)
 
-### 사전 요청과 실제 요청의 흐름
+#### 사전 요청과 실제 요청의 흐름
 
 1. **사전 요청(OPTIONS)**:
 
@@ -350,7 +350,7 @@ const handler = (req, res) => {
 
 브라우저는 "서버가 `PUT` 메소드를 허용했구나"라고 판단하여 애플리케이션에서 응답을 사용할 수 있도록 허용한 것이다.
 
-## 사전 요청 캐싱
+### 사전 요청 캐싱
 
 매번 `OPTIONS` 메소드를 사용하는 사전 요청을 보내는 것은 **네트워크 비용이 추가로 발생**한다.
 
@@ -369,13 +369,13 @@ const handler = (req, res) => {
 
 서버를 재시작한 후 테스트해본다:
 
-### 첫 번째 요청
+#### 첫 번째 요청
 
 ![첫 요청은 당연히 캐싱한 데이터가 없으므로 OPTIONS 요청이 날라감](./14.webp)
 
 처음에는 `OPTIONS` 사전 요청이 발생한다.
 
-### 10초 이내 재요청
+#### 10초 이내 재요청
 
 ![10초 이내의 요청은 당연히 캐싱한 데이터가 있으므로 OPTIONS 요청이 날라가지 않음](./14.webp)
 
@@ -385,13 +385,13 @@ const handler = (req, res) => {
 
 ---
 
-# CORS를 사용하는 요청들
+## CORS를 사용하는 요청들
 
 CORS를 사용하는 요청은 특정 API와 리소스에 한정된다.
 
 ![CORS를 사용하는 요청](./15.webp)
 
-## 주요 CORS 사용 요청
+### 주요 CORS 사용 요청
 
 - [`Fetch API`](https://developer.mozilla.org/ko/docs/Web/API/Fetch_API): 우리가 다룬 fetch 함수
 - [`XMLHttpRequest(XHR)`](https://developer.mozilla.org/ko/docs/Web/API/XMLHttpRequest): 비동기 HTTP 요청
@@ -401,7 +401,7 @@ CORS를 사용하는 요청은 특정 API와 리소스에 한정된다.
 
 > **참고 자료**: [MDN - 어떤 요청이 CORS를 사용합니까?](https://developer.mozilla.org/ko/docs/Web/HTTP/Guides/CORS#%EC%96%B4%EB%96%A4_%EC%9A%94%EC%B2%AD%EC%9D%B4_cors%EB%A5%BC_%EC%82%AC%EC%9A%A9%ED%95%A9%EB%8B%88%EA%B9%8C)
 
-## 웹 폰트 CORS 테스트
+### 웹 폰트 CORS 테스트
 
 웹 폰트를 통해 CORS가 어떻게 동작하는지 확인해본다:
 
@@ -430,11 +430,11 @@ CORS를 사용하는 요청은 특정 API와 리소스에 한정된다.
 
 ---
 
-## 마치며
+### 마치며
 
 CORS는 웹 보안의 핵심 메커니즘으로, 브라우저가 다른 출처의 리소스를 안전하게 사용할 수 있도록 한다.
 
-## 핵심 정리
+### 핵심 정리
 
 - **출처(Origin)**: 프로토콜, 호스트, 포트 세 가지를 조합한 것
 - **단순 요청**: GET, POST, HEAD 메소드와 안전한 헤더만 사용하는 요청

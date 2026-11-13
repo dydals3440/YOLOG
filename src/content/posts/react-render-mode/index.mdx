@@ -7,8 +7,6 @@ category: DEVELOPMENT
 image: './thumbnail.webp'
 ---
 
-# 프레임워크 없이 살펴보는 React CSR, SSG와 SSR
-
 React 애플리케이션을 만들다 보면 CSR, SSG, SSR, Hydration 같은 용어를 자주 만나게 돼요. Next.js나 Astro 같은 프레임워크를 사용하면 대부분의 과정이 자동으로 처리되지만, 추상화가 걷히면 React가 언제 실행되고 어떤 결과가 브라우저로 전달되는지 헷갈릴 때가 있었어요.
 
 그래서 이번에는 프레임워크 없이 작은 SSG와 SSR을 직접 만들어봤어요. JSX도 잠시 내려놓고 `createElement`, `renderToStaticMarkup`, `renderToString`, `hydrateRoot`가 각각 어떤 일을 하는지 하나씩 확인했어요.

@@ -21,8 +21,6 @@ import { Image } from "astro:assets";
 import popoverBeforeImage from "./popover-before.svg";
 import popoverAfterImage from "./popover-after.svg";
 
-# useEffect vs useLayoutEffect vs useFocusEffect vs useEffectEvent
-
 React에서 부수 효과를 다룰 때 대부분은 `useEffect` 하나로 해결하려고 한다. 그리고 많은 경우 그걸로 충분하다.
 
 하지만 개발을 하다 보면 `useEffect`만으로는 풀리지 않는 순간을 만난다. UI가 한 프레임 깜빡이거나, 뒤로 가기를 했는데 데이터가 그대로거나, 의존성 배열 때문에 Effect가 쓸데없이 다시 실행되거나. 그럴 때 필요한 건 더 열심히 쓴 `useEffect`가 아니라, **애초에 다른 타이밍에 실행되는 훅**이다.

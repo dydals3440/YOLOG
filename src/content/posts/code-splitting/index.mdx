@@ -7,7 +7,7 @@ category: DEVELOPMENT
 image: './vite-bundle.webp'
 ---
 
-# Code Splitting 이란
+## Code Splitting 이란
 
 `코드 스플리팅(Code Splitting)`은 애플리케이션의 코드를 필요한 시점에 로드할 수 있도록 여러 개의 작은 파일로 분리하는 기술이다.
 
@@ -15,7 +15,7 @@ image: './vite-bundle.webp'
 
 주로 Webpack과 같은 모듈 번들러를 사용해 구현하며, 이를 통해 애플리케이션의 초기 로딩 시간을 줄이고 사용자 경험을 향상시킬 수 있다.
 
-# 현재 프로젝트에서, Code Splitting을 하는 이유?
+## 현재 프로젝트에서, Code Splitting을 하는 이유?
 
 리액트 어플리케이션의 경우 빌드를 통해서 파일을 배포하게 되고, 이 과정에서, 파일 크기를 최소화하는 것이 바람직하다.
 
@@ -57,25 +57,25 @@ React 애플리케이션은 규모가 커질수록 사용하는 라이브러리�
 
 ---
 
-# 해결 방법
+## 해결 방법
 
-## 1. Code Splitting과 Lazy Loading
+### 1. Code Splitting과 Lazy Loading
 
 `Code Splitting`과 `Lazy Loading`을 사용하여 초기 로딩 속도를 개선하고 불필요한 번들 로드를 줄이는 방식을 채택한다.
 
 ---
 
-### Lazy Loading
+#### Lazy Loading
 
 `React.lazy`를 사용하면 컴포넌트를 처음 렌더링하는 시점까지 해당 컴포넌트의 코드를 로드하지 않는다. 이는 컴포넌트를 필요한 시점에 동적으로 로딩하여 애플리케이션의 성능을 향상시킨다.
 
-### 장점
+#### 장점
 
 - 번들을 여러 개의 `chunk`로 분할하여 초기 로딩 시 필요한 코드만 로드
 - 데이터 사용량 절감 및 빠른 로딩으로 더 나은 사용자 경험 제공
 - 중요도가 떨어지거나 당장 화면에 보이지 않는 요소들의 번들 로딩을 우선적으로 시행하지 않으면서 로딩 퍼포먼스를 최적화할 수 있음
 
-### 예제
+#### 예제
 
 ```tsx
 import React, { Suspense } from 'react';
@@ -93,11 +93,11 @@ function App() {
 }
 ```
 
-### Code Splitting
+#### Code Splitting
 
 - `Code Splitting`은 클라이언트에 불필요한 코드가 전달되지 않도록 하고, 적절한 시점에 필요한 코드만 동적으로 로드할 수 있도록 분리하는 기법이다.
 
-### 장점
+#### 장점
 
 - 큰 번들 파일을 작은 chunk로 분할
 - 초기 로딩 속도 개선 및 상호작용 시간 단축
@@ -105,11 +105,11 @@ function App() {
 
 ---
 
-## 2. Suspense
+### 2. Suspense
 
 `Suspense`는 동적으로 로드되는 컴포넌트의 로딩 상태를 처리하기 위한 컴포넌트다. 로딩 중 화면에 표시할 UI를 `fallback`으로 정의하여 사용자 경험을 부드럽게 만든다.
 
-### 예제
+#### 예제
 
 ```tsx
 <Suspense fallback={<div>Loading content...</div>}>
@@ -117,7 +117,7 @@ function App() {
 </Suspense>
 ```
 
-### 정리된 장점
+#### 정리된 장점
 
 1. 초기 로드 속도 향상
 
@@ -135,7 +135,7 @@ function App() {
 
 ---
 
-### Code Splitting 도입 결과
+#### Code Splitting 도입 결과
 
 실제로 현재 운영하고 있는 서비스에서 `Code Splitting` 작업을 통해,
 
@@ -159,9 +159,9 @@ function App() {
 
 ---
 
-# Code Splitting 시 유용한 방법
+## Code Splitting 시 유용한 방법
 
-### 1. TreeShaking
+#### 1. TreeShaking
 
 라이브러리 전체 중 일부만 사용한다면 부분 설치를 하자.
 
@@ -211,7 +211,7 @@ window.addEventListener('resize', handleResize);
 
 위 코드는 `lodash.debounce`만을 설치하여 필요한 기능만 번들에 포함한다. 이는 트리 쉐이킹의 일환으로 코드 최적화에 유리하다.
 
-### rollup-plugin-visualizer을 사용한 번들 시각화
+#### rollup-plugin-visualizer을 사용한 번들 시각화
 
 내가 사용하고 있는 번들의 크기를 빌드했을 때 체크할 수 있다. vite 이전에 `WebPack Bundle Analyzer`와 유사한 역할을 한다.
 
@@ -254,7 +254,7 @@ pnpm run build
 
 ---
 
-## 핵심 정리
+### 핵심 정리
 
 - **Code Splitting의 본질**:
   - 애플리케이션 코드를 여러 작은 파일(chunk)로 분리

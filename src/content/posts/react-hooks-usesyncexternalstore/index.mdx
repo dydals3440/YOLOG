@@ -8,8 +8,6 @@ category: DEVELOPMENT
 image: "./thumbnail.webp"
 ---
 
-# useSyncExternalStore로 외부 상태 안전하게 구독하기
-
 윈도우 크기, 네트워크 연결 상태, `localStorage`, 다른 탭에서 변경된 값... 이런 React 바깥의 데이터를 컴포넌트로 가져오려면 어떻게 해야 할까?
 
 대부분 `useState`와 `useEffect`를 조합해 직접 구독하는 패턴을 떠올린다. 잘 동작하는 것처럼 보이지만, React 18부터 도입된 동시성 렌더링과 만나면 미묘한 버그가 생긴다.
