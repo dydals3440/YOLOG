@@ -7,7 +7,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "oxlint && oxfmt --check && astro check && bun check --no-script",
+    "check": "astro check && oxlint && oxfmt --check && bun check --no-script",
     "fix": "oxlint --fix && oxfmt",
     "test": "bun test src",
     "test:site": "bun test tests/site",
