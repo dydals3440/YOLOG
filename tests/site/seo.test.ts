@@ -341,13 +341,17 @@ describe("GEO", () => {
   });
 
   it("글마다 마크다운 미러가 있고 글 페이지가 이를 알려 준다", async () => {
-    for (const { file, html } of articlePages) {
-      // Given
-      const markdownPath = file.replace(/\/index\.html$/, ".md");
+    // Given
+    const mirrors = await Promise.all(
+      articlePages.map(async ({ file, html }) => {
+        const markdownPath = file.replace(/\/index\.html$/, ".md");
+        return { file, html, markdownPath, mirror: await readArtifact(markdownPath) };
+      }),
+    );
 
+    for (const { file, html, markdownPath, mirror } of mirrors) {
       // When
       const alternate = queryAll(html, 'link[rel="alternate"][type="text/markdown"]').at(0);
-      const mirror = await readArtifact(markdownPath);
 
       // Then
       expect(alternate?.attributes.get("href"), `${file}: 마크다운 대체 링크가 없습니다`).toBe(
@@ -370,11 +374,11 @@ describe("GEO", () => {
 
     // Then
     expect(links.length, "llms.txt의 글 링크 수가 다릅니다").toBe(articlePages.length);
-    for (const link of links) {
-      expect(
-        await readArtifact(new URL(link).pathname.slice(1)),
-        `${link}: 파일이 없습니다`,
-      ).toBeTruthy();
+    const mirrors = await Promise.all(
+      links.map((link) => readArtifact(new URL(link).pathname.slice(1))),
+    );
+    for (const [index, mirror] of mirrors.entries()) {
+      expect(mirror, `${links[index]}: 파일이 없습니다`).toBeTruthy();
     }
   });
 
