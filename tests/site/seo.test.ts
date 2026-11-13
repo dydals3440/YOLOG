@@ -332,3 +332,58 @@ describe("배포 설정", () => {
     });
   });
 });
+
+describe("GEO", () => {
+  let articlePages: BuiltPage[] = [];
+
+  beforeAll(async () => {
+    articlePages = (await loadPages()).filter(({ file }) => file.startsWith("post/"));
+  });
+
+  it("글마다 마크다운 미러가 있고 글 페이지가 이를 알려 준다", async () => {
+    for (const { file, html } of articlePages) {
+      // Given
+      const markdownPath = file.replace(/\/index\.html$/, ".md");
+
+      // When
+      const alternate = queryAll(html, 'link[rel="alternate"][type="text/markdown"]').at(0);
+      const mirror = await readArtifact(markdownPath);
+
+      // Then
+      expect(alternate?.attributes.get("href"), `${file}: 마크다운 대체 링크가 없습니다`).toBe(
+        `/${markdownPath}`,
+      );
+      expect(mirror.startsWith("# "), `${markdownPath}: 제목으로 시작해야 합니다`).toBeTrue();
+      expect(mirror, `${markdownPath}: MDX 전용 import가 남아 있습니다`).not.toMatch(
+        /^import .+ from ["'](?:@\/components\/|astro:)/m,
+      );
+      expect(mirror, `${markdownPath}: 열 수 없는 상대 경로 이미지가 남아 있습니다`).not.toMatch(
+        /!\[[^\]]*\]\(\.\.?\//,
+      );
+    }
+  });
+
+  it("llms.txt는 모든 글의 마크다운 미러를 가리킨다", async () => {
+    // When
+    const llms = await readArtifact("llms.txt");
+    const links = [...llms.matchAll(/\]\((https:\/\/[^)]+\.md)\)/g)].map(([, url = ""]) => url);
+
+    // Then
+    expect(links.length, "llms.txt의 글 링크 수가 다릅니다").toBe(articlePages.length);
+    for (const link of links) {
+      expect(
+        await readArtifact(new URL(link).pathname.slice(1)),
+        `${link}: 파일이 없습니다`,
+      ).toBeTruthy();
+    }
+  });
+
+  it("robots.txt는 모든 크롤러를 허용하고 사이트맵을 알려 준다", async () => {
+    // When
+    const robots = await readArtifact("robots.txt");
+
+    // Then
+    expect(robots).toContain("User-agent: *\nAllow: /");
+    expect(robots).toContain(`Sitemap: ${SITE_URL}/sitemap-index.xml`);
+  });
+});
