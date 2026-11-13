@@ -6,14 +6,14 @@ export const THEME_MAP = {
   system: undefined,
 } as const;
 
-export type ThemeValue = (typeof THEME_MAP)[keyof typeof THEME_MAP];
+type ThemeValue = (typeof THEME_MAP)[keyof typeof THEME_MAP];
 export type ResolvedTheme = Exclude<ThemeValue, undefined>;
 
 export const STORAGE_THEME_KEY = "theme";
 
 const SYSTEM_DARK_QUERY = "(prefers-color-scheme: dark)";
 
-export const themeStore = persistentAtom<ThemeValue>(STORAGE_THEME_KEY, THEME_MAP.system);
+const themeStore = persistentAtom<ThemeValue>(STORAGE_THEME_KEY, THEME_MAP.system);
 
 const applyTheme = (theme: ResolvedTheme) => {
   document.documentElement.dataset.theme = theme;

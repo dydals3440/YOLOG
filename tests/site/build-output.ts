@@ -63,7 +63,7 @@ export function queryAll(html: string, selector: string): ElementSnapshot[] {
   return elements;
 }
 
-export function queryAttribute(html: string, selector: string, attribute: string) {
+function queryAttribute(html: string, selector: string, attribute: string) {
   return queryAll(html, selector).at(0)?.attributes.get(attribute);
 }
 
