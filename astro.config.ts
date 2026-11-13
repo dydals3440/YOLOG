@@ -1,8 +1,9 @@
 import { readFile } from "node:fs/promises";
-import { load } from "cheerio";
-import sitemap from "@astrojs/sitemap";
+
+import { rehypeHeadingIds, unified } from "@astrojs/markdown-remark";
 import mdx from "@astrojs/mdx";
 import react from "@astrojs/react";
+import sitemap from "@astrojs/sitemap";
 import {
   transformerMetaHighlight,
   transformerMetaWordHighlight,
@@ -12,27 +13,27 @@ import {
   transformerNotationHighlight,
 } from "@shikijs/transformers";
 import tailwindcss from "@tailwindcss/vite";
-
-import { rehypeHeadingIds, unified } from "@astrojs/markdown-remark";
 import { defineConfig, envField, fontProviders } from "astro/config";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeExternalLinks from "rehype-external-links";
 import remarkBreaks from "remark-breaks";
 import remarkDirective from "remark-directive";
 
-import { SITE_URL } from "./src/lib/config/app";
-
 import { remarkPrioritizeFirstImage } from "./plugins/remark-prioritize-first-image";
 import { transformerFragment } from "./plugins/transformer-fragment";
+import { SITE_URL } from "./src/lib/config/app";
 import { customCallout } from "./src/lib/directives";
 
-const outDir = new URL("./dist/", import.meta.url);
+const outDir = "./dist/";
+const outDirUrl = new URL(outDir, import.meta.url);
+const MODIFIED_TIME_PATTERN = /<meta property="article:modified_time" content="([^"]+)"/;
 
 // 값이 없는 빌드도 허용한다. Preview와 로컬에서는 분석과 댓글이 꺼진다.
 const publicEnv = () => envField.string({ context: "client", access: "public", optional: true });
 
 export default defineConfig({
   output: "static",
+  outDir,
   trailingSlash: "never",
   // Astro 7의 compressHTML 기본값이 'jsx'로 바뀌어 인라인 요소 공백 처리가 달라진다.
   // 기존 v6 동작(true)을 유지하기 위해 명시적으로 고정한다.
@@ -129,8 +130,8 @@ export default defineConfig({
         const pathname = new URL(item.url).pathname;
         if (!pathname.startsWith("/post/")) return item;
         // 이미 생성된 SEO 메타데이터를 재사용해 lastmod의 출처를 하나로 유지한다.
-        const html = await readFile(new URL(`.${pathname}/index.html`, outDir), "utf8");
-        const modified = load(html)('meta[property="article:modified_time"]').attr("content");
+        const html = await readFile(new URL(`.${pathname}/index.html`, outDirUrl), "utf8");
+        const modified = html.match(MODIFIED_TIME_PATTERN)?.[1];
         return modified ? { ...item, lastmod: modified } : item;
       },
     }),
