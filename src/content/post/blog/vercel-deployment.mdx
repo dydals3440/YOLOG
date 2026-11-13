@@ -97,12 +97,10 @@ image: '/images/vercel-deployment/thumbnail.webp'
 
 ### 🚨 주의 사항
 
-:::warning
-
-1. 프로젝트 루트(`프로젝트 폴더 최상위 경로`)에서 모든 명령어가 실행된다고 가정합니다.
-
-2. `.env` 파일 등 민감 정보가 담긴 환경 변수 파일은 절대 GitHub에 업로드하지 않습니다.
-   :::
+> [!WARNING]
+> 1. 프로젝트 루트(`프로젝트 폴더 최상위 경로`)에서 모든 명령어가 실행된다고 가정합니다.
+>
+> 2. `.env` 파일 등 민감 정보가 담긴 환경 변수 파일은 절대 GitHub에 업로드하지 않습니다.
 
 ---
 
@@ -691,21 +689,15 @@ dig www.example.com
 또는 온라인 도구인 [DNS Checker](https://dnschecker.org/)에서 전 세계 여러 지역의
 DNS 전파 상태를 실시간으로 확인할 수 있습니다.
 
-:::warning
+> [!WARNING]
+> - **A Record**
+>   → 도메인 주소를 IP 주소로 연결
+>   예: yolog.co.kr → 123.45.67.89
 
-- **A Record**
-  → 도메인 주소를 IP 주소로 연결
-  예: yolog.co.kr → 123.45.67.89
-
-:::
-
-:::warning
-
-- **CNAME Record**
-  → 도메인을 다른 도메인으로 연결
-  예: www.yolog.co.kr → yolog.vercel.app
-
-  :::
+> [!WARNING]
+> - **CNAME Record**
+>   → 도메인을 다른 도메인으로 연결
+>   예: www.yolog.co.kr → yolog.vercel.app
 
 ### DNS 레코드 타입 상세 설명
 

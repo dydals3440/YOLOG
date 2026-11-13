@@ -24,7 +24,7 @@ image: "/images/facade-pattern/thumbnail.webp"
 
 청구할 금액과 기간을 담은 청구서(Invoice)는 `SubscriptionService`가 준비해요. 그런데 갱신 작업은 그다음부터 결제수단 조회, 토스 요청 구성, 오류 해석, 승인 기록까지 직접 처리하고 있어요.
 
-```ts
+```ts {40,47}
 @Injectable()
 class RenewSubscriptionJob {
   constructor(
@@ -64,14 +64,14 @@ class RenewSubscriptionJob {
         billingKey: paymentMethod.billingKey,
         idempotencyKey: attempt.idempotencyKey,
         body: {
-          customerKey: paymentMethod.customerKey, // [!code highlight]
+          customerKey: paymentMethod.customerKey,
           amount: invoice.amountKrw,
           orderId: attempt.orderId,
           orderName: invoice.description,
         },
       });
     } catch (error) {
-      if (error instanceof TossApiError && error.code === "REJECT_CARD_PAYMENT") { // [!code highlight]
+      if (error instanceof TossApiError && error.code === "REJECT_CARD_PAYMENT") {
         // 카드 승인이 거절됐다는 사유를 결제 시도에 기록해요.
         await this.paymentStore.markCardDeclined(attempt.id);
         return;
@@ -118,7 +118,7 @@ Facade는 복잡한 하위 시스템을 쉽게 사용할 수 있는 인터페이
 
 외부 연동과 승인 기록을 `TossPaymentService`로 옮기고, 두 Service를 Facade에서 호출해 볼게요.
 
-```ts
+```ts {8}
 @Injectable()
 class SubscriptionBillingFacadeV1 {
   constructor(
@@ -126,7 +126,7 @@ class SubscriptionBillingFacadeV1 {
     private readonly tossPaymentService: TossPaymentService,
   ) {}
 
-  async renewSubscription(subscriptionId: string): Promise<TossPaymentResponse | null> { // [!code highlight]
+  async renewSubscription(subscriptionId: string): Promise<TossPaymentResponse | null> {
     const invoice = await this.subscriptionService.prepareRenewal(subscriptionId);
     if (!invoice) {
       return null;
@@ -201,18 +201,18 @@ export type PaymentResult =
 
 이제 `PaymentService`가 토스 응답 대신 `PaymentResult`를 반환하도록 바꿔 볼게요. 바뀌는 부분부터 보면, 토스의 승인 상태를 해석하던 자리에 내부 결제 결과가 들어와요.
 
-```ts
+```ts ins={6-9,11} del={2-5}
 // 구독 갱신 메서드의 결제 처리 부분
-const { paymentId, payment } = await this.tossPaymentService.payInvoice(invoice); // [!code --]
-if (payment.status === "DONE") { // [!code --]
-  await this.subscriptionService.applyPayment(invoice.id, paymentId); // [!code --]
-} // [!code --]
-const paymentResult = await this.paymentService.payInvoice(invoice); // [!code ++]
-if (paymentResult.status !== "SUCCEEDED") { // [!code ++]
-  return; // [!code ++]
-} // [!code ++]
+const { paymentId, payment } = await this.tossPaymentService.payInvoice(invoice);
+if (payment.status === "DONE") {
+  await this.subscriptionService.applyPayment(invoice.id, paymentId);
+}
+const paymentResult = await this.paymentService.payInvoice(invoice);
+if (paymentResult.status !== "SUCCEEDED") {
+  return;
+}
 
-await this.subscriptionService.applyPayment(invoice.id, paymentResult.paymentId); // [!code ++]
+await this.subscriptionService.applyPayment(invoice.id, paymentResult.paymentId);
 ```
 
 이제 Facade는 `DONE`이나 `paymentKey`를 알 필요가 없어요. 전체 코드도 함께 볼게요.
@@ -1172,12 +1172,12 @@ export class BillingModule {}
 
 처음에 던진 질문으로 돌아가서, 신규 결제를 포트원 연동으로 전환한다고 해 볼게요. 새 Gateway가 `PaymentGateway`를 구현하도록 만들고, 주입할 구현을 바꿀 수 있어요.
 
-```ts
+```ts ins={5} del={4}
 // BillingModule에서 신규 결제에 사용할 Gateway를 교체해요.
 const paymentGatewayProvider = {
   provide: PAYMENT_GATEWAY,
-  useClass: TossPaymentGateway, // [!code --]
-  useClass: PortOnePaymentGateway, // [!code ++]
+  useClass: TossPaymentGateway,
+  useClass: PortOnePaymentGateway,
 };
 ```
 
@@ -1562,7 +1562,7 @@ await subscriptionBillingFacade.renewSubscription(subscriptionId);
 
 반면 Adapter는 호출자가 기대하는 인터페이스에 다른 객체를 맞춰 줘요. 앞서 만든 `TossPaymentGateway`에서 조회 기능만 간추려 볼게요.
 
-```ts
+```ts {10,17}
 // adapter-example.ts
 class TossPaymentGateway {
   constructor(private readonly tossBillingClient: TossBillingClient) {}
@@ -1572,14 +1572,14 @@ class TossPaymentGateway {
 
     try {
       // 내부 요청에서 주문번호를 꺼내 토스 Client의 조회 방식에 맞춰요.
-      response = await this.tossBillingClient.findByOrderId(request.orderId); // [!code highlight]
+      response = await this.tossBillingClient.findByOrderId(request.orderId);
     } catch (error) {
       // 토스의 오류도 내부 결제 결과나 연동 오류로 변환해요.
       return mapTossError(error, "LOOKUP");
     }
 
     // 토스의 응답을 검증한 뒤 우리 결제 계약으로 바꿔요.
-    return mapTossPayment(response, request); // [!code highlight]
+    return mapTossPayment(response, request);
   }
 }
 ```

@@ -357,10 +357,10 @@ deleteUser(postId); // 🤔 postId를 넣었는데 에러가 안 난다?
 
 DTO에서 ID를 변환할 때 **명목적 타입(Branded Types)**으로 감싸면, 이런 실수를 컴파일 타임에 잡을 수 있다.
 
-```ts
+```ts {2-3,11,14}
 // 브랜드 타입 정의
-type UserId = string & { readonly __brand: unique symbol }; // [!code highlight]
-type PostId = string & { readonly __brand: unique symbol }; // [!code highlight]
+type UserId = string & { readonly __brand: unique symbol };
+type PostId = string & { readonly __brand: unique symbol };
 
 const UserId = (id: string): UserId => id as UserId;
 const PostId = (id: string): PostId => id as PostId;
@@ -368,10 +368,10 @@ const PostId = (id: string): PostId => id as PostId;
 // 함수는 UserId만 받음
 function deleteUser(userId: UserId) {
   /* ... */
-} // [!code highlight]
+}
 function deletePost(postId: PostId) {
   /* ... */
-} // [!code highlight]
+}
 ```
 
 왜 필요할까? 일반 `string`을 쓰면 **타입 에러가 발생하지 않는다**:
@@ -385,10 +385,10 @@ deleteUser('post-456');
 
 명목적 타입을 쓰면 **잘못된 ID를 넘기면 컴파일 에러**가 난다:
 
-```ts
+```ts {2} del={3}
 // ✅ 명목적 타입 - 타입 에러로 실수 방지
-deleteUser(UserId('user-123')); // [!code highlight]
-deleteUser(PostId('post-456')); // [!code error]
+deleteUser(UserId('user-123'));
+deleteUser(PostId('post-456'));
 // 타입 에러! PostId는 UserId에 할당 불가
 ```
 

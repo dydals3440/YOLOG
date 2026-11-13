@@ -60,7 +60,7 @@ import authSecurityStyles from '@/components/mdx/moyeo-auth-security/auth-securi
 
 인증 코드의 핵심 흐름만 남기면 다음과 같다. `tokenIssuer`는 토큰을 조회용 값으로 바꾸고, `sessions`는 이 값으로 DB의 세션을 찾는다.
 
-```ts title="토큰으로 로그인 상태 확인하기" caption="인증 유스케이스를 단순화한 예시. 계정 상태 확인과 최근 사용 기록 갱신은 생략했다."
+```ts title="토큰으로 로그인 상태 확인하기"
 async function authenticate(rawToken: string, now: Date) {
   const tokenDigest = tokenIssuer.digestToken(rawToken);
   if (tokenDigest === null) {
@@ -75,6 +75,8 @@ async function authenticate(rawToken: string, now: Date) {
   return { status: "authenticated", session: record.session };
 }
 ```
+
+<p class="code-caption">인증 유스케이스를 단순화한 예시. 계정 상태 확인과 최근 사용 기록 갱신은 생략했다.</p>
 
 **토큰이 있다는 것과 로그인 상태가 유효하다는 것은 다르다.** 서버가 기록을 확인하므로, 나중에 문제가 생겼을 때 특정 세션만 골라 끝낼 수도 있다. 세션을 서버에서 관리하기로 한 데는 이 점이 가장 컸다.
 
@@ -91,13 +93,15 @@ async function authenticate(rawToken: string, now: Date) {
 
 > Digest는 원본 값을 해시 함수로 계산한 고정 길이의 결과다. HMAC은 이 계산에 비밀 키를 함께 넣는 방식이다.
 
-```ts title="토큰 원문과 저장할 값을 분리하기" caption="실제 토큰 발급기의 핵심을 변수 이름과 함께 재구성했다."
+```ts title="토큰 원문과 저장할 값을 분리하기"
 const randomToken = randomBytes(32).toString("base64url");
 const rawToken = `v${keyring.activeVersion}.${randomToken}`;
 const tokenDigest = keyring.digestWithActiveSecret(rawToken);
 
 return { rawToken, tokenDigest };
 ```
+
+<p class="code-caption">실제 토큰 발급기의 핵심을 변수 이름과 함께 재구성했다.</p>
 
 DB에 저장한 Digest를 브라우저의 토큰 대신 쓸 수는 없다. 반대로 브라우저의 원문 토큰이 탈취되면 그 세션으로 요청할 수 있으니, 서버의 HMAC 키와 원문 토큰은 각각 보호해야 한다.
 
@@ -145,7 +149,7 @@ Google·Kakao로 로그인해도 마지막에는 모여의 세션을 만든다. 
 
 토큰을 가진 사람은 해당 세션으로 요청을 보낼 수 있다. 그래서 JavaScript가 토큰을 직접 읽지 못하게 하고, 쿠키가 전송되는 조건도 제한했다.
 
-```ts title="모여의 세션 쿠키 설정" caption="실제 쿠키 어댑터 설정을 발췌했다. 변수 이름을 정리하고 쿠키 전송 우선순위 옵션은 생략했다."
+```ts title="모여의 세션 쿠키 설정"
 const cookie = fastifyCookie.serialize(cookieName, rawToken, {
   httpOnly: true, // JavaScript로 쿠키 값을 읽지 못하게 한다.
   secure: isSecure, // HTTPS에서만 전달한다. 운영에서는 true다.
@@ -156,6 +160,8 @@ const cookie = fastifyCookie.serialize(cookieName, rawToken, {
 
 responseHeaders.append("set-cookie", cookie);
 ```
+
+<p class="code-caption">실제 쿠키 어댑터 설정을 발췌했다. 변수 이름을 정리하고 쿠키 전송 우선순위 옵션은 생략했다.</p>
 
 세 설정이 막는 것은 각각 다르다.
 
@@ -204,7 +210,7 @@ NestJS가 로그인을 처리하고 응답에 `Set-Cookie`를 넣었다면, TanS
 
 모여에서는 프록시가 응답을 전달할 때 `Set-Cookie`가 누락되지 않도록 처리했다. 아래 코드의 `isSafeCookie`는 `Domain`·`Secure`·`SameSite` 등의 전달 조건을 확인하는 함수다.
 
-```ts title="로그인 응답의 쿠키 전달하기" caption="응답 중계 코드의 쿠키 처리 부분을 단순화했다. 다른 응답 헤더와 리다이렉트 검사는 생략했다."
+```ts title="로그인 응답의 쿠키 전달하기"
 const cookies = upstreamHeaders.getSetCookie();
 
 for (const cookie of cookies) {
@@ -215,6 +221,8 @@ for (const cookie of cookies) {
   responseHeaders.append("set-cookie", cookie);
 }
 ```
+
+<p class="code-caption">응답 중계 코드의 쿠키 처리 부분을 단순화했다. 다른 응답 헤더와 리다이렉트 검사는 생략했다.</p>
 
 ### SSR은 다른 서버 요청을 만든다
 
@@ -230,7 +238,7 @@ NestJS는 전달받은 토큰으로 같은 사용자의 세션을 확인한다. 
 
 아래 예시는 쿠키를 읽어서 API 클라이언트의 요청 헤더에 넣는 부분만 남겼다. `createApiClient`는 모여에서 oRPC 클라이언트를 만드는 함수다.
 
-```ts title="SSR 요청에 Cookie 전달하기" caption="설명을 위해 단순화한 예시. 실제 코드는 요청을 인자로 받지 않고 서버에서 현재 요청을 읽는다."
+```ts title="SSR 요청에 Cookie 전달하기"
 function createServerApiClient(request: Request, apiOrigin: string) {
   const headers: Record<string, string> = {};
   const cookie = request.headers.get("cookie");
@@ -247,6 +255,8 @@ function createServerApiClient(request: Request, apiOrigin: string) {
   });
 }
 ```
+
+<p class="code-caption">설명을 위해 단순화한 예시. 실제 코드는 요청을 인자로 받지 않고 서버에서 현재 요청을 읽는다.</p>
 
 서버에서 실행되는 `fetch`는 사용자의 브라우저 쿠키 저장소에 접근할 수 없다. 그래서 `credentials: "include"`를 설정해도 페이지 요청에 담긴 쿠키가 API 요청으로 넘어가지 않는다. 위 코드처럼 들어온 `Cookie`를 읽어 새 요청의 헤더에 직접 넣어야 한다.
 
@@ -293,14 +303,16 @@ TanStack Start는 받은 요청을 그대로 NestJS에 넘기지 않는다. `cre
 
 예를 들어 쿠키 두 개를 보내는 응답은 다음과 같다. 첫 번째 줄의 `Wed,` 뒤에 있는 쉼표는 쿠키를 구분하는 문자가 아니라 날짜의 일부다.
 
-```http title="쿠키 두 개는 각각의 Set-Cookie 헤더로 보낸다" caption="쿠키 이름과 값은 설명용 예시다."
+```http title="쿠키 두 개는 각각의 Set-Cookie 헤더로 보낸다"
 Set-Cookie: session=example; Expires=Wed, 21 Oct 2026 07:28:00 GMT; Path=/; Secure; HttpOnly
 Set-Cookie: device=example; Path=/; Secure; HttpOnly
 ```
 
+<p class="code-caption">쿠키 이름과 값은 설명용 예시다.</p>
+
 이를 하나의 문자열로 합친 뒤 쉼표로 나누면 어떻게 될까? 쿠키는 두 개인데, 날짜까지 잘려 세 조각이 된다.
 
-```ts title="쉼표로 합치고 나누면 날짜까지 잘린다" caption="문제가 생기는 처리의 예시. 날짜 외의 쿠키 속성은 생략했다."
+```ts title="쉼표로 합치고 나누면 날짜까지 잘린다"
 const cookies = [
   "session=example; Expires=Wed, 21 Oct 2026 07:28:00 GMT",
   "device=example",
@@ -317,6 +329,8 @@ console.log(pieces);
 // ]
 ```
 
+<p class="code-caption">문제가 생기는 처리의 예시. 날짜 외의 쿠키 속성은 생략했다.</p>
+
 그래서 앞의 중계 코드에서는 `getSetCookie()`로 쿠키를 각각 읽고, `append()`로 헤더를 하나씩 추가했다. 합친 문자열에서 쿠키의 경계를 다시 찾을 필요가 없다. 또 중계한 응답에는 인증 응답인지와 관계없이 모두 [`Cache-Control: no-store`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cache-Control)를 설정해, 사용자별 응답이 캐시에 남지 않게 한다.
 
 SSR 조회는 이미 로그인한 사용자의 데이터를 가져와 HTML을 만드는 과정이다. 페이지 요청의 `Cookie`는 NestJS에 보내지만, NestJS가 응답에 넣은 `Set-Cookie`를 페이지 응답에 자동으로 옮겨 주지는 않는다. **API에 쿠키를 보내는 처리와 브라우저에 새 쿠키를 돌려주는 처리는 별개다.** 모여에서도 로그인 응답 중계와 SSR 데이터 조회를 각각 구현했다.
@@ -329,7 +343,7 @@ SSR 서버는 여러 사용자의 요청을 동시에 처리한다. 이때 사�
 
 코드로 옮기면 다음과 같다. 앞서 본 `createServerApiClient`도 이 안에서 함께 호출해, 각 요청의 쿠키를 읽게 한다.
 
-```ts title="SSR 요청마다 클라이언트와 캐시 만들기" caption="모여의 요청별 분리를 설명하기 위해 재구성했다. 라우터 연결과 캐시 설정은 생략했다."
+```ts title="SSR 요청마다 클라이언트와 캐시 만들기"
 import { QueryClient } from "@tanstack/react-query";
 
 function createSsrContext(request: Request, apiOrigin: string) {
@@ -339,6 +353,8 @@ function createSsrContext(request: Request, apiOrigin: string) {
   return { api, queryClient };
 }
 ```
+
+<p class="code-caption">모여의 요청별 분리를 설명하기 위해 재구성했다. 라우터 연결과 캐시 설정은 생략했다.</p>
 
 A의 요청과 B의 요청에서 이 함수를 각각 호출하면 서로 다른 객체가 만들어진다. SSR 서버 전체에서 쓸 `QueryClient` 하나를 함수 밖에 만들어 두고 공유하는 것과는 다르다.
 
@@ -371,7 +387,7 @@ A의 요청과 B의 요청에서 이 함수를 각각 호출하면 서로 다른
 
 아래는 실제 정책 함수를 읽기 쉽게 정리한 예시다. 이 검사는 데이터를 바꾸는 요청을 대상으로 한다. `GET`·`HEAD`·`OPTIONS`는 제외하고, 그 외 메서드에서는 요청의 출처와 표시 헤더를 확인한다. 제외된 메서드도 로그인과 작업 권한은 그대로 검사한다.
 
-```ts title="변경 요청을 허용할 조건" caption="변경 요청 검사 정책을 명시적인 조건문으로 재구성했다. 사용자 인증은 별도로 수행한다."
+```ts title="변경 요청을 허용할 조건"
 if (SAFE_METHODS.has(method)) {
   return true;
 }
@@ -386,6 +402,8 @@ if (clientHeader !== TRUSTED_CLIENT_HEADER_VALUE) {
 }
 return true;
 ```
+
+<p class="code-caption">변경 요청 검사 정책을 명시적인 조건문으로 재구성했다. 사용자 인증은 별도로 수행한다.</p>
 
 클라이언트 표시 헤더는 "모여 클라이언트가 보내는 요청"이라는 표시로 사용하는 공개된 고정값이다. 비밀 키나 로그인 토큰은 아니다. 다른 사이트의 브라우저 코드가 이 헤더를 붙여 요청하려면 CORS 검사도 통과해야 하므로, 서버의 `Origin` 검사와 함께 사용한다.
 
@@ -411,7 +429,7 @@ return true;
 
 교체 정책을 간단히 표현하면 다음과 같다. 여기서 `activeSessions`는 사용할 수 있는 기존 세션들이고, 새 세션을 추가하기 전에 교체 대상을 고른다.
 
-```ts title="새 로그인을 위해 교체할 세션 고르기" caption="세션 교체 정책을 단순화한 예시. 동률일 때의 순서와 동시성 처리는 아래 구현 설명에서 다룬다."
+```ts title="새 로그인을 위해 교체할 세션 고르기"
 const maximumSessions = 5;
 const replaceCount = activeSessions.length - maximumSessions + 1;
 const sessionsToReplace = [];
@@ -426,6 +444,8 @@ if (replaceCount > 0) {
   }
 }
 ```
+
+<p class="code-caption">세션 교체 정책을 단순화한 예시. 동률일 때의 순서와 동시성 처리는 아래 구현 설명에서 다룬다.</p>
 
 ### 새 기기 로그인은 이메일로 알려 준다
 
@@ -450,7 +470,7 @@ if (replaceCount > 0) {
 
 갱신 여부를 판단하는 조건만 남기면 다음과 같다. 두 시각의 차이를 구하고, 15분 이상 지났는지 확인한다.
 
-```ts title="최근 사용 시각을 다시 기록할지 판단하기" caption="실제 세션 기록 갱신 정책의 시간 조건을 단순화했다. 시각 검증과 DB 갱신은 생략했다."
+```ts title="최근 사용 시각을 다시 기록할지 판단하기"
 function shouldUpdateLastSeen(lastSeenAt: Date, now: Date) {
   const minimumInterval = 15 * 60 * 1_000;
   const elapsed = now.getTime() - lastSeenAt.getTime();
@@ -458,6 +478,8 @@ function shouldUpdateLastSeen(lastSeenAt: Date, now: Date) {
   return elapsed >= minimumInterval;
 }
 ```
+
+<p class="code-caption">실제 세션 기록 갱신 정책의 시간 조건을 단순화했다. 시각 검증과 DB 갱신은 생략했다.</p>
 
 10시에 기록했다면 10시 1분 요청에서는 다시 쓰지 않고, 10시 15분 이후에 요청이 들어왔을 때 갱신한다. 따로 도는 예약 작업 없이 요청이 들어올 때 판단한다. 기록을 갱신하지 않는 요청에서도 세션이 유효한지는 확인한다.
 
@@ -471,7 +493,7 @@ function shouldUpdateLastSeen(lastSeenAt: Date, now: Date) {
 
 코드에서는 기존 세션 종료와 새 세션 생성, 알림 기록을 하나의 트랜잭션으로 묶었다. 트랜잭션은 여러 DB 변경을 모두 반영하거나, 중간에 실패하면 함께 되돌리는 처리 단위다. 기존 세션만 종료되고 새 로그인은 저장되지 않는 상황을 피하기 위한 것이다.
 
-```ts title="한 계정의 로그인 처리 순서" caption="실제 세션 생성 트랜잭션을 설명하기 위해 재구성한 예시다."
+```ts title="한 계정의 로그인 처리 순서"
 await database.transaction(async (transaction) => {
   await lockUser(transaction, userId);
 
@@ -486,6 +508,8 @@ await database.transaction(async (transaction) => {
   await recordDeviceNotice(transaction, newSession);
 });
 ```
+
+<p class="code-caption">실제 세션 생성 트랜잭션을 설명하기 위해 재구성한 예시다.</p>
 
 실제로는 잠근 뒤 계정이 이용 가능한 상태인지도 다시 확인한다. 통합 테스트에서도 로그인 기록이 없는 계정에 요청 7개를 동시에 보내는 경우를 확인했다. 로그인 7건은 성공하고, 세션 2개가 종료돼 활성 세션은 5개가 남는다.
 
@@ -569,7 +593,7 @@ await database.transaction(async (transaction) => {
 
 예를 들어 다른 기기 로그아웃 요청에서 최근 본인 확인이 만료됐다면, 서버는 바로 세션을 종료하지 않고 추가 확인이 필요하다는 응답을 보낸다. 로그인은 유효해도 본인 확인 시간이 지났다면 기다리게 하는 것이다. 서버 코드로 보면 조건 하나다.
 
-```ts title="로그인 중이어도 본인 확인이 만료됐다면 기다린다" caption="실제 다른 기기 로그아웃 유스케이스의 조건을 단순화했다. DB의 재검사와 오류 처리는 생략했다."
+```ts title="로그인 중이어도 본인 확인이 만료됐다면 기다린다"
 if (principal.freshAuthenticationExpiresAt <= now) {
   return { status: "fresh_authentication_required" };
 }
@@ -582,11 +606,13 @@ return repository.revokeOthers({
 });
 ```
 
+<p class="code-caption">실제 다른 기기 로그아웃 유스케이스의 조건을 단순화했다. DB의 재검사와 오류 처리는 생략했다.</p>
+
 브라우저는 이 응답을 받아 확인 화면을 띄운다. 비밀번호 확인처럼 현재 화면에서 인증을 마치면 원래 요청을 한 번만 다시 보내고, 취소했다면 작업을 진행하지 않는다. 소셜 계정으로 확인하는 경우에는 외부 로그인 화면을 거쳐 돌아오므로, 원래 작업 화면에서 다시 진행하도록 안내한다.
 
 이 흐름은 oRPC 클라이언트의 인터셉터 하나가 맡는다. 확인 창을 띄우는 브라우저 처리라서 SSR에서는 함께 쓰지 않는다.
 
-```ts title="본인 확인 뒤 원래 요청을 한 번만 다시 보내기" caption="실제 재인증 인터셉터를 단순화했다. 타입과 확인 창 등록 코드는 생략했다."
+```ts title="본인 확인 뒤 원래 요청을 한 번만 다시 보내기"
 const freshAuthenticationInterceptor = async ({ next }) => {
   try {
     return await next();
@@ -608,6 +634,8 @@ const freshAuthenticationInterceptor = async ({ next }) => {
 };
 ```
 
+<p class="code-caption">실제 재인증 인터셉터를 단순화했다. 타입과 확인 창 등록 코드는 생략했다.</p>
+
 다시 보낸 요청이라고 그대로 통과시키지는 않는다. 서버는 실제 변경 시점에 본인 확인 상태와 작업 조건을 다시 검사한다.
 
 비밀번호 재설정 링크도 여러 번 쓸 수 없게 했다. 토큰이 재설정용인지, 이미 사용됐는지, 발급 후 비밀번호가 바뀌지는 않았는지 확인한다. 토큰을 사용 처리하는 작업과 비밀번호 변경, 모든 세션 종료를 같은 트랜잭션으로 묶는다.
@@ -620,7 +648,7 @@ const freshAuthenticationInterceptor = async ({ next }) => {
 
 한 탭 안에서도 비슷한 일이 생긴다. 화면 데이터를 가져오는 Query 캐시와 실시간 변경을 받는 SSE 연결이 같은 순간에 세션 만료 오류를 받으면, 캐시 정리와 로그인 화면 이동이 두 번 일어날 수 있다. 그래서 `createSessionRecovery`는 진행 중인 복구가 있으면 같은 Promise를 돌려줘, 재검증과 이동을 한 번만 실행한다.
 
-```ts title="세션 복구를 한 번만 실행하기" caption="실제 세션 복구 함수에서 타입과 내부 함수를 덜어 냈다."
+```ts title="세션 복구를 한 번만 실행하기"
 function createSessionRecovery(run) {
   let pending;
 
@@ -636,6 +664,8 @@ function createSessionRecovery(run) {
   };
 }
 ```
+
+<p class="code-caption">실제 세션 복구 함수에서 타입과 내부 함수를 덜어 냈다.</p>
 
 </details>
 
@@ -708,13 +738,15 @@ JWT 검증과 DB 세션 조회 중 무엇이 더 빠른지는 실제 환경과 �
 
 모여는 Bun이 제공하는 Argon2id를 선택했다. 별도의 알고리즘을 직접 구현하지 않고, 다음 설정으로 해시를 만든다.
 
-```ts title="모여의 비밀번호 해싱 설정" caption="실제 Bun 비밀번호 어댑터의 설정. 메모리 설정의 단위는 KiB다."
+```ts title="모여의 비밀번호 해싱 설정"
 const passwordHash = await passwordApi.hash(plainTextPassword, {
   algorithm: "argon2id",
   memoryCost: 65_536,
   timeCost: 3,
 });
 ```
+
+<p class="code-caption">실제 Bun 비밀번호 어댑터의 설정. 메모리 설정의 단위는 KiB다.</p>
 
 `memoryCost: 65_536`은 64MiB에 해당한다. 공격자가 비밀번호 후보를 계산하는 데 부담을 주지만, 우리 서버도 그 비용을 지불한다. 해시 8개가 실제로 동시에 실행된다면 설정상 메모리 예산은 **64MiB × 8 = 512MiB**가 된다.
 

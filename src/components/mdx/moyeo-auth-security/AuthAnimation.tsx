@@ -123,7 +123,7 @@ export default function AuthAnimation({ scene }: { scene: SceneName }) {
     resize.observe(graphic);
     theme.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["class", "data-theme"],
+      attributeFilter: ["data-theme"],
     });
     motion.addEventListener("change", onMotion);
     document.addEventListener("visibilitychange", onVisibility);

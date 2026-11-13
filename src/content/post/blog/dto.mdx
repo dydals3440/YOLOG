@@ -125,7 +125,7 @@ function renderSummary(progress: DailyProgress) {
 
 "운동하기" 아래에 "스트레칭", "달리기 30분" 같은 세부 항목이 생긴 거죠.
 
-```ts
+```ts ins={8-9}
 interface Todo {
   id: number;
   title: string;
@@ -133,8 +133,8 @@ interface Todo {
   category: { id: number; name: string; color: string };
   scheduledTime: string | null;
   startDate: string;
-  items: { id: number; title: string; completed: boolean }[];  // 추가됨 // [!code ++]
-  itemStats: { total: number; completed: number };              // 추가됨 // [!code ++]
+  items: { id: number; title: string; completed: boolean }[];  // 추가됨
+  itemStats: { total: number; completed: number };              // 추가됨
 }
 ```
 
@@ -454,15 +454,15 @@ ViewModel을 `extends TodoItem`으로 확장할 수도 있지만, 그러면 컴�
 
 Mapper가 `formattedTime: "오전 9:00"`까지 만들어준다고 가정해볼까요?
 
-```ts
+```ts del={5-8}
 // Mapper에서 ViewModel 역할까지 하면?
 export const toTodoItem = (dto: TodoResponse): TodoItem => ({
   // ...
   scheduledTime: dto.scheduledTime ? new Date(dto.scheduledTime) : null,
-  formattedTime: dto.scheduledTime                                        // [!code error]
-    ? formatTime(new Date(dto.scheduledTime), ???)  // 12시간? 24시간?   // [!code error]
-    : null,                                                               // [!code error]
-  isRecurring: dto.recurrenceGroupId !== null,                            // [!code error]
+  formattedTime: dto.scheduledTime
+    ? formatTime(new Date(dto.scheduledTime), ???)  // 12시간? 24시간?
+    : null,
+  isRecurring: dto.recurrenceGroupId !== null,
 });
 ```
 

@@ -182,7 +182,7 @@ React에서 상태가 바뀌면 다음 과정이 순서대로 일어난다.
 
 자연스럽게 `useEffect`에 손이 간다.
 
-```tsx
+```tsx del={9,13}
 interface PopoverProps {
   anchorRef: React.RefObject<HTMLButtonElement | null>
   children: React.ReactNode
@@ -191,11 +191,11 @@ interface PopoverProps {
 function Popover({ anchorRef, children }: PopoverProps) {
   const [pos, setPos] = useState({ top: 0, left: 0 })
 
-  useEffect(() => { // [!code error]
+  useEffect(() => {
     const rect = anchorRef.current?.getBoundingClientRect()
     if (!rect) return
     setPos({ top: rect.bottom + 4, left: rect.left })
-  }, []) // [!code error]
+  }, [])
 
   return (
     <div style={{ position: 'fixed', top: pos.top, left: pos.left }}>
@@ -227,15 +227,15 @@ function Popover({ anchorRef, children }: PopoverProps) {
 
 `useLayoutEffect`로 바꾸면 된다. 코드 변경은 딱 한 단어다.
 
-```tsx
+```tsx {4,8}
 function Popover({ anchorRef, children }: PopoverProps) {
   const [pos, setPos] = useState({ top: 0, left: 0 })
 
-  useLayoutEffect(() => { // [!code highlight]
+  useLayoutEffect(() => {
     const rect = anchorRef.current?.getBoundingClientRect()
     if (!rect) return
     setPos({ top: rect.bottom + 4, left: rect.left })
-  }, []) // [!code highlight]
+  }, [])
 
   return (
     <div style={{ position: 'fixed', top: pos.top, left: pos.left }}>
@@ -358,19 +358,19 @@ function PostList({ navigation }: { navigation: NavigationProp }) {
 
 `useFocusEffect`에 전달하는 콜백은 반드시 `useCallback`으로 감싸야 한다. 감싸지 않으면 매 렌더링마다 새 함수 참조가 생기고, 결과는 **무한 루프**다.
 
-```tsx
+```tsx {9,12} del={2-5}
 // 무한 루프
-useFocusEffect(() => { // [!code error]
-  const loadPosts = async () => setPosts(await getPosts()) // [!code error]
-  loadPosts() // [!code error]
-}) // [!code error]
+useFocusEffect(() => {
+  const loadPosts = async () => setPosts(await getPosts())
+  loadPosts()
+})
 
 // useCallback으로 감싸야 한다
 useFocusEffect(
-  useCallback(() => { // [!code highlight]
+  useCallback(() => {
     const loadPosts = async () => setPosts(await getPosts())
     loadPosts()
-  }, []) // [!code highlight]
+  }, [])
 )
 ```
 
@@ -386,7 +386,7 @@ React Navigation 공식 문서에서도 가장 먼저 경고하는 부분이다.
 
 채팅방에 연결하는 Effect가 있다. 연결이 되면 현재 테마에 맞는 알림을 보여주고 싶다.
 
-```tsx
+```tsx del={11}
 function ChatRoom({ roomId, theme }: { roomId: string; theme: 'light' | 'dark' }) {
   useEffect(() => {
     const connection = createConnection(roomId)
@@ -397,7 +397,7 @@ function ChatRoom({ roomId, theme }: { roomId: string; theme: 'light' | 'dark' }
 
     connection.connect()
     return () => connection.disconnect()
-  }, [roomId, theme]) // [!code error]
+  }, [roomId, theme])
 }
 ```
 
@@ -413,11 +413,11 @@ function ChatRoom({ roomId, theme }: { roomId: string; theme: 'light' | 'dark' }
 
 [`useEffectEvent`](https://react.dev/learn/separating-events-from-effects#declaring-an-effect-event)는 바로 이 문제를 풀기 위해 만들어졌다. Effect 안에서 사용하지만, **의존성 배열에 포함되지 않으면서 항상 최신 값을 읽는 함수**를 만들어준다.
 
-```tsx
+```tsx {2-4}
 function ChatRoom({ roomId, theme }: { roomId: string; theme: 'light' | 'dark' }) {
-  const onConnected = useEffectEvent(() => { // [!code highlight]
-    showNotification('연결됨!', theme) // 항상 최신 theme을 읽는다 // [!code highlight]
-  }) // [!code highlight]
+  const onConnected = useEffectEvent(() => {
+    showNotification('연결됨!', theme) // 항상 최신 theme을 읽는다
+  })
 
   useEffect(() => {
     const connection = createConnection(roomId)

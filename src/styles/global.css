@@ -1,7 +1,6 @@
 @import "tailwindcss";
 
-/* v3 darkMode: ["class"] equivalent */
-@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* v3 theme.container equivalent (center + 2rem padding + 2xl: 1400px) */
 @utility container {
@@ -114,13 +113,14 @@
 
     --background: 0 0% 100%;
 
-    --code-highlighted: var(--selection);
     --progress-bar-color: oklch(0.7 0.15 250);
     --inline-code-bg: var(--gray-200);
     --inline-code-border: var(--gray-300);
   }
 
-  .dark {
+  [data-theme="dark"] {
+    color-scheme: dark;
+
     --gray-50: #0b0b0e;
     --gray-75: #141418;
     --gray-100: #18181b;
@@ -148,7 +148,6 @@
 
     --background: 240 10% 3.9%;
 
-    --code-highlighted: hsla(240, 5%, 84%, 0.06);
     --progress-bar-color: oklch(0.75 0.14 250);
     --inline-code-bg: var(--gray-200);
     --inline-code-border: var(--gray-300);
@@ -284,7 +283,7 @@
     background-repeat: no-repeat;
     background-size: cover;
   }
-  .dark a.external-link::after {
+  [data-theme="dark"] a.external-link::after {
     background: url('data:image/svg+xml;utf8,<svg color="%23B0B0B0" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6m0 0H9m9 0v9"/></svg>');
     background-repeat: no-repeat;
     background-size: cover;

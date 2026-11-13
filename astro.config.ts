@@ -4,25 +4,17 @@ import { rehypeHeadingIds, unified } from "@astrojs/markdown-remark";
 import mdx from "@astrojs/mdx";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
-import {
-  transformerMetaHighlight,
-  transformerMetaWordHighlight,
-  transformerNotationDiff,
-  transformerNotationErrorLevel,
-  transformerNotationFocus,
-  transformerNotationHighlight,
-} from "@shikijs/transformers";
 import tailwindcss from "@tailwindcss/vite";
+import expressiveCode from "astro-expressive-code";
+import mermaid from "astro-mermaid";
 import { defineConfig, envField, fontProviders } from "astro/config";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
+import rehypeCallouts from "rehype-callouts";
 import rehypeExternalLinks from "rehype-external-links";
 import remarkBreaks from "remark-breaks";
-import remarkDirective from "remark-directive";
 
 import { remarkPrioritizeFirstImage } from "./plugins/remark-prioritize-first-image";
-import { transformerFragment } from "./plugins/transformer-fragment";
 import { SITE_URL } from "./src/lib/config/app";
-import { customCallout } from "./src/lib/directives";
 
 const outDir = "./dist/";
 const outDirUrl = new URL(outDir, import.meta.url);
@@ -35,9 +27,6 @@ export default defineConfig({
   output: "static",
   outDir,
   trailingSlash: "never",
-  // Astro 7의 compressHTML 기본값이 'jsx'로 바뀌어 인라인 요소 공백 처리가 달라진다.
-  // 기존 v6 동작(true)을 유지하기 위해 명시적으로 고정한다.
-  compressHTML: true,
   site: SITE_URL,
   env: {
     schema: {
@@ -77,28 +66,21 @@ export default defineConfig({
     defaultStrategy: "hover",
   },
   markdown: {
-    syntaxHighlight: { type: "shiki", excludeLangs: ["mermaid"] },
-    shikiConfig: {
-      themes: {
-        light: "catppuccin-latte",
-        dark: "tokyo-night",
-      },
-      langAlias: {
-        gitignore: "bash",
-      },
-      transformers: [
-        transformerNotationHighlight(),
-        transformerNotationDiff(),
-        transformerNotationFocus(),
-        transformerNotationErrorLevel(),
-        transformerMetaHighlight(),
-        transformerMetaWordHighlight(),
-        transformerFragment(),
-      ],
-    },
     processor: unified({
-      remarkPlugins: [remarkBreaks, remarkDirective, customCallout, remarkPrioritizeFirstImage],
+      remarkPlugins: [remarkBreaks, remarkPrioritizeFirstImage],
       rehypePlugins: [
+        [
+          rehypeCallouts,
+          {
+            theme: "github",
+            callouts: {
+              note: { title: "참고" },
+              tip: { title: "팁" },
+              warning: { title: "주의" },
+              caution: { title: "위험" },
+            },
+          },
+        ],
         rehypeHeadingIds,
         [
           rehypeAutolinkHeadings,
@@ -123,6 +105,30 @@ export default defineConfig({
     }),
   },
   integrations: [
+    mermaid({
+      autoTheme: true,
+      enableLog: false,
+      mermaidConfig: { layout: "dagre", look: "classic" },
+    }),
+    expressiveCode({
+      themes: ["catppuccin-latte", "tokyo-night"],
+      themeCssSelector: (theme) => `[data-theme="${theme.type}"]`,
+      useDarkModeMediaQuery: false,
+      shiki: { langAlias: { gitignore: "bash" } },
+      frames: { extractFileNameFromCode: false },
+      styleOverrides: {
+        borderRadius: "10px",
+        codeFontFamily: "var(--font-mono)",
+        uiFontFamily: "var(--font-sans)",
+        codeFontSize: "14px",
+        codeLineHeight: "1.5",
+        codePaddingBlock: "20px",
+        codePaddingInline: "24px",
+        frames: {
+          frameBoxShadowCssValue: "0 1px 2px rgb(0 0 0 / 6%), 0 4px 12px rgb(0 0 0 / 4%)",
+        },
+      },
+    }),
     mdx(),
     react(),
     sitemap({

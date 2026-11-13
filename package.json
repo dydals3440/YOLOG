@@ -26,6 +26,8 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.1.0",
     "astro": "7.4.11",
+    "astro-expressive-code": "0.44.3",
+    "astro-mermaid": "2.2.0",
     "dayjs": "^1.11.23",
     "es-toolkit": "^1.53.2",
     "lucide-react": "^1.70.0",
@@ -34,6 +36,7 @@
     "nanostores": "^1.5.5",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "rehype-callouts": "2.2.0",
     "sharp": "^0.35.5",
     "sonner": "2.0.8",
     "tailwindcss": "^4.3.5",
@@ -42,7 +45,6 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
-    "@shikijs/transformers": "^4.6.0",
     "@types/bun": "1.4.4",
     "@types/hast": "^3.0.5",
     "@types/mdast": "4.0.4",
@@ -57,8 +59,6 @@
     "rehype-autolink-headings": "7.1.0",
     "rehype-external-links": "3.0.0",
     "remark-breaks": "4.0.0",
-    "remark-directive": "4.0.0",
-    "shiki": "^4.6.0",
     "tailwind-merge": "^3.7.0",
     "unist-util-visit": "^5.2.0"
   },

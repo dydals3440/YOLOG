@@ -5,7 +5,7 @@ import { THEME_MAP, type ThemeKey, themeStore } from "@/lib/stores/theme";
 
 // 저장값이 없으면 OS 설정을 따르므로, 화면에 실제 적용된 테마를 기준으로 뒤집는다.
 const toggleTheme = () => {
-  const isDark = document.documentElement.classList.contains("dark");
+  const isDark = document.documentElement.dataset.theme === "dark";
   const themeKey: ThemeKey = isDark ? "light" : "dark";
   themeStore.set(THEME_MAP[themeKey]);
 };
