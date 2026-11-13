@@ -1,0 +1,65 @@
+---
+import { ChevronLeft, ChevronRight } from "@lucide/astro";
+import type { Page } from "astro";
+
+import { getPaginationRange } from "@/utils/pagination";
+
+import PageLink from "./PageLink.astro";
+
+interface Props {
+  page: Page<unknown>;
+}
+
+const { page } = Astro.props;
+const items = getPaginationRange({ currentPage: page.currentPage, lastPage: page.lastPage });
+const toPageUrl = (pageNumber: number) =>
+  pageNumber === 1 ? page.url.first : `${page.url.first}/${pageNumber}`;
+---
+
+<nav class="flex items-center justify-center gap-1" aria-label="페이지네이션">
+  <PageLink href={page.url.prev} rel="prev" label="이전 페이지">
+    <ChevronLeft class="size-4" stroke-width={1.75} aria-hidden="true" />
+  </PageLink>
+  <ol class="flex items-center gap-1">
+    {items.map((item) =>
+      item.type === "ellipsis" ? (
+        <li class="page-ellipsis" aria-hidden="true">
+          …
+        </li>
+      ) : (
+        <li>
+          <PageLink
+            href={item.page === page.currentPage ? undefined : toPageUrl(item.page)}
+            current={item.page === page.currentPage}
+            label={`${item.page}페이지로 이동`}
+          >
+            {item.page}
+          </PageLink>
+        </li>
+      ),
+    )}
+  </ol>
+  <PageLink href={page.url.next} rel="next" label="다음 페이지">
+    <ChevronRight class="size-4" stroke-width={1.75} aria-hidden="true" />
+  </PageLink>
+</nav>
+
+<style>
+  .page-ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 2.5rem;
+    font-size: 0.875rem;
+    color: var(--text-disabled);
+    user-select: none;
+  }
+
+  @media (max-width: 640px) {
+    .page-ellipsis {
+      width: 1.25rem;
+      height: 2.25rem;
+    }
+  }
+</style>

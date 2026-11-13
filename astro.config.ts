@@ -14,7 +14,7 @@ import rehypeExternalLinks from "rehype-external-links";
 import remarkBreaks from "remark-breaks";
 
 import { remarkPrioritizeFirstImage } from "./plugins/remark-prioritize-first-image";
-import { SITE_URL } from "./src/lib/config/app";
+import { SITE } from "./src/constants/site";
 
 const outDir = "./dist/";
 const outDirUrl = new URL(outDir, import.meta.url);
@@ -27,9 +27,15 @@ export default defineConfig({
   output: "static",
   outDir,
   trailingSlash: "never",
-  site: SITE_URL,
+  site: SITE.url,
   env: {
     schema: {
+      VERCEL_ENV: envField.enum({
+        context: "server",
+        access: "public",
+        values: ["production", "preview", "development"],
+        optional: true,
+      }),
       PUBLIC_GA_ID: publicEnv(),
       PUBLIC_GISCUS_REPO: publicEnv(),
       PUBLIC_GISCUS_REPO_ID: publicEnv(),

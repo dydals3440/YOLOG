@@ -1,5 +1,4 @@
 import { persistentAtom } from "@nanostores/persistent";
-import { onMount } from "nanostores";
 
 export const THEME_MAP = {
   light: "light",
@@ -7,15 +6,14 @@ export const THEME_MAP = {
   system: undefined,
 } as const;
 
-export type ThemeKey = keyof typeof THEME_MAP;
-export type ThemeValue = (typeof THEME_MAP)[ThemeKey];
+export type ThemeValue = (typeof THEME_MAP)[keyof typeof THEME_MAP];
 export type ResolvedTheme = Exclude<ThemeValue, undefined>;
 
 export const STORAGE_THEME_KEY = "theme";
 
-export const themeStore = persistentAtom<ThemeValue>(STORAGE_THEME_KEY, THEME_MAP.system);
-
 const SYSTEM_DARK_QUERY = "(prefers-color-scheme: dark)";
+
+export const themeStore = persistentAtom<ThemeValue>(STORAGE_THEME_KEY, THEME_MAP.system);
 
 const applyTheme = (theme: ResolvedTheme) => {
   document.documentElement.dataset.theme = theme;
@@ -24,7 +22,8 @@ const applyTheme = (theme: ResolvedTheme) => {
 const resolveSystemTheme = (query: MediaQueryList | MediaQueryListEvent): ResolvedTheme =>
   query.matches ? THEME_MAP.dark : THEME_MAP.light;
 
-const subscribeTheme = () => {
+/** 저장한 테마(없으면 OS 설정)를 html의 data-theme에 반영하고, 바뀔 때마다 다시 반영한다. */
+export function syncTheme() {
   const systemQuery = window.matchMedia(SYSTEM_DARK_QUERY);
   const followSystemTheme = (event: MediaQueryListEvent) => {
     if (themeStore.get() === THEME_MAP.system) {
@@ -41,8 +40,10 @@ const subscribeTheme = () => {
     systemQuery.removeEventListener("change", followSystemTheme);
     unsubscribe();
   };
-};
+}
 
-if (typeof window !== "undefined") {
-  onMount(themeStore, subscribeTheme);
+/** 저장값이 없으면 OS 설정을 따르므로, 화면에 실제 적용된 테마를 기준으로 뒤집는다. */
+export function toggleTheme() {
+  const isDark = document.documentElement.dataset.theme === THEME_MAP.dark;
+  themeStore.set(isDark ? THEME_MAP.light : THEME_MAP.dark);
 }

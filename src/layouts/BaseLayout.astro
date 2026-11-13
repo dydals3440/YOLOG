@@ -1,38 +1,32 @@
 ---
+import "@/styles/global.css";
 import "@/styles/animation.css";
-import Analytics from "@vercel/analytics/astro";
-import SpeedInsights from "@vercel/speed-insights/astro";
+import Analytics from "@/components/site/Analytics.astro";
+import SeoHead, { type Props as SeoHeadProps } from "@/components/site/SeoHead.astro";
+import SiteFooter from "@/components/site/SiteFooter.astro";
+import SiteHeader from "@/components/site/SiteHeader.astro";
 
-import Monitoring from "@/components/scripts/Monitoring.astro";
-import ThemeHead from "@/components/scripts/ThemeHead.astro";
-import { Toaster } from "@/components/ui/Toaster";
-import Footer from "@/layouts/partials/Footer.astro";
-import Header from "@/layouts/partials/Header.astro";
-import MetaHead from "@/layouts/partials/MetaHead.astro";
-import { isLiveBuild } from "@/lib/analytics-config";
-import type { BaseLayoutProps } from "@/types";
+interface Props {
+  seo?: SeoHeadProps | undefined;
+  class?: string | undefined;
+}
 
-export interface Props extends BaseLayoutProps {}
-
-const { seo, class: className } = Astro.props;
+const { seo = {}, class: className } = Astro.props;
 ---
 
 <html lang="ko">
   <head>
-    <MetaHead {...seo} />
-    <ThemeHead />
-    <Monitoring contentGroup={seo?.articleSection} />
+    <SeoHead {...seo} />
+    <Analytics contentGroup={seo.article?.section} />
   </head>
   <body>
-    <Header />
-    {isLiveBuild && <Analytics />}
-    {isLiveBuild && <SpeedInsights />}
+    <SiteHeader />
     <main class={className}>
       <div class="main-container container mx-auto max-w-content pt-page">
         <slot />
       </div>
     </main>
-    <Footer />
-    <Toaster client:only="react" />
+    <SiteFooter />
+    <p class="sr-only" aria-live="polite" data-copy-status></p>
   </body>
 </html>

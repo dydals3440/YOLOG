@@ -1,0 +1,75 @@
+---
+import { PROJECTS } from "@/constants/site";
+
+import NavLink from "./NavLink.astro";
+import ThemeToggle from "./ThemeToggle.astro";
+---
+
+<div class="blur-layer" aria-hidden="true"></div>
+<header
+  class="fixed inset-x-0 top-0 z-10 h-(--header-height) transition-transform duration-300"
+  data-site-header
+>
+  <div class="container mx-auto flex h-full max-w-content items-center justify-between">
+    <nav class="h-full min-w-0" aria-label="사이트">
+      <ul class="flex h-full items-center gap-8 whitespace-nowrap sm:gap-3">
+        <li>
+          <NavLink href="/" class="text-base font-semibold tracking-tight">
+            yolog
+          </NavLink>
+        </li>
+        <li>
+          <NavLink href="/blogs" class="text-sm">
+            블로그
+          </NavLink>
+        </li>
+        <li>
+          <NavLink href={PROJECTS.aido} external class="text-sm">
+            아이두
+          </NavLink>
+        </li>
+        <li>
+          <NavLink href={PROJECTS.moyeo} external class="text-sm">
+            모여
+          </NavLink>
+        </li>
+      </ul>
+    </nav>
+    <ThemeToggle class="ml-3 shrink-0" />
+  </div>
+</header>
+
+<style>
+  @reference "@/styles/global.css";
+
+  .blur-layer {
+    @apply pointer-events-none fixed inset-0 z-10 h-(--header-height) bg-background/70 backdrop-blur-(--blur-size);
+    --blur-size: 10px;
+  }
+
+  :global(.scrolled-down) [data-site-header] {
+    transform: translateY(calc(var(--header-height) * -1));
+  }
+</style>
+
+<script>
+  let lastScrollY = window.scrollY;
+  let isTicking = false;
+
+  // 아래로 스크롤하면 헤더를 숨기고, 위로 스크롤하면 다시 보여 준다.
+  const updateHeader = () => {
+    document.documentElement.classList.toggle("scrolled-down", window.scrollY > lastScrollY);
+    lastScrollY = window.scrollY;
+    isTicking = false;
+  };
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (isTicking) return;
+      isTicking = true;
+      requestAnimationFrame(updateHeader);
+    },
+    { passive: true },
+  );
+</script>

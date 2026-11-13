@@ -1,0 +1,27 @@
+---
+import GithubIcon from "@/assets/icons/github.svg";
+import LinkedinIcon from "@/assets/icons/linkedin.svg";
+import YoutubeIcon from "@/assets/icons/youtube.svg";
+import { AUTHOR } from "@/constants/site";
+
+import EmailMenu from "./EmailMenu.astro";
+import IconLink from "./IconLink.astro";
+
+const currentYear = new Date().getFullYear();
+---
+
+<footer class="container mt-auto pt-16 pb-8 text-center">
+  <div class="flex items-center justify-center gap-1">
+    <EmailMenu />
+    <IconLink href={AUTHOR.profiles.github} label="깃허브">
+      <GithubIcon class="size-4" aria-hidden="true" />
+    </IconLink>
+    <IconLink href={AUTHOR.profiles.linkedin} label="링크드인">
+      <LinkedinIcon class="size-4" aria-hidden="true" />
+    </IconLink>
+    <IconLink href={AUTHOR.profiles.youtube} label="유튜브">
+      <YoutubeIcon class="size-4" aria-hidden="true" />
+    </IconLink>
+  </div>
+  <p class="mt-4 text-xs text-third">© {currentYear} yolog</p>
+</footer>
