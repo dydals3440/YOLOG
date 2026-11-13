@@ -1,88 +1,25 @@
-/* animate intro stage */
+/* 섹션이 순서대로 떠오르는 첫 화면 효과. 본문·제목 같은 LCP 요소에는 쓰지 않는다. */
 @media (prefers-reduced-motion: no-preference) {
   @keyframes intro-stage {
-    0% {
+    from {
       opacity: 0;
       transform: translateY(5px);
     }
-    to {
-      opacity: 1;
-      transform: none;
+  }
+
+  [data-animate] > * {
+    --stagger: 50ms;
+    animation: intro-stage 0.5s both;
+  }
+
+  [data-animate-speed="slow"] > * {
+    --stagger: 100ms;
+  }
+
+  /* sibling-index()를 지원하는 브라우저만 순서대로 늦춰 띄운다. */
+  @supports (animation-delay: calc(sibling-index() * 1ms)) {
+    [data-animate] > * {
+      animation-delay: calc(sibling-index() * var(--stagger));
     }
   }
-  [data-animate] > * {
-    --lv: 0;
-    --lv-wait: 0;
-    --delay: 50ms;
-    --start: 0ms;
-    animation: intro-stage 0.5s both;
-    animation-delay: calc(var(--lv) * var(--delay) + var(--lv-wait) * var(--delay) + var(--start));
-  }
-  [data-animate-speed="slow"] > * {
-    --delay: 100ms;
-  }
-  [data-animate-speed="fast"] > * {
-    --delay: 25ms;
-  }
-}
-
-[data-animate] > *:nth-child(1) {
-  --lv: 1;
-}
-[data-animate] > *:nth-child(2) {
-  --lv: 2;
-}
-[data-animate] > *:nth-child(3) {
-  --lv: 3;
-}
-[data-animate] > *:nth-child(4) {
-  --lv: 4;
-}
-[data-animate] > *:nth-child(5) {
-  --lv: 5;
-}
-[data-animate] > *:nth-child(6) {
-  --lv: 6;
-}
-[data-animate] > *:nth-child(7) {
-  --lv: 7;
-}
-[data-animate] > *:nth-child(8) {
-  --lv: 8;
-}
-[data-animate] > *:nth-child(9) {
-  --lv: 9;
-}
-[data-animate] > *:nth-child(10) {
-  --lv: 10;
-}
-[data-animate] > *:nth-child(11) {
-  --lv: 11;
-}
-[data-animate] > *:nth-child(12) {
-  --lv: 12;
-}
-[data-animate] > *:nth-child(13) {
-  --lv: 13;
-}
-[data-animate] > *:nth-child(14) {
-  --lv: 14;
-}
-[data-animate] > *:nth-child(15) {
-  --lv: 15;
-}
-[data-animate] > *:nth-child(16) {
-  --lv: 16;
-}
-[data-animate] > *:nth-child(17) {
-  --lv: 17;
-}
-[data-animate] > *:nth-child(18) {
-  --lv: 18;
-}
-[data-animate] > *:nth-child(19) {
-  --lv: 19;
-}
-[data-animate] > *:nth-child(20) {
-  --lv: 20;
 }
