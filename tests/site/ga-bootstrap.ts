@@ -18,7 +18,7 @@ export function runGaBootstrap(bootstrap: string, hostname: string, repetitions 
     },
     document: {
       createElement: (): InjectedScript => ({}),
-      head: { appendChild: (script: InjectedScript) => scripts.push(script) },
+      head: { append: (script: InjectedScript) => scripts.push(script) },
     },
   });
 

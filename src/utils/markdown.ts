@@ -37,7 +37,7 @@ export function extractParagraphText(markdown: string) {
   const paragraphs: string[] = [];
   collectParagraphs(root, paragraphs);
 
-  return paragraphs.join(" ").replace(/\s+/g, " ").trim();
+  return paragraphs.join(" ").replaceAll(/\s+/g, " ").trim();
 }
 
 const MDX_ONLY_NODE_TYPES = new Set(["mdxjsEsm", "mdxFlowExpression", "mdxTextExpression"]);
