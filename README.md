@@ -20,7 +20,7 @@ bun run dev
 | `bun run lighthouse` | `dist`로 Lighthouse CI 실행(CLS·접근성·SEO는 실패, LCP·성능은 경고) |
 | `bun run validate` | `check` → `test` → `build` → `test:site` |
 
-Node 24와 Bun 1.4.4를 써요(`package.json`의 `engines`·`packageManager`). `bunfig.toml`의
+Node 26과 Bun 1.4.5를 써요(`package.json`의 `engines`·`packageManager`). `bunfig.toml`의
 `minimumReleaseAge`로 배포된 지 3일이 지나지 않은 패키지는 설치하지 않아요.
 
 ## 구조

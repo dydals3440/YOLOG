@@ -104,8 +104,7 @@ it("본문의 TS·TSX 예제에 문법 오류가 없다", async () => {
     if (language === "tsx" && metadata.includes("snippet")) {
       const jsxStart = source.search(/^</m);
       if (jsxStart >= 0) {
-        code =
-          source.slice(0, jsxStart) + "\nconst example = <>\n" + source.slice(jsxStart) + "\n</>;";
+        code = `${source.slice(0, jsxStart)}\nconst example = <>\n${source.slice(jsxStart)}\n</>;`;
       }
     }
     if (language !== "ts" && language !== "tsx") continue;
@@ -140,8 +139,8 @@ async function readExample(
   const code = await readExampleSource(title);
   const { outputText } = ts.transpileModule(
     code
-      .replace(/^export /gm, "")
-      .replace(/^import \{ (?:z|postStatusSchema) \} from "[^"]+";\n/gm, ""),
+      .replaceAll(/^export /gm, "")
+      .replaceAll(/^import \{ (?:z|postStatusSchema) \} from "[^"]+";\n/gm, ""),
     {
       compilerOptions: { target: ts.ScriptTarget.ESNext, module: ts.ModuleKind.CommonJS },
     },

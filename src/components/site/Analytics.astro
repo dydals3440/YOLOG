@@ -35,7 +35,8 @@ const adsenseSrc = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.
 >
   // 로컬 preview와 임의의 복제 도메인에서는 운영 통계를 수집하지 않는다.
   if (location.hostname === hostname && !window.gtag) {
-    window.dataLayer = window.dataLayer || [];
+    window.dataLayer ??= [];
+    // gtag.js는 배열이 아니라 Arguments 객체를 기대하므로 rest 인자로 바꾸지 않는다.
     window.gtag = function () {
       window.dataLayer.push(arguments);
     };
@@ -51,8 +52,8 @@ const adsenseSrc = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.
     window.gtag("config", gaId, { page_location: pageUrl.href, content_group: contentGroup });
     const script = document.createElement("script");
     script.async = true;
-    script.src = "https://www.googletagmanager.com/gtag/js?id=" + gaId;
-    document.head.appendChild(script);
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${gaId}`;
+    document.head.append(script);
   }
 </script>}
 {isProduction && <script is:inline async src={adsenseSrc} crossorigin="anonymous" data-yolog-ads />}
